@@ -207,7 +207,7 @@ int GUIManager::Init(const char* argv0, const char* name)
 
     if( name == nullptr || strcmp(name,"") == 0 )
     {
-        name = GetValidGUIName(); // get the default gui name
+        name = "qglviewer"; // By default, use the GUI.
     }
     GUICreator *creator = GetGUICreator(name);
     if(!creator)

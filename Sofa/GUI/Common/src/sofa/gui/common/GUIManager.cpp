@@ -115,42 +115,13 @@ std::string GUIManager::ListSupportedGUI(char separator)
 const char* GUIManager::GetValidGUIName()
 {
     const char* name;
-    std::string lastGuiFilename = BaseGUI::getConfigDirectoryPath() + "/lastUsedGUI.ini";
     if (guiCreators.empty())
     {
-
         msg_error("GUIManager") << "No GUI registered.";
         return nullptr;
     }
     else
     {
-        //Check the config file for the last used GUI type
-        if(FileSystem::exists(lastGuiFilename))
-        {
-            std::string lastGuiName;
-            std::ifstream lastGuiStream(lastGuiFilename.c_str());
-            std::getline(lastGuiStream,lastGuiName);
-            lastGuiStream.close();
-
-            const char* lastGuiNameChar = lastGuiName.c_str();
-
-            // const char* lastGuiNameChar = "qt";
-            std::list<GUICreator>::iterator it1 = guiCreators.begin();
-            std::list<GUICreator>::iterator itend1 = guiCreators.end();
-            while(++it1 != itend1)
-            {
-                if( strcmp(lastGuiNameChar, it1->name) == 0 )
-                {
-                    return it1->name;
-                }
-            }
-            msg_warning("GUIManager") << "Previously used GUI not registered. Using default GUI.";
-        }
-        else
-        {
-            msg_info("GUIManager") << "lastUsedGUI.ini not found; using default GUI.";
-        }
-
         std::list<GUICreator>::iterator it =guiCreators.begin();
         std::list<GUICreator>::iterator itend =guiCreators.end();
         name = it->name;

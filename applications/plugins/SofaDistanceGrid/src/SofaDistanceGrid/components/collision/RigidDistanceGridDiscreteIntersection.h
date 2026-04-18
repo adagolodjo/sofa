@@ -32,7 +32,7 @@
 #include <sofa/component/collision/geometry/RayCollisionModel.h>
 #include <sofa/component/collision/detection/intersection/DiscreteIntersection.h>
 
-#include "DistanceGridCollisionModel.h"
+#include "RigidDistanceGridCollisionModel.h"
 
 namespace sofa
 {

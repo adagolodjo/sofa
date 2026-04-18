@@ -61,7 +61,7 @@ void DistanceGridForceField<DataTypes>::init()
     msg_info_when(scale.getValue()!=1.0) << " scale="<<scale.getValue();
 
     msg_info_when(box.getValue()[0][0]<box.getValue()[1][0])
-            <<" bbox=<"<<box.getValue()[0]<<">-<"<<box.getValue()[0]<<">";
+            <<" bbox=<"<<box.getValue()[0]<<">-<"<<box.getValue()[1]<<">";
 
     grid = DistanceGrid::loadShared(fileDistanceGrid.getFullPath(), scale.getValue(), 0.0,
                                     nx.getValue(),ny.getValue(),nz.getValue(),
@@ -92,8 +92,9 @@ void DistanceGridForceField<DataTypes>::init()
                 Coord tN = cross(B, C);
                 Real area = tN.norm()/2;
                 Coord sN = grid->grad((p1[t[0]]+p1[t[1]]+p1[t[2]])*(1.0/3.0));
+                sN.normalize();
+                sumSArea += (sN*tN)*0.5f;
                 sumArea += area;
-                sumSArea = (sN*tN)*0.5f;
                 pOnBorder[t[0]] = true;
                 pOnBorder[t[1]] = true;
                 pOnBorder[t[2]] = true;
@@ -172,6 +173,7 @@ void DistanceGridForceField<DataTypes>::addForce(const sofa::core::MechanicalPar
         {
             if (d >= maxdist || stiffOut == 0) continue;
             Deriv grad = grid->tgrad(p1[i]);
+            grad.normalize();
             Real forceIntensity = -stiffOut * d;
             Real dampingIntensity = forceIntensity * damp;
             Deriv force = grad * forceIntensity - v1[i]*dampingIntensity;
@@ -186,6 +188,7 @@ void DistanceGridForceField<DataTypes>::addForce(const sofa::core::MechanicalPar
         {
             if (-d >= maxdist || stiffIn == 0) continue;
             Deriv grad = grid->tgrad(p1[i]);
+            grad.normalize();
             Real forceIntensity = -stiffIn * d;
             Real dampingIntensity = forceIntensity * damp;
             Deriv force = grad * forceIntensity - v1[i]*dampingIntensity;
@@ -400,24 +403,185 @@ void DistanceGridForceField<DataTypes>::addKToMatrix(const sofa::core::Mechanica
     unsigned int &offset = r.offset;
     sofa::linearalgebra::BaseMatrix* mat = r.matrix;
 
-    if (r)
+    if (!r) return;
+    if (!grid) return;
+
+    // Helper: add a 3x3 outer-product block  a ⊗ b * factor  at matrix position (pi, pj)
+    auto addOuterProduct = [&](int pi, int pj, const Coord& a, const Coord& b, Real factor)
     {
-        if (!grid) return;
-        const sofa::type::vector<Contact>& contacts = this->contacts.getValue();
-        if (contacts.empty()) return;
-        for (unsigned int i=0; i<contacts.size(); i++)
-        {
-            const Contact& c = contacts[i];
-            const int p = c.index;
-            const Real fact = (Real)(c.fact * -kFactor);
-            const Deriv& normal = c.normal;
-            for (sofa::Size l=0; l<Deriv::total_size; ++l)
-                for (sofa::Size c=0; c<Deriv::total_size; ++c)
-                {
-                    SReal coef = normal[l] * fact * normal[c];
-                    mat->add(offset + p*Deriv::total_size + l, offset + p*Deriv::total_size + c, coef);
-                }
-        }
+        for (sofa::Size l = 0; l < Deriv::total_size; ++l)
+            for (sofa::Size c = 0; c < Deriv::total_size; ++c)
+                mat->add(offset + pi * Deriv::total_size + l,
+                         offset + pj * Deriv::total_size + c,
+                         a[l] * b[c] * factor);
+    };
+
+    // Helper: add a 3x3 skew-symmetric block [n]× * factor at matrix position (pi, pj)
+    // [n]× · v = cross(n, v), so the matrix is:
+    //   [  0   -n2   n1 ]
+    //   [  n2   0   -n0 ]
+    //   [ -n1   n0   0  ]
+    auto addSkewBlock = [&](int pi, int pj, const Coord& n, Real factor)
+    {
+        mat->add(offset + pi*3 + 0, offset + pj*3 + 1, -n[2] * factor);
+        mat->add(offset + pi*3 + 0, offset + pj*3 + 2,  n[1] * factor);
+        mat->add(offset + pi*3 + 1, offset + pj*3 + 0,  n[2] * factor);
+        mat->add(offset + pi*3 + 1, offset + pj*3 + 2, -n[0] * factor);
+        mat->add(offset + pi*3 + 2, offset + pj*3 + 0, -n[1] * factor);
+        mat->add(offset + pi*3 + 2, offset + pj*3 + 1,  n[0] * factor);
+    };
+
+    // ===== 1) Point contacts (existing code) =====
+    const sofa::type::vector<Contact>& contacts = this->contacts.getValue();
+    for (unsigned int i = 0; i < contacts.size(); i++)
+    {
+        const Contact& c = contacts[i];
+        const int p = c.index;
+        const Deriv& normal = c.normal;
+        addOuterProduct(p, p, normal, normal, c.fact * -kFactor);
+    }
+
+    // ===== 2) Triangle contacts (area penalty) =====
+    // From addDForce:
+    //   a = cross(C, N),  b = cross(N, B)
+    //   darea = 0.5*(a·dB + b·dC)    where dB=dx1-dx0, dC=dx2-dx0
+    //   dfB = a*(factA*darea) + [N]×*dC*(factA*fact)
+    //   dfC = b*(factA*darea) - [N]×*dB*(factA*fact)   (cross(N,dB) = -[N]×·dB... checking sign)
+    //   dfA = -(dfB+dfC)
+    // The derivative blocks K[ti,tj] are assembled from these relationships.
+    const sofa::type::vector<TContact>& tcontacts = this->tcontacts.getValue();
+    const Real factA = -this->stiffnessArea.getValue() * kFactor;
+    for (unsigned int i = 0; i < tcontacts.size(); i++)
+    {
+        const TContact& tc = tcontacts[i];
+        const int t0 = tc.index[0], t1 = tc.index[1], t2 = tc.index[2];
+        const Coord& N = tc.normal;
+        const Coord& B = tc.B;
+        const Coord& C = tc.C;
+        const Real cFact = tc.fact;
+
+        Coord a = cross(C, N); // d(area)/d(B) direction * 2
+        Coord b = cross(N, B); // d(area)/d(C) direction * 2
+
+        // dfB w.r.t. dB: factA * 0.5 * a ⊗ a     (from darea term)
+        // dfB w.r.t. dC: factA * 0.5 * a ⊗ b + factA*cFact * [N]×  (from darea + cross term)
+        // Since dB = dx1-dx0 and dC = dx2-dx0, chain rule gives blocks for t0,t1,t2
+
+        // K[t1,t1] += factA * 0.5 * a ⊗ a
+        addOuterProduct(t1, t1, a, a, factA * 0.5);
+
+        // K[t1,t0] -= factA * 0.5 * a ⊗ a
+        addOuterProduct(t1, t0, a, a, -factA * 0.5);
+
+        // K[t1,t2] += factA * 0.5 * a ⊗ b + factA*cFact * [N]×
+        addOuterProduct(t1, t2, a, b, factA * 0.5);
+        addSkewBlock(t1, t2, N, factA * cFact);
+
+        // K[t1,t0] -= factA * 0.5 * a ⊗ b + factA*cFact * [N]× (from -dC w.r.t. dx0)
+        addOuterProduct(t1, t0, a, b, -factA * 0.5);
+        addSkewBlock(t1, t0, N, -factA * cFact);
+
+        // dfC w.r.t. dC: factA * 0.5 * b ⊗ b
+        addOuterProduct(t2, t2, b, b, factA * 0.5);
+        addOuterProduct(t2, t0, b, b, -factA * 0.5);
+
+        // dfC w.r.t. dB: factA * 0.5 * b ⊗ a - factA*cFact * [N]×
+        addOuterProduct(t2, t1, b, a, factA * 0.5);
+        addSkewBlock(t2, t1, N, -factA * cFact);
+
+        addOuterProduct(t2, t0, b, a, -factA * 0.5);
+        addSkewBlock(t2, t0, N, factA * cFact);
+
+        // dfA = -(dfB+dfC): assemble by adding negated rows to t0
+        // K[t0,tj] = -K[t1,tj] - K[t2,tj]  for each tj
+        // This is equivalent to: for each block we added for t1 and t2,
+        // add the negative to t0.
+        // Rather than re-derive, we use the constraint that sum of rows = 0
+        // by going through t0 explicitly:
+        Coord apb = a + b; // combined derivative factor
+        addOuterProduct(t0, t1, apb, a, -factA * 0.5);
+        addOuterProduct(t0, t2, apb, b, -factA * 0.5);
+        addOuterProduct(t0, t0, apb, a, factA * 0.5);
+        addOuterProduct(t0, t0, apb, b, factA * 0.5);
+    }
+
+    // ===== 3) Tetrahedron contacts (volume penalty) =====
+    // From addDForce:
+    //   ga = cross(B,C), gb = cross(C,A), gc = cross(A,B)
+    //   dvol = (1/6)*(ga·dA + gb·dB + gc·dC)
+    //   dfA = factV * (ga * dvol - (cross(dB,C)+cross(B,dC)) * cFact)
+    //   dfB = factV * (gb * dvol - (cross(dC,A)+cross(C,dA)) * cFact)
+    //   dfC = factV * (gc * dvol - (cross(dA,B)+cross(A,dB)) * cFact)
+    //   df0 = -(dfA+dfB+dfC)
+    const sofa::type::vector<VContact>& vcontacts = this->vcontacts.getValue();
+    const Real factV = -this->stiffnessVolume.getValue() * (1.0 / 6.0) * kFactor;
+    for (unsigned int i = 0; i < vcontacts.size(); i++)
+    {
+        const VContact& vc = vcontacts[i];
+        const int v0 = vc.index[0], v1 = vc.index[1], v2 = vc.index[2], v3 = vc.index[3];
+        const Coord& A = vc.A;
+        const Coord& B = vc.B;
+        const Coord& C = vc.C;
+        const Real cFact = vc.fact;
+
+        Coord ga = cross(B, C);
+        Coord gb = cross(C, A);
+        Coord gc = cross(A, B);
+
+        // Volume-derivative outer products: K_vol[vi,vj] = factV * (1/6) * g_i ⊗ g_j
+        // where dA=dx1-dx0, dB=dx2-dx0, dC=dx3-dx0
+        const Real v16 = (Real)(1.0 / 6.0);
+
+        // dfA (at v1) w.r.t. dA (from v1): factV * v16 * ga ⊗ ga
+        addOuterProduct(v1, v1, ga, ga, factV * v16);
+        addOuterProduct(v1, v0, ga, ga, -factV * v16);
+        addOuterProduct(v1, v2, ga, gb, factV * v16);
+        addOuterProduct(v1, v0, ga, gb, -factV * v16);
+        addOuterProduct(v1, v3, ga, gc, factV * v16);
+        addOuterProduct(v1, v0, ga, gc, -factV * v16);
+
+        // Cross-product terms for dfA: -factV*cFact*(cross(dB,C)+cross(B,dC))
+        // cross(dB,C) = -[C]× dB   and  cross(B,dC) = [B]× dC (skew matrices)
+        addSkewBlock(v1, v2, C, -factV * cFact);    // -[C]× · (dx2-dx0)
+        addSkewBlock(v1, v0, C, factV * cFact);
+        addSkewBlock(v1, v3, B, factV * cFact);     // [B]× · (dx3-dx0)
+        addSkewBlock(v1, v0, B, -factV * cFact);
+
+        // dfB (at v2)
+        addOuterProduct(v2, v1, gb, ga, factV * v16);
+        addOuterProduct(v2, v0, gb, ga, -factV * v16);
+        addOuterProduct(v2, v2, gb, gb, factV * v16);
+        addOuterProduct(v2, v0, gb, gb, -factV * v16);
+        addOuterProduct(v2, v3, gb, gc, factV * v16);
+        addOuterProduct(v2, v0, gb, gc, -factV * v16);
+
+        addSkewBlock(v2, v3, A, -factV * cFact);
+        addSkewBlock(v2, v0, A, factV * cFact);
+        addSkewBlock(v2, v1, C, factV * cFact);
+        addSkewBlock(v2, v0, C, -factV * cFact);
+
+        // dfC (at v3)
+        addOuterProduct(v3, v1, gc, ga, factV * v16);
+        addOuterProduct(v3, v0, gc, ga, -factV * v16);
+        addOuterProduct(v3, v2, gc, gb, factV * v16);
+        addOuterProduct(v3, v0, gc, gb, -factV * v16);
+        addOuterProduct(v3, v3, gc, gc, factV * v16);
+        addOuterProduct(v3, v0, gc, gc, -factV * v16);
+
+        addSkewBlock(v3, v1, B, -factV * cFact);
+        addSkewBlock(v3, v0, B, factV * cFact);
+        addSkewBlock(v3, v2, A, factV * cFact);
+        addSkewBlock(v3, v0, A, -factV * cFact);
+
+        // df0 (at v0) = -(dfA+dfB+dfC)
+        // Row v0 gets the negative sum of rows v1, v2, v3
+        Coord gsum = ga + gb + gc;
+        addOuterProduct(v0, v1, gsum, ga, -factV * v16);
+        addOuterProduct(v0, v2, gsum, gb, -factV * v16);
+        addOuterProduct(v0, v3, gsum, gc, -factV * v16);
+        addOuterProduct(v0, v0, gsum, ga, factV * v16);
+        addOuterProduct(v0, v0, gsum, gb, factV * v16);
+        addOuterProduct(v0, v0, gsum, gc, factV * v16);
     }
 }
 

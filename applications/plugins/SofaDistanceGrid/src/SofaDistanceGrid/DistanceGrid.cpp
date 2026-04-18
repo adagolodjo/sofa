@@ -22,7 +22,6 @@
 #include <fstream>
 
 #include <SofaDistanceGrid/DistanceGrid.h>
-#include <sofa/core/visual/VisualParams.h>
 
 #include <sofa/helper/io/Mesh.h>
 
@@ -30,8 +29,8 @@
 #include <flowvr/render/mesh.h>
 #endif
 
-#include <fstream>
 #include <sstream>
+#include <mutex>
 
 #include <sofa/helper/logging/Messaging.h>
 
@@ -53,6 +52,7 @@ namespace _distancegrid_
 {
 
 std::map<DistanceGrid::DistanceGridParams, std::weak_ptr<DistanceGrid> > DistanceGrid::instances;
+static std::mutex instancesMutex;
 
 using namespace defaulttype;
 
@@ -1224,6 +1224,9 @@ std::shared_ptr<DistanceGrid> DistanceGrid::loadShared(const std::string& filena
     params.nz = nz;
     params.pmin = pmin;
     params.pmax = pmax;
+    
+    std::lock_guard<std::mutex> lock(instancesMutex);
+    
     std::map<DistanceGridParams, std::weak_ptr<DistanceGrid> >::iterator it = instances.find(params);
     if (it != instances.end())
     {

@@ -22,6 +22,7 @@
 #ifndef SOFA_SOFADISTANCEGRID_DISTANCEGRID_H
 #define SOFA_SOFADISTANCEGRID_DISTANCEGRID_H
 #include <SofaDistanceGrid/config.h>
+#include <SofaDistanceGrid/core/DistanceFieldData.h>
 
 #include <map>
 #include <sofa/defaulttype/VecTypes.h>
@@ -52,7 +53,7 @@ using sofa::helper::io::Mesh;
 using sofa::type::Vec3 ;
 typedef Vec3 Coord;
 
-class SOFA_SOFADISTANCEGRID_API DistanceGrid
+class SOFA_SOFADISTANCEGRID_API DistanceGrid : public AbstractDistanceField
 {
 public:
     static SReal maxDist() { return std::numeric_limits<SReal>::max(); }
@@ -62,7 +63,7 @@ public:
 
     DistanceGrid(int m_nx, int m_ny, int m_nz, Coord m_pmin, Coord m_pmax);
 
-    ~DistanceGrid();
+    ~DistanceGrid() override;
 
 public:
     /// Load a distance grid
@@ -104,8 +105,8 @@ public:
 
     inline int size() const { return m_nxnynz; }
 
-    inline const Coord& getBBMin() const { return m_bbmin; }
-    inline const Coord& getBBMax() const { return m_bbmax; }
+    inline const Coord& getBBMin() const override { return m_bbmin; }
+    inline const Coord& getBBMax() const override { return m_bbmax; }
     inline void setBBMin(const Coord& val) { m_bbmin = val; }
     inline void setBBMax(const Coord& val) { m_bbmax = val; }
     inline Coord getBBCorner(int i) const {
@@ -119,8 +120,8 @@ public:
         return true;
     }
 
-    inline const Coord& getPMin() const { return m_pmin; }
-    inline const Coord& getPMax() const { return m_pmax; }
+    inline const Coord& getPMin() const override { return m_pmin; }
+    inline const Coord& getPMax() const override { return m_pmax; }
     inline Coord getCorner(int i) const {
         return Coord((i&1)?m_pmax[0]:m_pmin[0],(i&2)?m_pmax[1]:m_pmin[1],(i&4)?m_pmax[2]:m_pmin[2]);
     }
@@ -128,7 +129,7 @@ public:
     inline bool isCube() const { return m_cubeDim != 0; }
     inline SReal getCubeDim() const { return m_cubeDim; }
 
-    bool inGrid(const Coord& p) const
+    bool inGrid(const Coord& p) const override
     {
         Coord epsilon = m_cellWidth*0.1;
         for (int c=0; c<3; ++c)
@@ -167,12 +168,12 @@ public:
         return index(p, coefs);
     }
 
-    int index(int x, int y, int z)
+    int index(int x, int y, int z) const
     {
         return x+m_nx*(y+m_ny*(z));
     }
 
-    Coord coord(int x, int y, int z)
+    Coord coord(int x, int y, int z) const
     {
         return m_pmin+Coord(x*m_cellWidth[0], y*m_cellWidth[1], z*m_cellWidth[2]);
     }
@@ -188,8 +189,8 @@ public:
     SReal interp(int index, const Coord& coefs) const ;
     SReal interp(const Coord& p) const ;
     Coord grad(int index, const Coord& coefs) const ;
-    Coord grad(const Coord& p) const ;
-    SReal eval(const Coord& x) const ;
+    Coord grad(const Coord& p) const override;
+    SReal eval(const Coord& x) const override;
     SReal quickeval(const Coord& x) const ;
     SReal eval2(const Coord& x) const ;
     SReal quickeval2(const Coord& x) const ;

@@ -214,10 +214,33 @@ public:
     void addForce(const sofa::core::MechanicalParams* /*mparams*/, DataVecDeriv &  dataF, const DataVecCoord &  dataX , const DataVecDeriv & dataV ) override;
     void addDForce(const sofa::core::MechanicalParams* mparams, DataVecDeriv&   datadF , const DataVecDeriv&   datadX ) override;
     void addKToMatrix(const sofa::core::MechanicalParams* mparams, const sofa::core::behavior::MultiMatrixAccessor* matrix) override;
-    SReal getPotentialEnergy(const core::MechanicalParams* /*mparams*/, const DataVecCoord&  /* x */) const override
+    SReal getPotentialEnergy(const core::MechanicalParams* /*mparams*/, const DataVecCoord& dataX) const override
     {
-        msg_warning() << "Get potentialEnergy not implemented";
-        return 0.0;
+        if (!grid) return 0.0;
+
+        const VecCoord& p1 = dataX.getValue();
+        const Real stiffIn = stiffnessIn.getValue();
+        const Real stiffOut = stiffnessOut.getValue();
+        const Real maxdist = maxDist.getValue();
+
+        unsigned int ibegin = 0;
+        unsigned int iend = p1.size();
+        if (localRange.getValue()[0] >= 0)
+            ibegin = localRange.getValue()[0];
+        if (localRange.getValue()[1] >= 0 && (unsigned int)localRange.getValue()[1]+1 < iend)
+            iend = localRange.getValue()[1]+1;
+
+        SReal energy = 0;
+        for (unsigned int i = ibegin; i < iend; i++)
+        {
+            if (i < pOnBorder.size() && !pOnBorder[i]) continue;
+            Real d = grid->teval(p1[i]);
+            if (d > 0 && d < maxdist && stiffOut != 0)
+                energy += 0.5 * stiffOut * d * d;
+            else if (d < 0 && -d < maxdist && stiffIn != 0)
+                energy += 0.5 * stiffIn * d * d;
+        }
+        return energy;
     }
     void draw(const core::visual::VisualParams* vparams) override;
     void drawDistanceGrid(const core::visual::VisualParams*, float size=0.0f);

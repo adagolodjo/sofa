@@ -19,7 +19,7 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#define SOFA_COMPONENT_COLLISION_DISTANCEGRIDCOLLISIONMODEL_CPP
+#define SOFA_COMPONENT_COLLISION_FFDDISTANCEGRIDCOLLISIONMODEL_CPP
 #include <fstream>
 #include <sstream>
 #include <SofaDistanceGrid/config.h>
@@ -31,7 +31,7 @@
 #include <sofa/component/collision/response/mapper/BarycentricContactMapper.inl>
 #include <sofa/component/collision/response/mapper/RigidContactMapper.inl>
 
-#include "DistanceGridCollisionModel.h"
+#include "FFDDistanceGridCollisionModel.h"
 
 #if SOFADISTANCEGRID_HAVE_SOFA_GL == 1
 #include <sofa/gl/gl.h>
@@ -47,10 +47,10 @@ namespace component
 namespace collision
 {
 
-void registerRigidDistanceGridCollisionModel(sofa::core::ObjectFactory* factory)
+void registerFFDDistanceGridCollisionModel(sofa::core::ObjectFactory* factory)
 {
     factory->registerObjects(sofa::core::ObjectRegistrationData("Grid-based distance field.")
-    .add< RigidDistanceGridCollisionModel >());
+    .add< FFDDistanceGridCollisionModel >());
 }
       
 void registerFFDDistanceGridCollisionModel(sofa::core::ObjectFactory* factory)
@@ -68,7 +68,7 @@ using namespace sofa::component::collision::response::mapper;
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-RigidDistanceGridCollisionModel::RigidDistanceGridCollisionModel()
+FFDDistanceGridCollisionModel::FFDDistanceGridCollisionModel()
     : modified(true)
     , fileRigidDistanceGrid( initData( &fileRigidDistanceGrid, "filename", "Load distance grid from specified file"))
     , scale( initData( &scale, 1.0, "scale", "scaling factor for input file"))
@@ -90,10 +90,10 @@ RigidDistanceGridCollisionModel::RigidDistanceGridCollisionModel()
     addAlias(&fileRigidDistanceGrid,"fileRigidDistanceGrid");
 }
 
-RigidDistanceGridCollisionModel::~RigidDistanceGridCollisionModel()
+FFDDistanceGridCollisionModel::~FFDDistanceGridCollisionModel()
 {}
 
-void RigidDistanceGridCollisionModel::init()
+void FFDDistanceGridCollisionModel::init()
 {
     Inherit1::init();
     Inherit2::init();

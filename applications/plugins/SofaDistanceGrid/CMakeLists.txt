@@ -24,11 +24,16 @@ set(HEADER_FILES
     ${SOFADISTANCEGRID_SRC}/config.h.in
     ${SOFADISTANCEGRID_SRC}/initSofaDistanceGrid.h
     ${SOFADISTANCEGRID_SRC}/DistanceGrid.h
-    ${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridDiscreteIntersection.h
-    ${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridDiscreteIntersection.inl
+    ${SOFADISTANCEGRID_SRC}/core/DistanceFieldData.h
+    ${SOFADISTANCEGRID_SRC}/core/DistanceFieldEvaluator.h
+    ${SOFADISTANCEGRID_SRC}/core/DistanceFieldGenerator.h
+    ${SOFADISTANCEGRID_SRC}/components/engine/DistanceGridEngine.h
+    #    ${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridDiscreteIntersection.h
+    # ${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridDiscreteIntersection.inl
     ${SOFADISTANCEGRID_SRC}/components/collision/RigidDistanceGridDiscreteIntersection.h
     ${SOFADISTANCEGRID_SRC}/components/collision/RigidDistanceGridDiscreteIntersection.inl
-    ${SOFADISTANCEGRID_SRC}/components/collision/DistanceGridCollisionModel.h
+    ${SOFADISTANCEGRID_SRC}/components/collision/RigidDistanceGridCollisionModel.h
+    #${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridCollisionModel.h
     ${SOFADISTANCEGRID_SRC}/components/forcefield/DistanceGridForceField.h
     ${SOFADISTANCEGRID_SRC}/components/forcefield/DistanceGridForceField.inl
 )
@@ -36,12 +41,16 @@ set(HEADER_FILES
 set(SOURCE_FILES
     ${SOFADISTANCEGRID_SRC}/initSofaDistanceGrid.cpp
     ${SOFADISTANCEGRID_SRC}/DistanceGrid.cpp
+    ${SOFADISTANCEGRID_SRC}/core/DistanceFieldEvaluator.cpp
+    ${SOFADISTANCEGRID_SRC}/core/DistanceFieldGenerator.cpp
     ${SOFADISTANCEGRID_SRC}/RegisterModelToCollisionFactory.cpp
+    ${SOFADISTANCEGRID_SRC}/components/engine/DistanceGridEngine.cpp
     ${SOFADISTANCEGRID_SRC}/components/forcefield/DistanceGridForceField.cpp
-    ${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridDiscreteIntersection.cpp
+    # ${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridDiscreteIntersection.cpp
     ${SOFADISTANCEGRID_SRC}/components/collision/RayDistanceGridContact.cpp
     ${SOFADISTANCEGRID_SRC}/components/collision/RigidDistanceGridDiscreteIntersection.cpp
-    ${SOFADISTANCEGRID_SRC}/components/collision/DistanceGridCollisionModel.cpp
+    ${SOFADISTANCEGRID_SRC}/components/collision/RigidDistanceGridCollisionModel.cpp
+    #${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridCollisionModel.cpp
     ${SOFADISTANCEGRID_SRC}/components/collision/BarycentricPenalityContact_DistanceGrid.cpp
 )
 

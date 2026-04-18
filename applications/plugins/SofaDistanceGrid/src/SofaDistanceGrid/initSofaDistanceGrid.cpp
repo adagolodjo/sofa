@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #include <SofaDistanceGrid/initSofaDistanceGrid.h>
-#include "components/collision/DistanceGridCollisionModel.h"
+#include "components/collision/RigidDistanceGridCollisionModel.h"
 #include "components/forcefield/DistanceGridForceField.h"
 #include "RegisterModelToCollisionFactory.h"
 

@@ -26,7 +26,7 @@
 #include <sofa/component/collision/geometry/TriangleCollisionModel.h>
 #include <sofa/component/collision/response/contact/RayContact.h>
 
-#include "DistanceGridCollisionModel.h"
+#include "RigidDistanceGridCollisionModel.h"
 
 namespace sofa
 {

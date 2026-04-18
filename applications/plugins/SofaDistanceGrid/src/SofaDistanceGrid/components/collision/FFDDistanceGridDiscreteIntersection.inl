@@ -28,7 +28,6 @@
 
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/core/ObjectFactory.h>
-#include <sofa/helper/proximity.h>
 
 #include "FFDDistanceGridDiscreteIntersection.h"
 
@@ -43,24 +42,24 @@ namespace collision
 
 
 template<class T>
-bool FFDDistanceGridDiscreteIntersection::testIntersection(FFDDistanceGridCollisionElement&, TSphere<T>&)
+bool FFDDistanceGridDiscreteIntersection::testIntersection(FFDDistanceGridCollisionElement&, geometry::TSphere<T>&, const core::collision::Intersection*)
 {
     return true;
 }
 
 template<class T>
-int FFDDistanceGridDiscreteIntersection::computeIntersection(FFDDistanceGridCollisionElement& e1, TSphere<T>& e2, OutputVector* contacts)
+int FFDDistanceGridDiscreteIntersection::computeIntersection(FFDDistanceGridCollisionElement& e1, geometry::TSphere<T>& e2, OutputVector* contacts, const core::collision::Intersection* intersection)
 {
 
-    DistanceGrid* grid1 = e1.getGrid();
+    const std::shared_ptr<DistanceGrid> grid1 = e1.getGrid();
     FFDDistanceGridCollisionModel::DeformedCube& c1 = e1.getCollisionModel()->getDeformCube(e1.getIndex());
 
-    const double d0 = e1.getProximity() + e2.getProximity() + intersection->getContactDistance() + e2.r();
+    const double d0 = e1.getContactDistance() + e2.getContactDistance() + intersection->getContactDistance() + e2.r();
     const SReal margin = 0.001f + (SReal)d0;
 
     c1.updateFaces();
     const SReal cubesize = c1.invDP.norm();
-    type::Vector3 p2 = e2.center();
+    type::Vec3 p2 = e2.center();
     DistanceGrid::Coord p1 = p2;
 
     // estimate the barycentric coordinates
@@ -100,12 +99,12 @@ int FFDDistanceGridDiscreteIntersection::computeIntersection(FFDDistanceGridColl
 
                     contacts->resize(contacts->size()+1);
                     sofa::core::collision::DetectionOutput *detection = &*(contacts->end()-1);
-                    detection->normal = type::Vector3(grad); // normal in global space from p1's surface
+                    detection->normal = type::Vec3(grad); // normal in global space from p1's surface
                     detection->value = d - d0;
                     detection->elem.first = e1;
                     detection->elem.second = e2;
                     detection->id = e2.getIndex();
-                    detection->point[0] = type::Vector3(pinit);
+                    detection->point[0] = type::Vec3(pinit);
                     detection->point[1] = e2.getContactPointWithSurfacePoint( pinit );
                     return 1;
                 }

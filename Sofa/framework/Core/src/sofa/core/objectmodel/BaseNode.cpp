@@ -20,19 +20,14 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #include <sofa/core/objectmodel/BaseNode.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/behavior/BaseAnimationLoop.h>
 #include <sofa/core/behavior/OdeSolver.h>
 #include <sofa/core/collision/Pipeline.h>
 #include <sofa/core/visual/VisualLoop.h>
 
-namespace sofa
-{
 
-namespace core
-{
-
-namespace objectmodel
+namespace sofa::core::objectmodel
 {
 
 BaseNode::BaseNode()
@@ -43,7 +38,7 @@ BaseNode::~BaseNode()
 
 BaseNode* BaseNode::getRoot() const
 {
-    BaseNode* firstParent = getFirstParent();
+    const BaseNode* firstParent = getFirstParent();
     if (!firstParent) return const_cast<BaseNode*>(this);
     else return firstParent->getRoot();
 }
@@ -69,13 +64,13 @@ core::visual::VisualLoop* BaseNode::getVisualLoop() const
 }
 
 /// Set the context of an object to this
-void BaseNode::setObjectContext(BaseObject::SPtr obj)
+void BaseNode::setObjectContext(BaseComponent::SPtr obj)
 {
     obj->l_context.set(this->getContext());
 }
 
 /// Reset the context of an object
-void BaseNode::clearObjectContext(BaseObject::SPtr obj)
+void BaseNode::clearObjectContext(BaseComponent::SPtr obj)
 {
     if (obj != nullptr)
     {
@@ -106,7 +101,7 @@ std::string BaseNode::internalGetPathName() const {
 
 // path name representation of root as "/", as it is done for filesystems
 std::string BaseNode::getPathName() const {
-    Parents parents = getParents();
+    const Parents parents = getParents();
     if (parents.empty())
         return "/";
     return internalGetPathName();
@@ -121,8 +116,8 @@ std::string BaseNode::getRootPath() const {
     return str;
 }
 
-} // namespace objectmodel
+} // namespace sofa::core::objectmodel
 
-} // namespace core
 
-} // namespace sofa
+
+

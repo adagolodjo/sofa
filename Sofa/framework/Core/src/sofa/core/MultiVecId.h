@@ -19,17 +19,13 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_MULTIVECID_H
-#define SOFA_CORE_MULTIVECID_H
+#pragma once
 
 #include <sofa/core/VecId.h>
 #include <sofa/core/objectmodel/Data.h>
 #include <map>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 class SOFA_CORE_API BaseState;
@@ -50,7 +46,7 @@ struct StateVecAccessor<DataTypes, V_COORD, V_READ>
     typedef TVecId<V_COORD, V_READ> MyVecId;
     typedef Data<typename DataTypes::VecCoord> MyDataVec;
 
-    StateVecAccessor(const State<DataTypes>* state, const MyVecId& id) : state(state), id(id) {}
+    StateVecAccessor(const State<DataTypes>* st, const MyVecId& vecid) : state(st), id(vecid) {}
     operator MyVecId() const {  return id;  }
     const MyDataVec* read()  const {  return state-> read(id);  }
 
@@ -65,7 +61,7 @@ struct StateVecAccessor<DataTypes, V_COORD, V_WRITE>
     typedef TVecId<V_COORD, V_WRITE> MyVecId;
     typedef Data<typename DataTypes::VecCoord> MyDataVec;
 
-    StateVecAccessor(State<DataTypes>* state, const MyVecId& id) : state(state), id(id) {}
+    StateVecAccessor(State<DataTypes>* st, const MyVecId& vecid) : state(st), id(vecid) {}
     operator MyVecId() const {  return id;  }
     const MyDataVec* read()  const {  return state-> read(id);  }
     MyDataVec* write() const {  return state->write(id);  }
@@ -81,7 +77,7 @@ struct StateVecAccessor<DataTypes, V_DERIV, V_READ>
     typedef TVecId<V_DERIV, V_READ> MyVecId;
     typedef Data<typename DataTypes::VecDeriv> MyDataVec;
 
-    StateVecAccessor(const State<DataTypes>* state, const MyVecId& id) : state(state), id(id) {}
+    StateVecAccessor(const State<DataTypes>* st, const MyVecId& vecid) : state(st), id(vecid) {}
     operator MyVecId() const {  return id;  }
     const MyDataVec* read()  const {  return state-> read(id);  }
 
@@ -96,7 +92,7 @@ struct StateVecAccessor<DataTypes, V_DERIV, V_WRITE>
     typedef TVecId<V_DERIV, V_WRITE> MyVecId;
     typedef Data<typename DataTypes::VecDeriv> MyDataVec;
 
-    StateVecAccessor(State<DataTypes>* state, const MyVecId& id) : state(state), id(id) {}
+    StateVecAccessor(State<DataTypes>* st, const MyVecId& vecid) : state(st), id(vecid) {}
     operator MyVecId() const {  return id;  }
     const MyDataVec* read()  const {  return state-> read(id);  }
     MyDataVec* write() const {  return state->write(id);  }
@@ -112,7 +108,7 @@ struct StateVecAccessor<DataTypes, V_MATDERIV, V_READ>
     typedef TVecId<V_MATDERIV, V_READ> MyVecId;
     typedef Data<typename DataTypes::MatrixDeriv> MyDataVec;
 
-    StateVecAccessor(const State<DataTypes>* state, const MyVecId& id) : state(state), id(id) {}
+    StateVecAccessor(const State<DataTypes>* st, const MyVecId& vecid) : state(st), id(vecid) {}
     operator MyVecId() const {  return id;  }
     const MyDataVec* read()  const {  return state-> read(id);  }
 
@@ -127,7 +123,7 @@ struct StateVecAccessor<DataTypes, V_MATDERIV, V_WRITE>
     typedef TVecId<V_MATDERIV, V_WRITE> MyVecId;
     typedef Data<typename DataTypes::MatrixDeriv> MyDataVec;
 
-    StateVecAccessor(State<DataTypes>* state, const MyVecId& id) : state(state), id(id) {}
+    StateVecAccessor(State<DataTypes>* st, const MyVecId& vecid) : state(st), id(vecid) {}
     operator MyVecId() const {  return id;  }
     const MyDataVec* read()  const {  return state-> read(id);  }
     MyDataVec* write() const {  return state->write(id);  }
@@ -143,7 +139,7 @@ struct StateVecAccessor<DataTypes, V_ALL, V_READ>
     typedef TVecId<V_ALL, V_READ> MyVecId;
     //typedef BaseData MyDataVec;
 
-    StateVecAccessor(const State<DataTypes>* state, const MyVecId& id) : state(state), id(id) {}
+    StateVecAccessor(const State<DataTypes>* st, const MyVecId& vecid) : state(st), id(vecid) {}
     operator MyVecId() const {  return id;  }
     //const MyDataVec* read()  const {  return state-> read(id);  }
 
@@ -157,7 +153,7 @@ struct StateVecAccessor<DataTypes, V_ALL, V_WRITE>
 {
     typedef TVecId<V_ALL, V_WRITE> MyVecId;
 
-    StateVecAccessor(State<DataTypes>* state, const MyVecId& id) : state(state), id(id) {}
+    StateVecAccessor(State<DataTypes>* st, const MyVecId& vecid) : state(st), id(vecid) {}
     operator MyVecId() const {  return id;  }
 
 protected:
@@ -663,9 +659,4 @@ typedef TMultiVecId<V_MATDERIV, V_READ> ConstMultiMatrixDerivId;
 typedef TMultiVecId<V_MATDERIV, V_WRITE>     MultiMatrixDerivId;
 typedef TMultiVecId<V_ALL, V_READ>      ConstMultiVecId;
 typedef TMultiVecId<V_ALL, V_WRITE>          MultiVecId;
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core

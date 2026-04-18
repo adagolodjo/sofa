@@ -119,16 +119,16 @@ void generateRigid(Rigid3MassType& mass, type::Vec3& center, const helper::io::M
         }
     }
 
-    afIntegral[0] /= (SReal)6.0;
-    afIntegral[1] /= (SReal)24.0;
-    afIntegral[2] /= (SReal)24.0;
-    afIntegral[3] /= (SReal)24.0;
-    afIntegral[4] /= (SReal)60.0;
-    afIntegral[5] /= (SReal)60.0;
-    afIntegral[6] /= (SReal)60.0;
-    afIntegral[7] /= (SReal)120.0;
-    afIntegral[8] /= (SReal)120.0;
-    afIntegral[9] /= (SReal)120.0;
+    afIntegral[0] /= 6.0_sreal;
+    afIntegral[1] /= 24.0_sreal;
+    afIntegral[2] /= 24.0_sreal;
+    afIntegral[3] /= 24.0_sreal;
+    afIntegral[4] /= 60.0_sreal;
+    afIntegral[5] /= 60.0_sreal;
+    afIntegral[6] /= 60.0_sreal;
+    afIntegral[7] /= 120.0_sreal;
+    afIntegral[8] /= 120.0_sreal;
+    afIntegral[9] /= 120.0_sreal;
 
     // mass
     mass.volume = afIntegral[0];
@@ -138,26 +138,26 @@ void generateRigid(Rigid3MassType& mass, type::Vec3& center, const helper::io::M
     center = {afIntegral[1]/afIntegral[0],afIntegral[2]/afIntegral[0],afIntegral[3]/afIntegral[0]};
 
     // inertia relative to world origin
-    mass.inertiaMatrix[0][0] = afIntegral[5] + afIntegral[6];
-    mass.inertiaMatrix[0][1] = -afIntegral[7];
-    mass.inertiaMatrix[0][2] = -afIntegral[9];
-    mass.inertiaMatrix[1][0] = mass.inertiaMatrix[0][1];
-    mass.inertiaMatrix[1][1] = afIntegral[4] + afIntegral[6];
-    mass.inertiaMatrix[1][2] = -afIntegral[8];
-    mass.inertiaMatrix[2][0] = mass.inertiaMatrix[0][2];
-    mass.inertiaMatrix[2][1] = mass.inertiaMatrix[1][2];
-    mass.inertiaMatrix[2][2] = afIntegral[4] + afIntegral[5];
+    mass.inertiaMatrix(0,0) = afIntegral[5] + afIntegral[6];
+    mass.inertiaMatrix(0,1) = -afIntegral[7];
+    mass.inertiaMatrix(0,2) = -afIntegral[9];
+    mass.inertiaMatrix(1,0) = mass.inertiaMatrix(0,1);
+    mass.inertiaMatrix(1,1) = afIntegral[4] + afIntegral[6];
+    mass.inertiaMatrix(1,2) = -afIntegral[8];
+    mass.inertiaMatrix(2,0) = mass.inertiaMatrix(0,2);
+    mass.inertiaMatrix(2,1) = mass.inertiaMatrix(1,2);
+    mass.inertiaMatrix(2,2) = afIntegral[4] + afIntegral[5];
 
     // inertia relative to center of mass
-    mass.inertiaMatrix[0][0] -= mass.mass*(center[1]*center[1] + center[2]*center[2]);
-    mass.inertiaMatrix[0][1] += mass.mass*center[0]*center[1];
-    mass.inertiaMatrix[0][2] += mass.mass*center[2]*center[0];
-    mass.inertiaMatrix[1][0] = mass.inertiaMatrix[0][1];
-    mass.inertiaMatrix[1][1] -= mass.mass*(center[2]*center[2] + center[0]*center[0]);
-    mass.inertiaMatrix[1][2] += mass.mass*center[1]*center[2];
-    mass.inertiaMatrix[2][0] = mass.inertiaMatrix[0][2];
-    mass.inertiaMatrix[2][1] = mass.inertiaMatrix[1][2];
-    mass.inertiaMatrix[2][2] -= mass.mass*(center[0]*center[0] + center[1]*center[1]);
+    mass.inertiaMatrix(0,0) -= mass.mass*(center[1]*center[1] + center[2]*center[2]);
+    mass.inertiaMatrix(0,1) += mass.mass*center[0]*center[1];
+    mass.inertiaMatrix(0,2) += mass.mass*center[2]*center[0];
+    mass.inertiaMatrix(1,0) = mass.inertiaMatrix(0,1);
+    mass.inertiaMatrix(1,1) -= mass.mass*(center[2]*center[2] + center[0]*center[0]);
+    mass.inertiaMatrix(1,2) += mass.mass*center[1]*center[2];
+    mass.inertiaMatrix(2,0) = mass.inertiaMatrix(0,2);
+    mass.inertiaMatrix(2,1) = mass.inertiaMatrix(1,2);
+    mass.inertiaMatrix(2,2) -= mass.mass*(center[0]*center[0] + center[1]*center[1]);
 
     mass.inertiaMatrix /= mass.mass;
 }
@@ -177,8 +177,7 @@ void generateRigid(Rigid3MassType& mass, type::Vec3& center, io::Mesh *mesh
     }
 
     if( rotation != type::Vec3(0,0,0) ) {
-
-        type::Quat q = type::Quat<SReal>::createQuaterFromEuler( rotation*M_PI/180.0 );
+        const type::Quat q = type::Quat<SReal>::createQuaterFromEuler( rotation*M_PI/180.0 );
 
         for(size_t i = 0, n = mesh->getVertices().size(); i < n; ++i) {
             mesh->getVertices()[i] = q.rotate( mesh->getVertices()[i] );
@@ -249,11 +248,11 @@ void generateRigid( GenerateRigidInfo& res
     res.mass = rigidMass.mass;
     res.inertia = res.mass * rigidMass.inertiaMatrix;
 
-    // a threshol to test if inertia is diagonal in function of diagonal values
-    SReal threshold = type::trace( res.inertia ) * 1e-6;
+    // a threshold to test if inertia is diagonal in function of diagonal values
+    const SReal threshold = type::trace( res.inertia ) * 1e-6;
 
     // if not diagonal, extracting principal axes basis to get the corresponding rotation with a diagonal inertia
-    if( res.inertia[0][1]>threshold || res.inertia[0][2]>threshold || res.inertia[1][2]>threshold )
+    if( res.inertia(0,1)>threshold || res.inertia(0,2)>threshold || res.inertia(1,2)>threshold )
     {
         type::Matrix3 U;
         Decompose<SReal>::eigenDecomposition_iterative( res.inertia, U, res.inertia_diagonal );
@@ -262,17 +261,17 @@ void generateRigid( GenerateRigidInfo& res
         if( type::determinant( U ) < 0 ) // reflexion
         {
             // made it a rotation by negating a column
-            U[0][0] = -U[0][0];
-            U[1][0] = -U[1][0];
-            U[2][0] = -U[2][0];
+            U(0,0) = -U(0,0);
+            U(1,0) = -U(1,0);
+            U(2,0) = -U(2,0);
         }
         res.inertia_rotation.fromMatrix( U );
     }
     else
     {
-        res.inertia_diagonal[0] = res.inertia[0][0];
-        res.inertia_diagonal[1] = res.inertia[1][1];
-        res.inertia_diagonal[2] = res.inertia[2][2];
+        res.inertia_diagonal[0] = res.inertia(0,0);
+        res.inertia_diagonal[1] = res.inertia(1,1);
+        res.inertia_diagonal[2] = res.inertia(2,2);
         res.inertia_rotation.clear();
     }
 }

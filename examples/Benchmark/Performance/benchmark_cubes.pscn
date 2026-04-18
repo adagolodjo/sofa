@@ -4,15 +4,15 @@
 <Node name="root" dt="0.01" gravity="0 -9.81 0">
 
     <Node name="pluginList" >
-        <RequiredPlugin name="SofaOpenglVisual"/>
-        <RequiredPlugin name="SofaConstraint"/>
-        <RequiredPlugin name="SofaMeshCollision"/>
-        <RequiredPlugin name="SofaRigid"/>
-        <RequiredPlugin name="SofaImplicitOdeSolver"/>
-        <RequiredPlugin name="SofaLoader"/>
-        <RequiredPlugin name="SofaGeneralEngine"/>
-        <RequiredPlugin name="Sofa.Component.ODESolver.Backward"/>
-        <RequiredPlugin name="SofaMiscCollision"/>
+        <RequiredPlugin pluginName="SofaOpenglVisual"/>
+        <RequiredPlugin pluginName="SofaConstraint"/>
+        <RequiredPlugin pluginName="SofaMeshCollision"/>
+        <RequiredPlugin pluginName="SofaRigid"/>
+        <RequiredPlugin pluginName="SofaImplicitOdeSolver"/>
+        <RequiredPlugin pluginName="SofaLoader"/>
+        <RequiredPlugin pluginName="SofaGeneralEngine"/>
+        <RequiredPlugin pluginName="Sofa.Component.ODESolver.Backward"/>
+        <RequiredPlugin pluginName="SofaMiscCollision"/>
     </Node>
 
 
@@ -25,7 +25,7 @@
     <BruteForceBroadPhase/>
     <BVHNarrowPhase/>
     <LocalMinDistance name="Proximity" alarmDistance="0.2" contactDistance="0.09" angleCone="0.0" />
-    <DefaultContactManager name="Response" response="FrictionContact" />
+    <DefaultContactManager name="Response" response="FrictionContactConstraint" />
     <LCPConstraintSolver maxIt="1000" tolerance="0.001"  build_lcp="false"/>
     <!-- Using a rigid cube using collision triangles, lines and points  -->
 
@@ -55,7 +55,7 @@
             <EulerImplicitSolver name="EulerImplicit"  rayleighStiffness="0.1" rayleighMass="0.1" />
             <CGLinearSolver name="CG Solver" iterations="25" tolerance="1e-5" threshold="1e-5"/>
 
-<?php echo '            <MechanicalObject name="Cube_RigidDOF" template="Rigid3d" translation="'.$tx.' '.$ty.' '.$tz.'" />';?>
+<?php echo '            <MechanicalObject name="Cube_RigidDOF" template="Rigid3" translation="'.$tx.' '.$ty.' '.$tz.'" />';?>
 
             <UniformMass name="UniformMass" totalMass="10.0" />
             <UncoupledConstraintCorrection useOdeSolverIntegrationFactors="0"/>

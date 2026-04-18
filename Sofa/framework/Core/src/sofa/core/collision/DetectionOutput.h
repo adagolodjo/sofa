@@ -19,8 +19,7 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_COLLISION_DETECTIONOUTPUT_H
-#define SOFA_CORE_COLLISION_DETECTIONOUTPUT_H
+#pragma once
 
 #include <sofa/core/config.h>
 #include <sofa/core/CollisionElement.h>
@@ -28,33 +27,9 @@
 #include <sofa/type/vector.h>
 #include <iostream>
 
-namespace sofa
+namespace sofa::core::collision
 {
 
-namespace core
-{
-
-namespace collision
-{
-
-/**
- *  \brief Abstract description of a set of contact point.
- */
-
-class DetectionOutputVector
-{
-protected:
-    virtual ~DetectionOutputVector() {}
-public:
-    /// Clear the content of this vector
-    virtual void clear() = 0;
-    /// Current size (number of detected contacts
-    virtual unsigned int size() const = 0;
-    /// Test if the vector is empty
-    bool empty() const { return size()==0; }
-    /// Delete this vector from memory once the contact pair is no longer active
-    virtual void release() { delete this; }
-};
 
 
 /**
@@ -70,7 +45,7 @@ public:
  *  - deltaT: estimated of time of contact.
  *
  *  The contact id is used to filter redundant contacts (only the contact with
- *  the smallest distance is kept), and to store persistant data over time for
+ *  the smallest distance is kept), and to store persistent data over time for
  *  the response.
  *
  */
@@ -78,22 +53,21 @@ public:
 class DetectionOutput
 {
 public:
-    typedef sofa::type::Vector3 Vector3;
     /// Pair of colliding elements.
     std::pair<core::CollisionElementIterator, core::CollisionElementIterator> elem;
     typedef int64_t ContactId;
     /// Unique id of the contact for the given pair of collision models.
     ContactId id;
     /// Contact points on the surface of each model. They are expressed in the local coordinate system of the model if any is defined..
-    Vector3 point[2];
+    type::Vec3 point[2];
 #ifdef SOFA_DETECTIONOUTPUT_FREEMOTION
-    Vector3 freePoint[2]; ///< free Point in contact on each element
+    type::Vec3 freePoint[2]; ///< free Point in contact on each element
 #endif
 
     /// Normal of the contact, pointing outward from the first model
-    Vector3 normal;
+    type::Vec3 normal;
     /*
-    /// Signed distance (negative if objects are interpenetrating). If using a proximity-based detection, this is the actual distance between the objets minus the specified contact distance.
+    /// Signed distance (negative if objects are interpenetrating). If using a proximity-based detection, this is the actual distance between the objects minus the specified contact distance.
     */
     /// Store information for the collision Response. Depending on the kind of contact, can be a distance, or a pression, ...
     double value;
@@ -106,6 +80,30 @@ public:
     }
 };
 
+/**
+ *  \brief Abstract description of a set of contact point.
+ */
+
+class DetectionOutputVector
+{
+   protected:
+    virtual ~DetectionOutputVector() {}
+   public:
+    /// Clear the content of this vector
+    virtual void clear() = 0;
+    /// Current size (number of detected contacts
+    virtual unsigned int size() const = 0;
+    /// Test if the vector is empty
+    bool empty() const { return size()==0; }
+    /// Delete this vector from memory once the contact pair is no longer active
+    virtual void release() { delete this; }
+
+    /// Const iterator to iterate the detection pairs
+    virtual type::Vec3 getFirstPosition(unsigned idx) = 0;
+    /// Const iterator end to iterate the detection pairs
+    virtual type::Vec3 getSecondPosition(unsigned idx) = 0;
+
+};
 
 
 /**
@@ -128,12 +126,18 @@ public:
     {
         return (unsigned int)this->Vector::size();
     }
+
+    /// Const iterator to iterate the detection pairs
+    virtual type::Vec3 getFirstPosition(unsigned idx) override
+    {
+        return (*this)[idx].point[0];
+    }
+
+    /// Const iterator end to iterate the detection pairs
+    virtual type::Vec3 getSecondPosition(unsigned idx) override
+    {
+        return (*this)[idx].point[1];
+    }
+
 };
-
-} // namespace collision
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core::collision

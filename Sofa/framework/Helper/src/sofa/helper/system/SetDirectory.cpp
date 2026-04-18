@@ -33,16 +33,12 @@
 #endif
 #include <cstring>
 #include <iostream>
+#include <memory>
 
 #include <sofa/helper/logging/Messaging.h>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace system
+namespace sofa::helper::system
 {
 
 #if defined(WIN32)
@@ -93,8 +89,8 @@ std::string SetDirectory::GetCurrentDir()
 
 std::string SetDirectory::GetParentDir(const char* filename)
 {
-    std::string s = filename;
-    std::string::size_type pos = s.find_last_of("/\\");
+    const std::string s = filename;
+    const std::string::size_type pos = s.find_last_of("/\\");
     if (pos == std::string::npos)
         return ""; // no directory
     else
@@ -104,7 +100,7 @@ std::string SetDirectory::GetParentDir(const char* filename)
 std::string SetDirectory::GetFileName(const char* filename)
 {
     std::string s = filename;
-    std::string::size_type pos = s.find_last_of("/\\");
+    const std::string::size_type pos = s.find_last_of("/\\");
     if (pos == std::string::npos)
         return s; // no directory
     else
@@ -114,7 +110,7 @@ std::string SetDirectory::GetFileName(const char* filename)
 std::string SetDirectory::GetFileNameWithoutExtension(const char* filename)
 {
     std::string s = GetFileName(filename);
-    std::string::size_type pos = s.find_first_of(".");
+    const std::string::size_type pos = s.find_first_of(".");
     if (pos == std::string::npos)
         return s; // no directory
     else
@@ -148,13 +144,13 @@ std::string SetDirectory::GetRelativeFromDir(const char* filename, const char* b
 
 std::string SetDirectory::GetRelativeFromFile(const char* filename, const char* basename)
 {
-    std::string base = GetParentDir(basename);
+    const std::string base = GetParentDir(basename);
     return GetRelativeFromDir(filename, base.c_str());
 }
 
 std::string SetDirectory::GetRelativeFromProcess(const char* filename, const char* basename)
 {
-    std::string base = GetProcessFullPath(basename);
+    const std::string base = GetProcessFullPath(basename);
     return GetRelativeFromFile(filename, base.c_str());
 }
 
@@ -197,18 +193,15 @@ std::string SetDirectory::GetProcessFullPath(const char* filename)
 #elif defined (__APPLE__)
     if (!filename || filename[0]!='/')
     {
-        char* path = new char[4096];
-        uint32_t size;
-        if ( _NSGetExecutablePath( path, &size ) != 0)
+        uint32_t size = 4096;
+        std::unique_ptr<char[]> path(new char[size]);
+        if ( _NSGetExecutablePath( path.get(), &size ) != 0)
         {
             //realloc
-            delete [] path;
-            path = new char[size];
-            _NSGetExecutablePath( path, &size );
+            path.reset(new char[size]);
+            _NSGetExecutablePath( path.get(), &size );
         }
-        std::string finalPath(path);
-        delete [] path;
-        return finalPath;
+        return std::string(path.get());
     }
 #endif
 
@@ -217,9 +210,9 @@ std::string SetDirectory::GetProcessFullPath(const char* filename)
     else return std::string("");
 }
 
-} // namespace system
+} // namespace sofa::helper::system
 
-} // namespace helper
 
-} // namespace sofa
+
+
 

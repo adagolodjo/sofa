@@ -19,20 +19,13 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_TOPOLOGY_BASEMESHTOPOLOGY_H
-#define SOFA_CORE_TOPOLOGY_BASEMESHTOPOLOGY_H
+#pragma once
 
 #include <sofa/core/fwd.h>
 #include <sofa/core/topology/Topology.h>
 #include <sofa/core/objectmodel/DataFileName.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace topology
+namespace sofa::core::topology
 {
 
 class SOFA_CORE_API BaseMeshTopology : public core::topology::Topology
@@ -41,14 +34,13 @@ public:
     SOFA_ABSTRACT_CLASS(BaseMeshTopology, core::topology::Topology);
     SOFA_BASE_CAST_IMPLEMENTATION(BaseMeshTopology)
 
-    SOFA_ATTRIBUTE_DISABLED("v20.12 (PR#1515)", "v21.06", "Use sofa::Index instead of sofa::core::topology::BaseMeshTopology::index_type")
-    typedef DeprecatedAndRemoved index_type;
-
-    typedef sofa::type::vector<Edge> 		        SeqEdges;
-    typedef sofa::type::vector<Triangle>		    SeqTriangles;
-    typedef sofa::type::vector<Quad>		        SeqQuads;
-    typedef sofa::type::vector<Tetra>		        SeqTetrahedra;
-    typedef sofa::type::vector<Hexa>		        SeqHexahedra;
+    using SeqEdges = sofa::type::vector<Edge>;
+    using SeqTriangles = sofa::type::vector<Triangle>;
+    using SeqQuads = sofa::type::vector<Quad>;
+    using SeqTetrahedra = sofa::type::vector<Tetra>;
+    using SeqHexahedra = sofa::type::vector<Hexa>;
+    using SeqPrisms = sofa::type::vector<Prism>;
+    using SeqPyramids = sofa::type::vector<Pyramid>;
 
     /// @name Deprecated types, for backward-compatibility
     /// @{
@@ -66,12 +58,12 @@ public:
     typedef sofa::type::fixed_array<QuadID,6>		QuadsInHexahedron;
     typedef sofa::type::fixed_array<EdgeID,12>    EdgesInHexahedron;
 
-    static EdgesInTriangle        InvalidEdgesInTriangles;
-    static EdgesInQuad            InvalidEdgesInQuad;
-    static TrianglesInTetrahedron InvalidTrianglesInTetrahedron;
-    static EdgesInTetrahedron     InvalidEdgesInTetrahedron;
-    static QuadsInHexahedron      InvalidQuadsInHexahedron;
-    static EdgesInHexahedron      InvalidEdgesInHexahedron;
+    static constexpr EdgesInTriangle        InvalidEdgesInTriangles       = type::makeHomogeneousArray<EdgesInTriangle>(sofa::InvalidID);
+    static constexpr EdgesInQuad            InvalidEdgesInQuad            = type::makeHomogeneousArray<EdgesInQuad>(sofa::InvalidID);
+    static constexpr TrianglesInTetrahedron InvalidTrianglesInTetrahedron = type::makeHomogeneousArray<TrianglesInTetrahedron>(sofa::InvalidID);
+    static constexpr EdgesInTetrahedron     InvalidEdgesInTetrahedron     = type::makeHomogeneousArray<EdgesInTetrahedron>(sofa::InvalidID);
+    static constexpr QuadsInHexahedron      InvalidQuadsInHexahedron      = type::makeHomogeneousArray<QuadsInHexahedron>(sofa::InvalidID);
+    static constexpr EdgesInHexahedron      InvalidEdgesInHexahedron      = type::makeHomogeneousArray<EdgesInHexahedron>(sofa::InvalidID);
 
     /// @}
 
@@ -95,6 +87,9 @@ protected:
 public:
     void init() override;
 
+    /// Method to be overriden by child class to create all the topology buffers
+    virtual void computeCrossElementBuffers() {}
+
     /// Load the topology from a file.
     ///
     /// The default implementation supports the following formats: obj, gmsh, mesh (custom simple text file), xs3 (deprecated description of mass-springs networks).
@@ -111,6 +106,8 @@ public:
     virtual const SeqQuads& getQuads() = 0;
     virtual const SeqTetrahedra& getTetrahedra() = 0;
     virtual const SeqHexahedra& getHexahedra() = 0;
+    virtual const SeqPrisms& getPrisms() = 0;
+    virtual const SeqPyramids& getPyramids() = 0;
     /// @}
 
     /// Random accessors
@@ -120,16 +117,35 @@ public:
     virtual Size getNbTriangles()               { return Size(getTriangles().size()); }
     virtual Size getNbQuads()                   { return Size(getQuads().size()); }
     virtual Size getNbTetrahedra()              { return Size(getTetrahedra().size()); }
-    virtual Size getNbHexahedra()	              { return Size(getHexahedra().size()); }
+    virtual Size getNbHexahedra()               { return Size(getHexahedra().size()); }
+    virtual Size getNbPrisms()                  { return Size(getPrisms().size()); }
+    virtual Size getNbPyramids()                { return Size(getPyramids().size()); }
+
+    /**
+     * @brief Returns the number of elements of a specific type
+     * @tparam ElementType The type of element (e.g., sofa::geometry::Triangle,
+     * sofa::geometry::Tetrahedron)
+     *
+     * Example:
+     * @code
+     * sofa::core::topology::BaseMeshTopology* topology = ...;
+     * Size nbTriangles = topology->getNbElements<sofa::geometry::Triangle>();
+     * Size nbTetrahedra = topology->getNbElements<sofa::geometry::Tetrahedron>();
+     * @endcode
+     */
+    template<class ElementType>
+    Size getNbElements();
 
     virtual const Edge getEdge(EdgeID i)             { return getEdges()[i]; }
     virtual const Triangle getTriangle(TriangleID i) { return getTriangles()[i]; }
     virtual const Quad getQuad(QuadID i)             { return getQuads()[i]; }
     virtual const Tetra getTetrahedron(TetraID i)    { return getTetrahedra()[i]; }
-    virtual const Hexa getHexahedron(HexaID i)       { return getHexahedra()[i]; }   
-	   
-    /// Type of higher topology element contains in this container @see TopologyElementType
-    virtual sofa::core::topology::TopologyElementType getTopologyType() const = 0;
+    virtual const Hexa getHexahedron(HexaID i)       { return getHexahedra()[i]; }
+    virtual const Prism getPrism(PrismID i)          { return getPrisms()[i]; }
+    virtual const Pyramid getPyramid(PyramidID i)    { return getPyramids()[i]; }
+
+    /// Type of higher topology element contains in this container @see ElementType
+    virtual sofa::geometry::ElementType getTopologyType() const = 0;
     /// @}
 
     /// Bridge from old functions (using Tetra/Tetras and Hexa/Hexas) to new ones
@@ -262,6 +278,8 @@ public:
     virtual void addQuad( Index a, Index b, Index c, Index d );
     virtual void addTetra( Index a, Index b, Index c, Index d );
     virtual void addHexa( Index a, Index b, Index c, Index d, Index e, Index f, Index g, Index h );
+    virtual void addPrism( Index a, Index b, Index c, Index d, Index e, Index f );
+    virtual void addPyramid( Index a, Index b, Index c, Index d, Index e );
     /// @}
 
     /// get information about connexity of the mesh
@@ -313,16 +331,6 @@ public:
 
     virtual const sofa::type::vector<PointID>& getPointsOnBorder();
 
-
-    ////////////////////////////////////// DEPRECATED ///////////////////////////////////////////
-    SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#2085)", "v21.06 (PR#2085)", "This method has been removed as it is not part of the new topology change design.")
-    std::list<TopologyHandler*>::const_iterator beginTopologyHandler() const = delete;
-
-    SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#2085)", "v21.06 (PR#2085)", "This method has been removed as it is not part of the new topology change design.")
-    std::list<TopologyHandler*>::const_iterator endTopologyHandler() const = delete;
-
-    SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#2085)", "v21.06 (PR#2085)", "This method has been removed from this Base class as it is common to static topology and is now in TopologyContainer.")
-    void addTopologyHandler(TopologyHandler* _TopologyHandler) = delete;
 protected:
 
     sofa::core::objectmodel::DataFileName fileTopology;
@@ -334,10 +342,14 @@ public:
 
 };
 
-} // namespace topology
+template<> SOFA_CORE_API Size BaseMeshTopology::getNbElements<geometry::Edge>();
+template<> SOFA_CORE_API Size BaseMeshTopology::getNbElements<geometry::Triangle>();
+template<> SOFA_CORE_API Size BaseMeshTopology::getNbElements<geometry::Quad>();
+template<> SOFA_CORE_API Size BaseMeshTopology::getNbElements<geometry::Tetrahedron>();
+template<> SOFA_CORE_API Size BaseMeshTopology::getNbElements<geometry::Hexahedron>();
+template<> SOFA_CORE_API Size BaseMeshTopology::getNbElements<geometry::Prism>();
+template<> SOFA_CORE_API Size BaseMeshTopology::getNbElements<geometry::Pyramid>();
 
-} // namespace core
 
-} // namespace sofa
 
-#endif
+} // namespace sofa::core::topology

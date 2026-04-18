@@ -21,10 +21,9 @@
 ******************************************************************************/
 #include <sofa/simulation/UpdateInternalDataVisitor.h>
 #include <sofa/simulation/Node.h>
-namespace sofa
-{
 
-namespace simulation
+
+namespace sofa::simulation
 {
 
 
@@ -34,13 +33,12 @@ Visitor::Result UpdateInternalDataVisitor::processNodeTopDown(simulation::Node* 
     return RESULT_CONTINUE;
 }
 
-void UpdateInternalDataVisitor::processUpdateInternalData(simulation::Node* , sofa::core::objectmodel::BaseObject* baseObj)
+void UpdateInternalDataVisitor::processUpdateInternalData(simulation::Node* , sofa::core::objectmodel::BaseComponent* baseObj)
 {
     baseObj->updateInternal();
 }
 
 
+} // namespace sofa::simulation
 
-} // namespace simulation
 
-} // namespace sofa

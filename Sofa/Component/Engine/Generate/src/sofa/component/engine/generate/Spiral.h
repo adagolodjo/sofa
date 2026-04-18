@@ -26,7 +26,7 @@
 
 #include <sofa/type/Vec.h>
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/behavior/MechanicalState.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/defaulttype/VecTypes.h>
@@ -65,7 +65,7 @@ public:
     Data<Real> curvature; ///< Spiral curvature factor
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_SPIRAL_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_SPIRAL_CPP)
 extern template class SOFA_COMPONENT_ENGINE_GENERATE_API Spiral<defaulttype::Vec3Types>; 
 #endif
 

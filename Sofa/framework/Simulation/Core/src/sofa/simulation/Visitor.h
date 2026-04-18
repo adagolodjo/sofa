@@ -25,6 +25,7 @@
 #include <sofa/simulation/fwd.h>
 #include <sofa/core/fwd.h>
 #include <sofa/core/objectmodel/Tag.h>
+#include <sofa/core/objectmodel/TagSet.h>
 #include <sofa/helper/system/thread/CTime.h>
 
 #include <string>
@@ -48,7 +49,6 @@ public:
     public:
         simulation::Node* root; ///< root node from which the visitor was executed
         simulation::Node* node; ///< current node
-        SReal* nodeData;       ///< SReal value associated with this subtree. Set to nullptr if node-specific data is not in use
     };
     typedef helper::system::thread::ctime_t ctime_t;
 #ifdef SOFA_DUMP_VISITOR_INFO
@@ -62,7 +62,7 @@ public:
 
     enum Result { RESULT_CONTINUE, RESULT_PRUNE };
 
-    /// Callback method called when decending to a new node. Recursion will stop if this method returns RESULT_PRUNE
+    /// Callback method called when descending to a new node. Recursion will stop if this method returns RESULT_PRUNE
     virtual Result processNodeTopDown(simulation::Node* /*node*/) { return RESULT_CONTINUE; }
 
     /// Callback method called after child node have been processed and before going back to the parent node.
@@ -91,8 +91,8 @@ public:
     virtual std::string getInfos() const { return ""; }
 
 protected:
-    void debug_write_state_before( sofa::core::objectmodel::BaseObject* obj ) ;
-    void debug_write_state_after( sofa::core::objectmodel::BaseObject* obj ) ;
+    void debug_write_state_before( sofa::core::objectmodel::BaseComponent* obj ) ;
+    void debug_write_state_after( sofa::core::objectmodel::BaseComponent* obj ) ;
 
     /// Function to be called when a visitor executes a main task
     /// It surrounds the task function with debug information
@@ -128,42 +128,34 @@ protected:
 
 public:
 
-    //method to compare the tags of the objet with the ones of the visitor
+    //method to compare the tags of the object with the ones of the visitor
     // return true if the object has all the tags of the visitor
     // or if no tag is set to the visitor
-    bool testTags(sofa::core::objectmodel::BaseObject* obj);
+    bool testTags(sofa::core::objectmodel::BaseComponent* obj);
 
     /// Alias for context->executeVisitor(this)
     virtual void execute(sofa::core::objectmodel::BaseContext* node, bool precomputedOrder=false);
 
     /// Optional helper method to call before handling an object if not using the for_each method.
     /// It currently takes care of time logging, but could be extended (step-by-step execution for instance)
-    virtual ctime_t begin(simulation::Node *node, sofa::core::objectmodel::BaseObject *obj,
+    virtual ctime_t begin(simulation::Node *node, sofa::core::objectmodel::BaseComponent *obj,
                           const std::string &typeInfo = std::string("type"));
 
     /// Optional helper method to call after handling an object if not using the for_each method.
     /// It currently takes care of time logging, but could be extended (step-by-step execution for instance)
-    virtual void end(simulation::Node* node, sofa::core::objectmodel::BaseObject* obj, ctime_t t0);
+    virtual void end(simulation::Node* node, sofa::core::objectmodel::BaseComponent* obj, ctime_t t0);
 
     /// Optional helper method to call before handling an object if not using the for_each method.
     /// It currently takes care of time logging, but could be extended (step-by-step execution for instance)
-    virtual ctime_t begin(simulation::Visitor::VisitorContext *node, sofa::core::objectmodel::BaseObject *obj,
+    virtual ctime_t begin(simulation::Visitor::VisitorContext *node, sofa::core::objectmodel::BaseComponent *obj,
                   const std::string &typeInfo = std::string("type"));
 
     /// Optional helper method to call after handling an object if not using the for_each method.
     /// It currently takes care of time logging, but could be extended (step-by-step execution for instance)
-    virtual void end(simulation::Visitor::VisitorContext* node, sofa::core::objectmodel::BaseObject* obj, ctime_t t0);
+    virtual void end(simulation::Visitor::VisitorContext* node, sofa::core::objectmodel::BaseComponent* obj, ctime_t t0);
 
     /// Specify whether this visitor can be parallelized.
     virtual bool isThreadSafe() const { return false; }
-
-    /// Callback method called when decending to a new node. Recursion will stop if this method returns RESULT_PRUNE
-    /// This version is offered a LocalStorage to store temporary data
-    virtual Result processNodeTopDown(simulation::Node* node, LocalStorage*) { return processNodeTopDown(node); }
-
-    /// Callback method called after child node have been processed and before going back to the parent node.
-    /// This version is offered a LocalStorage to store temporary data
-    virtual void processNodeBottomUp(simulation::Node* node, LocalStorage*) { processNodeBottomUp(node); }
 
     typedef sofa::core::objectmodel::Tag Tag;
     typedef sofa::core::objectmodel::TagSet TagSet;
@@ -198,11 +190,11 @@ public:
     static void printNode(const char* type);
     static void printCloseNode(const char* type);
 
-    static void printVector(core::behavior::BaseMechanicalState *mm, core::ConstVecId id);
+    static void printVector(sofa::core::behavior::BaseMechanicalState *mm, sofa::core::ConstVecId id);
 
-    virtual void printInfo(const core::objectmodel::BaseContext* context, bool dirDown);
+    virtual void printInfo(const sofa::core::objectmodel::BaseContext* context, bool dirDown);
 
-    void setNode(core::objectmodel::Base* c);
+    void setNode(sofa::core::objectmodel::Base* c);
 
     static void EnableExportStateVector(bool activation) {outputStateVector=activation;}
     static void SetFirstIndexStateVector(unsigned int first) {firstIndexStateVector=first;}
@@ -213,7 +205,7 @@ public:
     static int GetRangeStateVector() {return rangeStateVector;}
 protected:
 
-    static std::ostream *outputVisitor;  //Ouput stream to dump the info
+    static std::ostream *outputVisitor;  //Output stream to dump the info
     static bool printActivated;          //bool to know if the stream is opened or not
     static bool outputStateVector;       //bool to know if we trace the evolution of the state vectors
     static unsigned int firstIndexStateVector; //numero of the first index of the particules to trace
@@ -221,7 +213,7 @@ protected:
     static ctime_t initDumpTime;
     static std::vector< ctime_t > initNodeTime;
 
-    core::objectmodel::Base* enteringBase;
+    sofa::core::objectmodel::Base* enteringBase;
     bool infoPrinted;
 
 private:

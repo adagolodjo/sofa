@@ -19,12 +19,14 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 using sofa::core::objectmodel::BaseObject ;
 using sofa::core::objectmodel::Base ;
 
 #include <sofa/helper/NameDecoder.h>
 #include <sofa/core/ObjectFactory.h>
+
+#include <sofa/defaulttype/VecTypes.h>
 
 #include <sofa/testing/BaseTest.h>
 using sofa::testing::BaseTest ;
@@ -32,10 +34,10 @@ using sofa::testing::BaseTest ;
 namespace sofa{
 namespace another_namespace{
 
-class EmptyObject : public BaseObject
+class EmptyObject : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(EmptyObject, BaseObject) ;
+    SOFA_CLASS(EmptyObject, sofa::core::objectmodel::BaseComponent) ;
 };
 
 }
@@ -44,10 +46,10 @@ public:
 namespace sofa{
 namespace numbered_namespace_123{
 
-class NumberedClass123 : public BaseObject
+class NumberedClass123 : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(NumberedClass123, BaseObject) ;
+    SOFA_CLASS(NumberedClass123, sofa::core::objectmodel::BaseComponent) ;
 };
 
 class NumberedClass456 : public another_namespace::EmptyObject
@@ -56,10 +58,10 @@ public:
     SOFA_CLASS(NumberedClass456, another_namespace::EmptyObject) ;
 };
 
-class CustomName123 : public BaseObject
+class CustomName123 : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(CustomName123, BaseObject) ;
+    SOFA_CLASS(CustomName123, sofa::core::objectmodel::BaseComponent) ;
 
     static const std::string GetCustomClassName(){ return "ClassWithACustomName"; }
     static const std::string GetCustomTemplateName(){ return "ClassWithACustomTemplate"; }
@@ -68,10 +70,10 @@ public:
     static const std::string className(){ return "TEST TEST"; }
 };
 
-class CustomNameOldWay : public BaseObject
+class CustomNameOldWay : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(CustomNameOldWay, BaseObject) ;
+    SOFA_CLASS(CustomNameOldWay, sofa::core::objectmodel::BaseComponent) ;
 
     static const std::string className(const CustomNameOldWay* =nullptr){ return "ClassWithACustomNameOldWay"; }
 
@@ -91,40 +93,40 @@ class DataTwo { public: static std::string Name(){ return "Two" ;} };
 class NotAType {};
 
 template<class DataType1>
-class DefaultTemplate1 : public BaseObject
+class DefaultTemplate1 : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE(DefaultTemplate1, DataType1), BaseObject) ;
+    SOFA_CLASS(SOFA_TEMPLATE(DefaultTemplate1, DataType1), sofa::core::objectmodel::BaseComponent) ;
 };
 
 template<class DataType1, class DataType2>
-class DefaultTemplate2 : public BaseObject
+class DefaultTemplate2 : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE2(DefaultTemplate2, DataType1, DataType2), BaseObject) ;
+    SOFA_CLASS(SOFA_TEMPLATE2(DefaultTemplate2, DataType1, DataType2), sofa::core::objectmodel::BaseComponent) ;
 };
 
 template<class DataType1, class DataType2, class NotAType>
-class DefaultTemplate3 : public BaseObject
+class DefaultTemplate3 : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE3(DefaultTemplate3, DataType1, DataType2, NotAType), BaseObject) ;
+    SOFA_CLASS(SOFA_TEMPLATE3(DefaultTemplate3, DataType1, DataType2, NotAType), sofa::core::objectmodel::BaseComponent) ;
 };
 
 template<class DataType1, class DataType2, class NotAType>
-class NotDefaultTemplate : public BaseObject
+class NotDefaultTemplate : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE3(NotDefaultTemplate, DataType1, DataType2, NotAType), BaseObject) ;
+    SOFA_CLASS(SOFA_TEMPLATE3(NotDefaultTemplate, DataType1, DataType2, NotAType), sofa::core::objectmodel::BaseComponent) ;
 
     static const std::string GetCustomTemplateName(){ return "non,oui"; }
 };
 
 template<class TDataType1>
-class OuterClass : public BaseObject
+class OuterClass : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE(OuterClass, TDataType1), BaseObject);
+    SOFA_CLASS(SOFA_TEMPLATE(OuterClass, TDataType1), sofa::core::objectmodel::BaseComponent);
 
     template<class TDataType2>
     class InnerClass : public BaseObject
@@ -148,6 +150,10 @@ public:
     DefaultTemplate3<DataOne, DataTwo, NotAType> m_ptr9;
     OuterClass<DataOne> m_ptr10;
     OuterClass<DataOne>::InnerClass<DataTwo> m_ptr11;
+    DefaultTemplate1<float> m_ptr12;
+    DefaultTemplate1<sofa::type::vector<float>> m_ptr13;
+    DefaultTemplate1<sofa::type::Vec3d> m_ptr14;
+    DefaultTemplate1<sofa::defaulttype::Vec3dTypes> m_ptr15;
 
     sofa::core::objectmodel::Base* m_baseptr1 {&m_ptr1};
     sofa::core::objectmodel::Base* m_baseptr2 {&m_ptr2};
@@ -157,7 +163,7 @@ public:
 };
 
 ///
-/// tests that all the BaseClass returned from GetClass function are refering to the same
+/// tests that all the BaseClass returned from GetClass function are referring to the same
 /// BaseClass instance.
 ///
 TEST_F(BaseClass_test, checkClassEquivalence  )
@@ -174,13 +180,13 @@ TEST_F(BaseClass_test, checkClassEquivalence  )
 
 TEST_F(BaseClass_test, checkStaticClassName  )
 {
-    ASSERT_EQ(sofa::helper::NameDecoder::getClassName<decltype(m_ptr1)>(),"EmptyObject");
-    ASSERT_EQ(sofa::helper::NameDecoder::getClassName<decltype(m_ptr2)>(),"NumberedClass123");
-    ASSERT_EQ(sofa::helper::NameDecoder::getClassName<decltype(m_ptr3)>(),"NumberedClass456");
+    ASSERT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getClassName<decltype(m_ptr1)>(),"EmptyObject");
+    ASSERT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getClassName<decltype(m_ptr2)>(),"NumberedClass123");
+    ASSERT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getClassName<decltype(m_ptr3)>(),"NumberedClass456");
 
-    ASSERT_EQ(sofa::helper::NameDecoder::getClassName<sofa::another_namespace::EmptyObject>(),"EmptyObject");
-    ASSERT_EQ(sofa::helper::NameDecoder::getClassName<sofa::numbered_namespace_123::NumberedClass123>(),"NumberedClass123");
-    ASSERT_EQ(sofa::helper::NameDecoder::getClassName<sofa::numbered_namespace_123::NumberedClass456>(),"NumberedClass456");
+    ASSERT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getClassName<sofa::another_namespace::EmptyObject>(),"EmptyObject");
+    ASSERT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getClassName<sofa::numbered_namespace_123::NumberedClass123>(),"NumberedClass123");
+    ASSERT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getClassName<sofa::numbered_namespace_123::NumberedClass456>(),"NumberedClass456");
 }
 
 TEST_F(BaseClass_test, checkDynamicClassName  )
@@ -227,11 +233,16 @@ TEST_F(BaseClass_test, checkStaticDefaultTemplate  )
 
     EXPECT_EQ(m_ptr9.getClassName(),"DefaultTemplate3") ;
     EXPECT_EQ(m_ptr9.getTemplateName(),"One,Two,NotAType") ;
+
+    EXPECT_EQ(m_ptr12.getTemplateName(),"f") ;
+    EXPECT_EQ(m_ptr13.getTemplateName(),"vector<f>") ;
+    EXPECT_EQ(m_ptr14.getTemplateName(),"Vec3d") ;
+    EXPECT_EQ(m_ptr15.getTemplateName(),"Vec3d") ;
 }
 
 TEST_F(BaseClass_test, checkStaticDefaultTemplateOverridenByCustom  )
 {
-    NotDefaultTemplate<DataOne, DataTwo, NotAType> ptr;
+    const NotDefaultTemplate<DataOne, DataTwo, NotAType> ptr;
     EXPECT_EQ(ptr.getClassName(),"NotDefaultTemplate") ;
     EXPECT_EQ(ptr.getTemplateName(),"non,oui") ;
 }
@@ -247,11 +258,11 @@ TEST_F(BaseClass_test, checkNameSpace)
 TEST_F(BaseClass_test, checkStaticGetCustomClassNameOldWay  )
 {
     EXPECT_EQ(m_ptr5.getClass()->shortName,"MECHANICAL") ;
-    EXPECT_EQ(sofa::helper::NameDecoder::getShortName<sofa::numbered_namespace_123::CustomNameOldWay>(), "MECHANICAL" );
+    EXPECT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getShortName<sofa::numbered_namespace_123::CustomNameOldWay>(), "MECHANICAL" );
     ASSERT_EQ(m_ptr5.getClassName(),"ClassWithACustomNameOldWay") ;
     ASSERT_EQ(m_baseptr5->getClassName(),"ClassWithACustomNameOldWay") ;
-    ASSERT_EQ(sofa::helper::NameDecoder::getClassName<decltype(m_ptr5)>(),"ClassWithACustomNameOldWay") ;
-    ASSERT_EQ(sofa::helper::NameDecoder::getClassName<sofa::numbered_namespace_123::CustomNameOldWay>(),"ClassWithACustomNameOldWay") ;
+    ASSERT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getClassName<decltype(m_ptr5)>(),"ClassWithACustomNameOldWay") ;
+    ASSERT_EQ(sofa::core::objectmodel::BaseClassNameHelper::getClassName<sofa::numbered_namespace_123::CustomNameOldWay>(),"ClassWithACustomNameOldWay") ;
 }
 
 TEST_F(BaseClass_test, checkNestedClass)

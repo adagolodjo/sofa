@@ -3,7 +3,7 @@
 
 #include <QVBoxLayout>
 #include <QGraphicsScene>
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 #include <sofa/defaulttype/VecTypes.h>
 //#include "labelimagetoolbox.h"
 
@@ -20,8 +20,6 @@ class SOFA_IMAGE_GUI_API LabelImageToolBox;
 }}}
 
 namespace sofa
-{
-namespace gui
 {
 namespace qt
 {
@@ -112,7 +110,6 @@ private slots:
 
 
 
-}
 }
 }
 

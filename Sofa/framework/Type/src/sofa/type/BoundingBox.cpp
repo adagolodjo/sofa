@@ -36,50 +36,12 @@ BoundingBox::bbox_t make_neutralBBox()
     return std::make_pair(minBBox,maxBBox);
 }
 
-BoundingBox::BoundingBox()
-    :bbox(make_neutralBBox())
-{
-}
-
-BoundingBox::BoundingBox(const bbox_t& bbox)
-    :bbox(bbox)
-{
-}
-
-BoundingBox::BoundingBox(const sofa::type::Vec3& minBBox, const sofa::type::Vec3& maxBBox)
-    :bbox(std::make_pair(minBBox,maxBBox))
-{
-}
-
-BoundingBox::BoundingBox(SReal xmin, SReal xmax, SReal ymin, SReal ymax, SReal zmin, SReal zmax )
-    :bbox(std::make_pair(sofa::type::Vec3((SReal)xmin, (SReal)ymin, (SReal)zmin),sofa::type::Vec3( (SReal)xmax, (SReal)ymax, (SReal)zmax)))
-{
-}
-
-
-BoundingBox::BoundingBox(const Vec6f& v )
-    :bbox(std::make_pair(sofa::type::Vec3(v[0],v[2],v[4]),sofa::type::Vec3(v[1],v[3],v[5])))
-{
-}
-
-BoundingBox::BoundingBox(const Vec6d& v )
-    :bbox(std::make_pair(sofa::type::Vec3((SReal)v[0],(SReal)v[2],(SReal)v[4]),sofa::type::Vec3((SReal)v[1],(SReal)v[3],(SReal)v[5])))
-{
-}
-
-
-/*static*/
-BoundingBox BoundingBox::neutral_bbox()
-{
-    return BoundingBox(make_neutralBBox());
-}
-
 void BoundingBox::invalidate()
 {
-    this->bbox = make_neutralBBox();
+    this->m_bbox = make_neutralBBox();
 }
 
-bool BoundingBox::isNegligeable() const
+bool BoundingBox::isNegligible() const
 {
     return minBBox().x() >= maxBBox().x() &&
            minBBox().y() >= maxBBox().y() &&
@@ -109,47 +71,52 @@ bool BoundingBox::isNull() const
 
 BoundingBox::operator bbox_t() const
 {
-    return bbox;
+    return m_bbox;
+}
+
+bool BoundingBox::operator==(const BoundingBox& other) const
+{
+    return this->m_bbox == other.m_bbox;
 }
 
 SReal* BoundingBox::minBBoxPtr()
 {
-    return bbox.first.elems;
+    return m_bbox.first.ptr();
 }
 
 SReal* BoundingBox::maxBBoxPtr()
 {
-    return bbox.second.elems;
+    return m_bbox.second.ptr();
 }
 
 const SReal* BoundingBox::minBBoxPtr() const
 {
-    return bbox.first.elems;
+    return m_bbox.first.ptr();
 }
 
 const SReal* BoundingBox::maxBBoxPtr() const
 {
-    return bbox.second.elems;
+    return m_bbox.second.ptr();
 }
 
 const sofa::type::Vec3& BoundingBox::minBBox() const
 {
-    return bbox.first;
+    return m_bbox.first;
 }
 
 const sofa::type::Vec3& BoundingBox::maxBBox() const
 {
-    return bbox.second;
+    return m_bbox.second;
 }
 
 sofa::type::Vec3& BoundingBox::minBBox()
 {
-    return bbox.first;
+    return m_bbox.first;
 }
 
 sofa::type::Vec3& BoundingBox::maxBBox()
 {
-    return bbox.second;
+    return m_bbox.second;
 }
 
 bool BoundingBox::contains(const sofa::type::Vec3& point) const
@@ -207,7 +174,7 @@ void BoundingBox::include(const BoundingBox& other)
 
 void BoundingBox::inflate(const SReal amount)
 {
-    sofa::type::Vec3 size(amount,amount,amount);
+    const sofa::type::Vec3 size(amount,amount,amount);
     minBBox() -= size;
     maxBBox() += size;
 }
@@ -262,7 +229,7 @@ BoundingBox BoundingBox::getInflate( SReal amount ) const
 {
     BoundingBox result;
 
-    sofa::type::Vec3 size(amount,amount,amount);
+    const sofa::type::Vec3 size(amount,amount,amount);
     result.minBBox() = minBBox() - size;
     result.maxBBox() = maxBBox() + size;
 
@@ -287,33 +254,33 @@ BoundingBox2D::bbox_t make_neutralBBox2D()
 }
 
 BoundingBox2D::BoundingBox2D()
-    :bbox(make_neutralBBox2D())
+    :m_bbox(make_neutralBBox2D())
 {
 }
 
 BoundingBox2D::BoundingBox2D(const bbox_t& bbox)
-    :bbox(bbox)
+    :m_bbox(bbox)
 {
 }
 
 BoundingBox2D::BoundingBox2D(const sofa::type::Vec<2, SReal>& minBBox, const sofa::type::Vec<2, SReal>& maxBBox)
-    :bbox(std::make_pair(minBBox,maxBBox))
+    :m_bbox(std::make_pair(minBBox,maxBBox))
 {
 }
 
 BoundingBox2D::BoundingBox2D(SReal xmin, SReal xmax, SReal ymin, SReal ymax )
-    :bbox(std::make_pair(sofa::type::Vec<2, SReal>((SReal)xmin, (SReal)ymin),sofa::type::Vec<2, SReal>((SReal)xmax,(SReal)ymax)))
+    :m_bbox(std::make_pair(sofa::type::Vec<2, SReal>((SReal)xmin, (SReal)ymin),sofa::type::Vec<2, SReal>((SReal)xmax,(SReal)ymax)))
 {
 }
 
 
 BoundingBox2D::BoundingBox2D(const Vec4f& v )
-    :bbox(std::make_pair(sofa::type::Vec<2, SReal>(v[0],v[2]),sofa::type::Vec<2, SReal>(v[1],v[3])))
+    :m_bbox(std::make_pair(sofa::type::Vec<2, SReal>(v[0],v[2]),sofa::type::Vec<2, SReal>(v[1],v[3])))
 {
 }
 
 BoundingBox2D::BoundingBox2D(const Vec4d& v )
-    :bbox(std::make_pair(sofa::type::Vec<2, SReal>((SReal)v[0],(SReal)v[2]),sofa::type::Vec<2, SReal>((SReal)v[1],(SReal)v[3])))
+    :m_bbox(std::make_pair(sofa::type::Vec<2, SReal>((SReal)v[0],(SReal)v[2]),sofa::type::Vec<2, SReal>((SReal)v[1],(SReal)v[3])))
 {
 }
 
@@ -326,10 +293,10 @@ BoundingBox2D BoundingBox2D::neutral_bbox()
 
 void BoundingBox2D::invalidate()
 {
-    this->bbox = make_neutralBBox2D();
+    this->m_bbox = make_neutralBBox2D();
 }
 
-bool BoundingBox2D::isNegligeable() const
+bool BoundingBox2D::isNegligible() const
 {
     return minBBox().x() >= maxBBox().x() &&
            minBBox().y() >= maxBBox().y();
@@ -355,47 +322,47 @@ bool BoundingBox2D::isNull() const
 
 BoundingBox2D::operator bbox_t() const
 {
-    return bbox;
+    return m_bbox;
 }
 
 SReal* BoundingBox2D::minBBoxPtr()
 {
-    return bbox.first.elems;
+    return m_bbox.first.ptr();
 }
 
 SReal* BoundingBox2D::maxBBoxPtr()
 {
-    return bbox.second.elems;
+    return m_bbox.second.ptr();
 }
 
 const SReal* BoundingBox2D::minBBoxPtr() const
 {
-    return bbox.first.elems;
+    return m_bbox.first.ptr();
 }
 
 const SReal* BoundingBox2D::maxBBoxPtr() const
 {
-    return bbox.second.elems;
+    return m_bbox.second.ptr();
 }
 
 const sofa::type::Vec<2, SReal>& BoundingBox2D::minBBox() const
 {
-    return bbox.first;
+    return m_bbox.first;
 }
 
 const sofa::type::Vec<2, SReal>& BoundingBox2D::maxBBox() const
 {
-    return bbox.second;
+    return m_bbox.second;
 }
 
 sofa::type::Vec<2, SReal>& BoundingBox2D::minBBox()
 {
-    return bbox.first;
+    return m_bbox.first;
 }
 
 sofa::type::Vec<2, SReal>& BoundingBox2D::maxBBox()
 {
-    return bbox.second;
+    return m_bbox.second;
 }
 
 bool BoundingBox2D::contains(const sofa::type::Vec<2, SReal>& point) const
@@ -445,7 +412,7 @@ void BoundingBox2D::include(const BoundingBox2D& other)
 
 void BoundingBox2D::inflate(const SReal amount)
 {
-    sofa::type::Vec<2, SReal> size(amount,amount);
+    const sofa::type::Vec<2, SReal> size(amount,amount);
     minBBox() -= size;
     maxBBox() += size;
 }
@@ -493,7 +460,7 @@ BoundingBox2D BoundingBox2D::getInflate( SReal amount ) const
 {
     BoundingBox2D result;
 
-    sofa::type::Vec<2, SReal> size(amount,amount);
+    const sofa::type::Vec<2, SReal> size(amount,amount);
     result.minBBox() = minBBox() - size;
     result.maxBBox() = maxBBox() + size;
 
@@ -513,28 +480,28 @@ BoundingBox1D::bbox_t make_neutralBBox1D()
 }
 
 BoundingBox1D::BoundingBox1D()
-    :bbox(make_neutralBBox1D())
+    :m_bbox(make_neutralBBox1D())
 {
 }
 
 BoundingBox1D::BoundingBox1D(const bbox_t& bbox)
-    :bbox(bbox)
+    :m_bbox(bbox)
 {
 }
 
 BoundingBox1D::BoundingBox1D(SReal minBBox, SReal maxBBox)
-    :bbox(std::make_pair(minBBox,maxBBox))
+    :m_bbox(std::make_pair(minBBox,maxBBox))
 {
 }
 
 
 BoundingBox1D::BoundingBox1D(const Vec2f& v )
-    :bbox(std::make_pair((SReal)v[0],(SReal)v[1]))
+    :m_bbox(std::make_pair((SReal)v[0],(SReal)v[1]))
 {
 }
 
 BoundingBox1D::BoundingBox1D(const Vec2d& v )
-     :bbox(std::make_pair((SReal)v[0],(SReal)v[1]))
+     :m_bbox(std::make_pair((SReal)v[0],(SReal)v[1]))
 {
 }
 
@@ -547,10 +514,10 @@ BoundingBox1D BoundingBox1D::neutral_bbox()
 
 void BoundingBox1D::invalidate()
 {
-    this->bbox = make_neutralBBox1D();
+    this->m_bbox = make_neutralBBox1D();
 }
 
-bool BoundingBox1D::isNegligeable() const
+bool BoundingBox1D::isNegligible() const
 {
     return minBBox() >= maxBBox();
 }
@@ -572,27 +539,27 @@ bool BoundingBox1D::isNull() const
 
 BoundingBox1D::operator bbox_t() const
 {
-    return bbox;
+    return m_bbox;
 }
 
 const SReal& BoundingBox1D::minBBox() const
 {
-    return bbox.first;
+    return m_bbox.first;
 }
 
 const SReal& BoundingBox1D::maxBBox() const
 {
-    return bbox.second;
+    return m_bbox.second;
 }
 
 SReal& BoundingBox1D::minBBox()
 {
-    return bbox.first;
+    return m_bbox.first;
 }
 
 SReal& BoundingBox1D::maxBBox()
 {
-    return bbox.second;
+    return m_bbox.second;
 }
 
 bool BoundingBox1D::contains(SReal point) const

@@ -24,12 +24,16 @@
 
 #include <sofa/helper/config.h>
 
+#include <sofa/type/hardening.h>
+
 #include <deque>
 #include <string>
 #include <iostream>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
 
 #include <sofa/helper/logging/Messaging.h>
-
 
 /// adding string serialization to std::deque to make it compatible with Data
 /// \todo: refactoring of the containers required
@@ -70,7 +74,7 @@ std::istream& operator>> ( std::istream& in, std::deque<T>& d )
 
 
 /// Input stream
-/// Specialization for reading deques of int and unsigned int using "A-B" notation for all integers between A and B, optionnally specifying a step using "A-B-step" notation.
+/// Specialization for reading dequeues of int and unsigned int using "A-B" notation for all integers between A and B, optionally specifying a step using "A-B-step" notation.
 template<>
 inline std::istream& operator>>( std::istream& in, std::deque<int>& d )
 {
@@ -79,30 +83,45 @@ inline std::istream& operator>>( std::istream& in, std::deque<int>& d )
     std::string s;
     while(in>>s)
     {
-        std::string::size_type hyphen = s.find_first_of('-',1);
+        const std::string::size_type hyphen = s.find_first_of('-',1);
         if (hyphen == std::string::npos)
         {
-            t = atoi(s.c_str());
+            if (!sofa::type::hardening::safeStrToInt(s, t))
+            {
+                msg_error("deque") << "parsing \""<<s<<"\": invalid integer";
+                continue;
+            }
             d.push_back(t);
         }
         else
         {
             int t1,t2,tinc;
             std::string s1(s,0,hyphen);
-            t1 = atoi(s1.c_str());
-            std::string::size_type hyphen2 = s.find_first_of('-',hyphen+2);
+            if (!sofa::type::hardening::safeStrToInt(s1, t1))
+            {
+                msg_error("deque") << "parsing \""<<s<<"\": invalid integer";
+                continue;
+            }
+            const std::string::size_type hyphen2 = s.find_first_of('-',hyphen+2);
             if (hyphen2 == std::string::npos)
             {
                 std::string s2(s,hyphen+1);
-                t2 = atoi(s2.c_str());
+                if (!sofa::type::hardening::safeStrToInt(s2, t2))
+                {
+                    msg_error("deque") << "parsing \""<<s<<"\": invalid integer";
+                    continue;
+                }
                 tinc = (t1<t2) ? 1 : -1;
             }
             else
             {
-                std::string s2(s,hyphen+1,hyphen2);
+                std::string s2(s,hyphen+1,hyphen2-hyphen-1);
                 std::string s3(s,hyphen2+1);
-                t2 = atoi(s2.c_str());
-                tinc = atoi(s3.c_str());
+                if (!sofa::type::hardening::safeStrToInt(s2, t2) || !sofa::type::hardening::safeStrToInt(s3, tinc))
+                {
+                    msg_error("deque") << "parsing \""<<s<<"\": invalid integer";
+                    continue;
+                }
                 if (tinc == 0)
                 {
                     msg_error("deque") << "parsing \""<<s<<"\": increment is 0";
@@ -129,7 +148,7 @@ inline std::istream& operator>>( std::istream& in, std::deque<int>& d )
 }
 
 /// Output stream
-/// Specialization for writing deques of unsigned char
+/// Specialization for writing dequeues of unsigned char
 template<>
 inline std::ostream& operator<<(std::ostream& os, const std::deque<unsigned char>& d)
 {
@@ -142,8 +161,8 @@ inline std::ostream& operator<<(std::ostream& os, const std::deque<unsigned char
     return os;
 }
 
-/// Inpu stream
-/// Specialization for writing deques of unsigned char
+/// Input stream
+/// Specialization for writing dequeues of unsigned char
 template<>
 inline std::istream& operator>>(std::istream& in, std::deque<unsigned char>& d)
 {
@@ -158,7 +177,7 @@ inline std::istream& operator>>(std::istream& in, std::deque<unsigned char>& d)
 }
 
 /// Input stream
-/// Specialization for reading deques of int and unsigned int using "A-B" notation for all integers between A and B
+/// Specialization for reading dequeues of int and unsigned int using "A-B" notation for all integers between A and B
 template<>
 inline std::istream& operator>>( std::istream& in, std::deque<unsigned int>& d )
 {
@@ -167,10 +186,14 @@ inline std::istream& operator>>( std::istream& in, std::deque<unsigned int>& d )
     std::string s;
     while(in>>s)
     {
-        std::string::size_type hyphen = s.find_first_of('-',1);
+        const std::string::size_type hyphen = s.find_first_of('-',1);
         if (hyphen == std::string::npos)
         {
-            t = atoi(s.c_str());
+            if (!sofa::type::hardening::safeStrToUInt(s, t))
+            {
+                msg_error("deque") << "parsing \""<<s<<"\": invalid unsigned integer";
+                continue;
+            }
             d.push_back(t);
         }
         else
@@ -178,20 +201,31 @@ inline std::istream& operator>>( std::istream& in, std::deque<unsigned int>& d )
             unsigned int t1,t2;
             int tinc;
             std::string s1(s,0,hyphen);
-            t1 = (unsigned int)atoi(s1.c_str());
-            std::string::size_type hyphen2 = s.find_first_of('-',hyphen+2);
+            if (!sofa::type::hardening::safeStrToUInt(s1, t1))
+            {
+                msg_error("deque") << "parsing \""<<s<<"\": invalid unsigned integer";
+                continue;
+            }
+            const std::string::size_type hyphen2 = s.find_first_of('-',hyphen+2);
             if (hyphen2 == std::string::npos)
             {
                 std::string s2(s,hyphen+1);
-                t2 = (unsigned int)atoi(s2.c_str());
+                if (!sofa::type::hardening::safeStrToUInt(s2, t2))
+                {
+                    msg_error("deque") << "parsing \""<<s<<"\": invalid unsigned integer";
+                    continue;
+                }
                 tinc = (t1<t2) ? 1 : -1;
             }
             else
             {
-                std::string s2(s,hyphen+1,hyphen2);
+                std::string s2(s,hyphen+1,hyphen2-hyphen-1);
                 std::string s3(s,hyphen2+1);
-                t2 = (unsigned int)atoi(s2.c_str());
-                tinc = atoi(s3.c_str());
+                if (!sofa::type::hardening::safeStrToUInt(s2, t2) || !sofa::type::hardening::safeStrToInt(s3, tinc))
+                {
+                    msg_error("deque") << "parsing \""<<s<<"\": invalid integer";
+                    continue;
+                }
                 if (tinc == 0)
                 {
                     msg_error("deque") << "parsing \""<<s<<"\": increment is 0";

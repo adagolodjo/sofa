@@ -21,7 +21,7 @@
 ******************************************************************************/
 #pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/behavior/BaseConstraintSet.h>
 
 namespace sofa::core::behavior
@@ -36,11 +36,11 @@ class BaseConstraintCorrection;
  The parameters are defined in class ConstraintParams.
  *
  */
-class SOFA_CORE_API ConstraintSolver : public virtual objectmodel::BaseObject
+class SOFA_CORE_API ConstraintSolver : public virtual objectmodel::BaseComponent
 {
 public:
 
-    SOFA_ABSTRACT_CLASS(ConstraintSolver, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(ConstraintSolver, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(ConstraintSolver)
 
 protected:
@@ -50,8 +50,8 @@ protected:
     ~ConstraintSolver() override;
 
 private:
-    ConstraintSolver(const ConstraintSolver& n) ;
-    ConstraintSolver& operator=(const ConstraintSolver& n) ;
+    ConstraintSolver(const ConstraintSolver& n) = delete;
+    ConstraintSolver& operator=(const ConstraintSolver& n) = delete;
 
 
 public:
@@ -74,7 +74,7 @@ public:
      * Rebuild the system using a mass and force factor.
      * Experimental API used to investigate convergence issues.
      */
-    virtual void rebuildSystem(double /*massfactor*/, double /*forceFactor*/){}
+    SOFA_ATTRIBUTE_DEPRECATED__REBUILDSYSTEM() virtual void rebuildSystem(SReal /*massfactor*/, SReal /*forceFactor*/){}
 
     /**
      * Use the system previously built and solve it with the appropriate algorithm
@@ -90,25 +90,23 @@ public:
     /// Compute the residual in the newton iterations due to the constraints forces
     /// i.e. compute Vecid::force() += J^t lambda
     /// the result is accumulated in Vecid::force()
+    SOFA_ATTRIBUTE_DEPRECATED__COMPUTERESIDUAL()
     virtual void computeResidual(const core::ExecParams* /*params*/)
     {
         dmsg_error() << "ComputeResidual is not implemented in " << this->getName() ;
     }
 
-
     /// @name Resolution DOFs vectors API
     /// @{
-
     virtual MultiVecDerivId getLambda() const
     {
-        return MultiVecDerivId(VecDerivId::externalForce());
+        return MultiVecDerivId(vec_id::write_access::externalForce);
     }
 
     virtual MultiVecDerivId getDx() const
     {
-        return MultiVecDerivId(VecDerivId::dx());
+        return MultiVecDerivId(vec_id::write_access::dx);
     }
-    
     /// @}
 
     /// Remove reference to ConstraintCorrection
@@ -116,10 +114,19 @@ public:
     /// @param c is the ConstraintCorrection
     virtual void removeConstraintCorrection(BaseConstraintCorrection *s) = 0;
 
-public:
-
     bool insertInNode( objectmodel::BaseNode* node ) override;
     bool removeInNode( objectmodel::BaseNode* node ) override;
+
+protected:
+
+    virtual void postBuildSystem(const ConstraintParams* constraint_params) { SOFA_UNUSED(constraint_params); }
+    virtual void postSolveSystem(const ConstraintParams* constraint_params) { SOFA_UNUSED(constraint_params); }
+
+    bool prepareStatesTask(const ConstraintParams*, MultiVecId res1, MultiVecId res2);
+    bool buildSystemTask(const ConstraintParams *, MultiVecId res1, MultiVecId res2);
+    bool solveSystemTask(const ConstraintParams *, MultiVecId res1, MultiVecId res2);
+    bool applyCorrectionTask(const ConstraintParams *, MultiVecId res1, MultiVecId res2);
+
 };
 
 } // namespace sofa::core::behavior

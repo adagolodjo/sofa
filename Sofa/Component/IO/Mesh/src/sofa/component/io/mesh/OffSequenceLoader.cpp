@@ -22,25 +22,29 @@
 
 #include <sofa/component/io/mesh/OffSequenceLoader.h>
 #include <sofa/core/visual/VisualParams.h>
+#include <sofa/type/hardening.h>
 
 #include <sofa/simulation/AnimateBeginEvent.h>
 #include <sofa/core/ObjectFactory.h>
 #include <sstream>
 #include <fstream>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
 
 namespace sofa::component::io::mesh
 {
 
-using namespace sofa::defaulttype;
-
-int OffSequenceLoaderClass = core::RegisterObject("Read and load an .off file at each timestep")
-        .add< OffSequenceLoader >();
-
+void registerOffSequenceLoader(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Read and load an .off file at each timestep.")
+        .add< OffSequenceLoader >());
+}
 
 OffSequenceLoader::OffSequenceLoader()
     : MeshOffLoader()
-    , nbFiles( initData(&nbFiles,(int)1,"nbOfFiles","number of files in the sequence") )
-    , stepDuration( initData(&stepDuration,0.04,"stepDuration","how long each file is loaded") )
+    , d_nbFiles(initData(&d_nbFiles, (int)1, "nbOfFiles", "number of files in the sequence") )
+    , d_stepDuration(initData(&d_stepDuration, 0.04, "stepDuration", "how long each file is loaded") )
     , firstIndex(0) , currentIndex(0)
 {
     this->f_listening.setValue(true);
@@ -72,6 +76,13 @@ void OffSequenceLoader::init()
 {
     MeshOffLoader::init();
 
+    if (this->d_filename.getValue().empty())
+    {
+        msg_error() << "Attribute '" << this->d_filename.getName() << "' is empty.";
+        this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+        return;
+    }
+
     //parse the file name to get the index part
     std::string file = this->d_filename.getFullPath();
     m_filenameAndNb = file.substr(0, file.find("."));
@@ -81,7 +92,16 @@ void OffSequenceLoader::init()
     while ( m_filenameAndNb[--indCar] >= '0' && m_filenameAndNb[indCar] <= '9')
         fileNb.insert(0, 1, m_filenameAndNb[indCar]);
 
-    currentIndex = firstIndex = atoi(fileNb.c_str());
+    
+    if(sofa::type::hardening::safeStrToInt(fileNb, firstIndex))
+    {
+        currentIndex = firstIndex;
+    }
+    else
+    {
+        msg_error() << "Invalid file index: " << fileNb;
+        currentIndex = firstIndex = 0;
+    }
 }
 
 
@@ -90,17 +110,17 @@ void OffSequenceLoader::handleEvent(sofa::core::objectmodel::Event* event)
     //load the next file at the beginning of animation step and if the current file duration is over
     if (simulation::AnimateBeginEvent::checkEventType(event))
     {
-        if ( (currentIndex-firstIndex)*stepDuration.getValue() <= this->getContext()->getTime())
+        if ((currentIndex-firstIndex) * d_stepDuration.getValue() <= this->getContext()->getTime())
         {
             currentIndex++;
-            if (currentIndex < firstIndex+nbFiles.getValue())
+            if (currentIndex < firstIndex + d_nbFiles.getValue())
             {
                 std::ostringstream os;
                 os << currentIndex;
-                std::string indexStr = os.str();
-                std::string filetmp = m_filenameAndNb.substr(0, m_filenameAndNb.size()-indexStr.size());
+                const std::string indexStr = os.str();
+                const std::string filetmp = m_filenameAndNb.substr(0, m_filenameAndNb.size()-indexStr.size());
 
-                std::string newFile = filetmp + indexStr + std::string(".off");
+                const std::string newFile = filetmp + indexStr + std::string(".off");
 
                 load(newFile.c_str());
             }

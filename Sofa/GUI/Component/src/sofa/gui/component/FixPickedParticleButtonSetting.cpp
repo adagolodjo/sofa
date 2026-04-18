@@ -27,13 +27,14 @@
 namespace sofa::gui::component
 {
 
-int FixPickedParticleButtonSettingClass = core::RegisterObject("Fix a picked particle in space")
-        .add< FixPickedParticleButtonSetting >()
-        .addAlias("FixPickedParticleButton")
-        ;
+void registerFixPickedParticleButtonSetting(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Fix a picked particle in space.")
+        .add< FixPickedParticleButtonSetting >());
+}
 
 FixPickedParticleButtonSetting::FixPickedParticleButtonSetting():
-    stiffness(initData(&stiffness, (SReal)10000.0, "stiffness", "Stiffness of the spring to fix a particule"))
+    stiffness(initData(&stiffness, 10000.0_sreal, "stiffness", "Stiffness of the spring to fix a particule"))
 {
 }
 

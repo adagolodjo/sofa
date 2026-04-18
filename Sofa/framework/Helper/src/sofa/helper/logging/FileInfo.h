@@ -60,26 +60,28 @@ protected:
 struct FileInfoOwningFilename : public FileInfo
 {
     FileInfoOwningFilename(const char *f, int l) {
-        char *tmp  = new char[strlen(f)+1] ;
-        strcpy(tmp, f) ;
+        const size_t len = strlen(f) + 1;
+        char *tmp  = new char[len] ;
+        std::memcpy(tmp, f, len) ;
         filename = tmp ;
         line = l ;
     }
 
     FileInfoOwningFilename(const std::string& f, int l) {
-        char *tmp  = new char[f.size()+1] ;
-        strcpy(tmp, f.c_str()) ;
+        const size_t len = f.size() + 1;
+        char *tmp  = new char[len] ;
+        std::memcpy(tmp, f.c_str(), len) ;
         filename = tmp ;
         line = l ;
     }
 
     ~FileInfoOwningFilename(){
         if(filename)
-            delete filename ;
+            delete[] filename ;
     }
 };
 
-static FileInfo::SPtr EmptyFileInfo(new FileInfo(s_unknownFile, 0)) ;
+static FileInfo::SPtr EmptyFileInfo = std::make_shared<FileInfo>(s_unknownFile, 0) ;
 
 #define SOFA_FILE_INFO sofa::helper::logging::FileInfo::SPtr(new sofa::helper::logging::FileInfo(__FILE__, __LINE__))
 #define SOFA_FILE_INFO_COPIED_FROM(file,line) sofa::helper::logging::FileInfo::SPtr(new sofa::helper::logging::FileInfoOwningFilename(file,line))

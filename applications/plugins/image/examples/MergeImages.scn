@@ -1,10 +1,15 @@
 <?xml version="1.0"?>
 <Node name="root" gravity="0 0 0" dt=".1"  >
-    <RequiredPlugin pluginName="image"/>
+    <Node name="plugins">
+        <RequiredPlugin pluginName="Sofa.Component.IO.Mesh"/> <!-- Needed to use components [MeshOBJLoader] -->
+        <RequiredPlugin pluginName="Sofa.Component.Visual"/> <!-- Needed to use components [LineAxis VisualGrid VisualStyle] -->
+        <RequiredPlugin pluginName="Sofa.GL.Component.Rendering3D"/> <!-- Needed to use components [OglSceneFrame] -->
+        <RequiredPlugin pluginName="image"/> <!-- Needed to use components [ImageContainer ImageViewer MergeImages MeshToImageEngine] -->
+    </Node>
 
     <VisualStyle displayFlags="showVisual showBehaviorModels" />
-    <OglGrid size="50"/>
-    <OglLineAxis size="50"/>
+    <VisualGrid size="50"/>
+    <LineAxis size="50"/>
     <OglSceneFrame/>
     
     <Node name="Average">

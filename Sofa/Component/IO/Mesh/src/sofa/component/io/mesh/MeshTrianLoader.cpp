@@ -34,19 +34,21 @@ namespace sofa::component::io::mesh
 using namespace sofa::type;
 using namespace sofa::defaulttype;
 
-int MeshTrianLoaderClass = core::RegisterObject("Specific mesh loader for trian (only triangulations) file format.")
-        .add< MeshTrianLoader >()
-        ;
+void registerMeshTrianLoader(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Specific mesh loader for trian (only triangulations) file format.")
+        .add< MeshTrianLoader >());
+}
 
 MeshTrianLoader::MeshTrianLoader() : MeshLoader()
-    , p_trian2(initData(&p_trian2,(bool)false,"trian2","Set to true if the mesh is a trian2 format."))
-    , neighborTable(initData(&neighborTable,"neighborTable","Table of neighborhood triangle indices for each triangle."))
-    , edgesOnBorder(initData(&edgesOnBorder,"edgesOnBorder","List of edges which are on the border of the mesh loaded."))
-    , trianglesOnBorderList(initData(&trianglesOnBorderList,"trianglesOnBorderList","List of triangle indices which are on the border of the mesh loaded."))
+    , d_trian2(initData(&d_trian2, (bool)false, "trian2", "Set to true if the mesh is a trian2 format."))
+    , d_neighborTable(initData(&d_neighborTable, "neighborTable", "Table of neighborhood triangle indices for each triangle."))
+    , d_edgesOnBorder(initData(&d_edgesOnBorder, "edgesOnBorder", "List of edges which are on the border of the mesh loaded."))
+    , d_trianglesOnBorderList(initData(&d_trianglesOnBorderList, "trianglesOnBorderList", "List of triangle indices which are on the border of the mesh loaded."))
 {
-    neighborTable.setPersistent(false);
-    edgesOnBorder.setPersistent(false);
-    trianglesOnBorderList.setPersistent(false);
+    d_neighborTable.setPersistent(false);
+    d_edgesOnBorder.setPersistent(false);
+    d_trianglesOnBorderList.setPersistent(false);
 }
 
 
@@ -68,7 +70,7 @@ bool MeshTrianLoader::doLoad()
     }
 
     // -- Reading file
-    if (p_trian2.getValue())
+    if (d_trian2.getValue())
         fileRead = this->readTrian2 (filename);
     else
         fileRead = this->readTrian (filename);
@@ -79,12 +81,12 @@ bool MeshTrianLoader::doLoad()
 
 void MeshTrianLoader::doClearBuffers()
 {
-    neighborTable.beginEdit()->clear();
-    neighborTable.endEdit();
-    edgesOnBorder.beginEdit()->clear();
-    edgesOnBorder.endEdit();
-    trianglesOnBorderList.beginEdit()->clear();
-    trianglesOnBorderList.endEdit();
+    d_neighborTable.beginEdit()->clear();
+    d_neighborTable.endEdit();
+    d_edgesOnBorder.beginEdit()->clear();
+    d_edgesOnBorder.endEdit();
+    d_trianglesOnBorderList.beginEdit()->clear();
+    d_trianglesOnBorderList.endEdit();
 }
 
 
@@ -112,20 +114,20 @@ bool MeshTrianLoader::readTrian (const char* filename)
 
         dataFile >> x >> y >> z;
 
-        my_positions.push_back (Vector3(x, y, z));
+        my_positions.push_back (Vec3(x, y, z));
     }
 
     // --- Loading Triangles array ---
     dataFile >> nbTriangles; //Loading number of Triangle
 
     auto my_triangles = getWriteOnlyAccessor(d_triangles);
-    auto my_neighborTable = getWriteOnlyAccessor(neighborTable);
-    auto my_edgesOnBorder = getWriteOnlyAccessor(edgesOnBorder);
-    auto my_trianglesOnBorderList = getWriteOnlyAccessor(trianglesOnBorderList);
+    auto my_neighborTable = getWriteOnlyAccessor(d_neighborTable);
+    auto my_edgesOnBorder = getWriteOnlyAccessor(d_edgesOnBorder);
+    auto my_trianglesOnBorderList = getWriteOnlyAccessor(d_trianglesOnBorderList);
 
     for (unsigned int i=0; i<nbTriangles; ++i)
     {
-        Triangle nodes;
+        topology::Triangle nodes;
         type::fixed_array <int,3> ngh;
 
         dataFile >>  nodes[0] >> nodes[1] >> nodes[2] >> ngh[0] >> ngh[1] >> ngh[2];
@@ -199,7 +201,7 @@ bool MeshTrianLoader::readTrian2 (const char* filename)
         SReal x,y,z;
 
         dataFile >> x >> y >> z;
-        my_positions.push_back (Vector3(x, y, z));
+        my_positions.push_back (Vec3(x, y, z));
     }
 
 
@@ -212,7 +214,7 @@ bool MeshTrianLoader::readTrian2 (const char* filename)
         SReal x,y,z;
 
         dataFile >> x >> y >> z;
-        my_normals.push_back (Vector3(x, y, z));
+        my_normals.push_back (Vec3(x, y, z));
     }
 
 
@@ -223,7 +225,7 @@ bool MeshTrianLoader::readTrian2 (const char* filename)
 
     for (unsigned int i=0; i<nbTriangles; ++i)
     {
-        Triangle nodes;
+        topology::Triangle nodes;
 
         dataFile >>  nodes[0] >> nodes[1] >> nodes[2] ;
 

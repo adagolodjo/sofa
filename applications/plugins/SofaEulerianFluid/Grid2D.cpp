@@ -28,16 +28,7 @@
 // set to true/false to activate extra verbose FMM.
 #define EMIT_EXTRA_FMM_MESSAGE false
 
-namespace sofa
-{
-
-namespace component
-{
-
-namespace behaviormodel
-{
-
-namespace eulerianfluid
+namespace sofaeulerianfluid
 {
 
 using namespace sofa::helper;
@@ -181,8 +172,8 @@ void Grid2D::seed(vec2 p0, vec2 p1, vec2 velocity)
     {
         vec2 v ((real)x,(real)y);
         v -= center;
-        v[0] = rabs(v[0]) - dim[0];
-        v[1] = rabs(v[1]) - dim[1];
+        v[0] = sofa::helper::rabs(v[0]) - dim[0];
+        v[1] = sofa::helper::rabs(v[1]) - dim[1];
         real d;
         if (v[0] <= 0 && v[1] <= 0)
         {
@@ -256,7 +247,7 @@ void Grid2D::step_levelset(Grid2D* prev, Grid2D* temp, real dt, real /*diff*/)
     FOR_INNER_CELLS(levelset,
     {
         //if (prev->fdata[ind].type != PART_WALL && rabs(prev->levelset[ind]) < 5)
-        if (rabs(prev->levelset[ind]) < 5)
+        if (sofa::helper::rabs(prev->levelset[ind]) < 5)
         {
             vec2 xn ( (real)x, (real)y );
             vec2 un = prev->interp(xn);
@@ -311,7 +302,6 @@ void Grid2D::step_levelset(Grid2D* prev, Grid2D* temp, real dt, real /*diff*/)
         int c[2]; c[0] = x; c[1] = y;
         bool known = false;
         real phi0 = temp->levelset[ind];
-        real inv_dist2 = 0;
         for (int dim = 0; dim < 2; dim++)
         {
             real dist = RMAX;
@@ -338,13 +328,11 @@ void Grid2D::step_levelset(Grid2D* prev, Grid2D* temp, real dt, real /*diff*/)
             if (border)
             {
                 known = true;
-                inv_dist2 += 1 / (dist*dist);
             }
         }
         if (known)
         {
-            //real phi = 1 / sqrt(inv_dist2);
-            real phi = rabs(phi0);
+            real phi = sofa::helper::rabs(phi0);
             levelset[ind] = phi;
             fmm_status[ind] = FMM_KNOWN;
         }
@@ -614,7 +602,7 @@ void Grid2D::step_forces(const Grid2D* prev, Grid2D* /*temp*/, real dt, real /*d
             unsigned int i;
         } tmp;
         tmp.f = 2*t;
-        srand(tmp.i);
+        sofa::helper::srand(tmp.i);
         vec2 v(4,0);
         int cx = 1*ny/4;
         int cy = 3*ny/4;
@@ -909,11 +897,5 @@ void Grid2D::step_project(const Grid2D* prev, Grid2D* temp, real dt, real /*diff
     });
 }
 
-} // namespace eulerianfluid
-
-} // namespace behaviormodel
-
-} // namespace component
-
-} // namespace sofa
+} // namespace sofaeulerianfluid
 

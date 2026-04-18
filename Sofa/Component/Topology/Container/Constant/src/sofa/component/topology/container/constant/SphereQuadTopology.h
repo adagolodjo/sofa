@@ -29,16 +29,16 @@ class SOFA_COMPONENT_TOPOLOGY_CONTAINER_CONSTANT_API SphereQuadTopology : public
 {
 public:
     SOFA_CLASS(SphereQuadTopology,CubeTopology);
-    typedef sofa::type::Vector3 Vector3;
+
 protected:
     SphereQuadTopology(int nx, int ny, int nz);
     SphereQuadTopology();
 public:
-    Vector3 getPoint(int x, int y, int z) const override;
+    Vec3 getPoint(int x, int y, int z) const override;
 
 protected:
-    Data< Vector3 > center; ///< Center of the sphere
-    Data< SReal > radius; ///< Radius of the sphere
+    Data< Vec3 > d_center; ///< Center of the sphere
+    Data< SReal > d_radius; ///< Radius of the sphere
 };
 
 } // namespace sofa::component::topology::container::constant

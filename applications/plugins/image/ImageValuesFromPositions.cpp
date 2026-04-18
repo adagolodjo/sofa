@@ -35,24 +35,28 @@ namespace engine
 
 using namespace defaulttype;
 
-int ImageValuesFromPositionsClass = core::RegisterObject("Get image intensities at sample locations")
-        .add<ImageValuesFromPositions<ImageD> >(true)
-        .add<ImageValuesFromPositions<ImageUC> >()
+void registerImageValuesFromPositions(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(sofa::core::ObjectRegistrationData("Get image intensities at sample locations")
+    .add<ImageValuesFromPositions<ImageD> >(true)
+    .add<ImageValuesFromPositions<ImageUC> >()
+    .add<ImageValuesFromPositions<ImageB> >()
 #if PLUGIN_IMAGE_COMPILE_SET == PLUGIN_IMAGE_COMPILE_SET_FULL
-        .add<ImageValuesFromPositions<ImageC> >()
-        .add<ImageValuesFromPositions<ImageI> >()
-        .add<ImageValuesFromPositions<ImageUI> >()
-        .add<ImageValuesFromPositions<ImageS> >()
-        .add<ImageValuesFromPositions<ImageUS> >()
-        .add<ImageValuesFromPositions<ImageL> >()
-        .add<ImageValuesFromPositions<ImageUL> >()
-        .add<ImageValuesFromPositions<ImageF> >()
-        .add<ImageValuesFromPositions<ImageB> >()
+    .add<ImageValuesFromPositions<ImageC> >()
+    .add<ImageValuesFromPositions<ImageI> >()
+    .add<ImageValuesFromPositions<ImageUI> >()
+    .add<ImageValuesFromPositions<ImageS> >()
+    .add<ImageValuesFromPositions<ImageUS> >()
+    .add<ImageValuesFromPositions<ImageL> >()
+    .add<ImageValuesFromPositions<ImageUL> >()
+    .add<ImageValuesFromPositions<ImageF> >()
 #endif
-        ;
+    );
+}
 
 template class SOFA_IMAGE_API ImageValuesFromPositions<ImageD>;
 template class SOFA_IMAGE_API ImageValuesFromPositions<ImageUC>;
+template class SOFA_IMAGE_API ImageValuesFromPositions<ImageB>;
 #if PLUGIN_IMAGE_COMPILE_SET == PLUGIN_IMAGE_COMPILE_SET_FULL
 template class SOFA_IMAGE_API ImageValuesFromPositions<ImageC>;
 template class SOFA_IMAGE_API ImageValuesFromPositions<ImageI>;
@@ -62,7 +66,6 @@ template class SOFA_IMAGE_API ImageValuesFromPositions<ImageUS>;
 template class SOFA_IMAGE_API ImageValuesFromPositions<ImageL>;
 template class SOFA_IMAGE_API ImageValuesFromPositions<ImageUL>;
 template class SOFA_IMAGE_API ImageValuesFromPositions<ImageF>;
-template class SOFA_IMAGE_API ImageValuesFromPositions<ImageB>;
 #endif
 
 

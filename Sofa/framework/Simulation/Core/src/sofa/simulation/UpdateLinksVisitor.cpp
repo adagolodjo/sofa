@@ -22,14 +22,12 @@
 #include <sofa/simulation/UpdateLinksVisitor.h>
 #include <sofa/simulation/Node.h>
 
-namespace sofa
+
+namespace sofa::simulation
 {
 
-namespace simulation
-{
 
-
-void UpdateLinksVisitor::processObject(core::objectmodel::BaseObject* obj)
+void UpdateLinksVisitor::processObject(core::objectmodel::BaseComponent* obj)
 {
     obj->updateLinks();
 }
@@ -41,7 +39,7 @@ Visitor::Result UpdateLinksVisitor::processNodeTopDown(simulation::Node* node)
         this->processObject(it->get());
     }
 
-    //TODO(dmarchal): why do we clear the messsage logs when we update the links ?
+    //TODO(dmarchal): why do we clear the message logs when we update the links ?
     //node->clearLoggedMessages(); node->clearLoggedMessages();
     return RESULT_CONTINUE;
 }
@@ -50,7 +48,7 @@ void UpdateLinksVisitor::processNodeBottomUp(simulation::Node* /*node*/)
 {
 }
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
+
 

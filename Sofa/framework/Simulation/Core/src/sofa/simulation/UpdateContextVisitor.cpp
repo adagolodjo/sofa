@@ -24,10 +24,8 @@
 
 #include <sofa/core/visual/VisualParams.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 Visitor::Result UpdateContextVisitor::processNodeTopDown(simulation::Node* node)
@@ -48,8 +46,8 @@ Visitor::Result UpdateSimulationContextVisitor::processNodeTopDown(simulation::N
 }
 
 
-UpdateVisualContextVisitor::UpdateVisualContextVisitor(const sofa::core::visual::VisualParams* vparams)
-    : UpdateContextVisitor(sofa::core::visual::visualparams::castToExecParams(vparams))
+UpdateVisualContextVisitor::UpdateVisualContextVisitor(const sofa::core::visual::VisualParams* visuparams)
+    : UpdateContextVisitor(sofa::core::visual::visualparams::castToExecParams(visuparams))
 {
 
 }
@@ -65,7 +63,7 @@ Visitor::Result UpdateVisualContextVisitor::processNodeTopDown(simulation::Node*
 }
 
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
+
 

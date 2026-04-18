@@ -53,11 +53,12 @@ public:
 
     void reinit() override;
 
+    void doDrawVisual(const core::visual::VisualParams* vparams) override;
     void drawTransparent(const core::visual::VisualParams* vparams) override;
 
 public:
     Data<std::string> d_text; ///< Test to display
-    Data<type::Vec3f> d_position; ///< 3d position
+    Data<type::Vec3> d_position; ///< 3d position
     Data<float> d_scale; ///< text scale
     Data<sofa::type::RGBAColor> d_color; ///< text color. (default=[1.0,1.0,1.0,1.0])
     Data<bool> d_depthTest; ///< perform depth test

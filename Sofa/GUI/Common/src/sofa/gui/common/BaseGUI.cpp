@@ -3,24 +3,24 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "BaseGUI.h"
-#include "BaseViewer.h"
+#include <sofa/gui/common/BaseGUI.h>
+#include <sofa/gui/common/BaseViewer.h>
 
 #include <sofa/type/vector.h>
 #include <sofa/helper/Utils.h>
@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
 
 #include <sofa/simulation/ExportGnuplotVisitor.h>
 #include <sofa/helper/ScopedAdvancedTimer.h>
@@ -70,13 +71,8 @@ void BaseGUI::configureGUI(sofa::simulation::Node::SPtr groot)
     groot->get(defaultPath, sofa::core::objectmodel::BaseContext::SearchRoot);
     if (defaultPath)
     {
-        if (!defaultPath->recordPath.getValue().empty())
-        {
-            setRecordPath(defaultPath->recordPath.getValue());
-        }
-
-        if (!defaultPath->gnuplotPath.getValue().empty())
-            setGnuplotPath(defaultPath->gnuplotPath.getValue());
+        if (!defaultPath->d_gnuplotPath.getValue().empty())
+            setGnuplotPath(defaultPath->d_gnuplotPath.getValue());
     }
 
 
@@ -85,10 +81,10 @@ void BaseGUI::configureGUI(sofa::simulation::Node::SPtr groot)
     groot->get(background, sofa::core::objectmodel::BaseContext::SearchRoot);
     if (background)
     {
-        if (background->image.getValue().empty())
-            setBackgroundColor(background->color.getValue());
+        if (background->d_image.getValue().empty())
+            setBackgroundColor(background->d_color.getValue());
         else
-            setBackgroundImage(background->image.getFullPath());
+            setBackgroundImage(background->d_image.getFullPath());
     }
 
     //Stats
@@ -96,9 +92,9 @@ void BaseGUI::configureGUI(sofa::simulation::Node::SPtr groot)
     groot->get(stats, sofa::core::objectmodel::BaseContext::SearchRoot);
     if (stats)
     {
-        setDumpState(stats->dumpState.getValue());
-        setLogTime(stats->logTime.getValue());
-        setExportState(stats->exportState.getValue());
+        setDumpState(stats->d_dumpState.getValue());
+        setLogTime(stats->d_logTime.getValue());
+        setExportState(stats->d_exportState.getValue());
 #ifdef SOFA_DUMP_VISITOR_INFO
         setTraceVisitors(stats->traceVisitors.getValue());
 #endif
@@ -121,9 +117,9 @@ void BaseGUI::configureGUI(sofa::simulation::Node::SPtr groot)
 
 void BaseGUI::exportGnuplot(sofa::simulation::Node* node, std::string /*gnuplot_directory*/ )
 {
-    sofa::helper::ScopedAdvancedTimer exportGnuplotTimer("exportGnuplot");
+    SCOPED_TIMER_VARNAME(exportGnuplotTimer, "exportGnuplot");
 
-    sofa::core::ExecParams* params = sofa::core::execparams::defaultInstance();
+    const sofa::core::ExecParams* params = sofa::core::execparams::defaultInstance();
     ExportGnuplotVisitor expg ( params, node->getTime());
     node->execute ( expg );
 }
@@ -150,13 +146,13 @@ const std::string& BaseGUI::getScreenshotDirectoryPath()
 
 static void setDirectoryPath(std::string& outputVariable, const std::string& path, bool createIfNecessary)
 {
-    const bool pathExists = FileSystem::exists(path);
+    const bool pathExists = std::filesystem::exists(path);
 
     if (!pathExists && !createIfNecessary)
     {
         msg_error("BaseGUI") << "No such directory '" << path << "'";
     }
-    else if (pathExists && !FileSystem::isDirectory(path))
+    else if (pathExists && !std::filesystem::is_directory(path))
     {
          msg_error("BaseGUI") << "Not a directory: " << path << "'";
     }
@@ -164,8 +160,10 @@ static void setDirectoryPath(std::string& outputVariable, const std::string& pat
     {
         if (!pathExists)
         {
-            FileSystem::createDirectory(path);
-            msg_info("BaseGUI") << "Created directory: " << path;
+            if(std::filesystem::create_directories(path))
+            {
+                msg_info("BaseGUI") << "Created directory: " << path;
+            }
         }
         outputVariable = path;
     }

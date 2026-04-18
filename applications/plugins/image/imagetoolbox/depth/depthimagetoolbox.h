@@ -1,13 +1,13 @@
 #ifndef DEPTHIMAGETOOLBOX_H
 #define DEPTHIMAGETOOLBOX_H
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 #include <QTextStream>
 #include <QFile>
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/objectmodel/DataFileName.h>
 #include <sofa/core/objectmodel/BaseContext.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
@@ -123,9 +123,9 @@ public:
 
     }
     
-    sofa::gui::qt::LabelImageToolBoxAction* createTBAction(QWidget*parent=nullptr) override
+    sofa::qt::LabelImageToolBoxAction* createTBAction(QWidget*parent=nullptr) override
     {
-        return new sofa::gui::qt::DepthImageToolBoxAction(this,parent);
+        return new sofa::qt::DepthImageToolBoxAction(this,parent);
     }
 
     void createLayer()

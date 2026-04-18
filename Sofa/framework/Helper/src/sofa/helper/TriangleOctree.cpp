@@ -40,23 +40,28 @@ TriangleOctree::~TriangleOctree()
 
 void TriangleOctree::draw (sofa::helper::visual::DrawTool* drawTool)
 {
-    type::Vec3 center;
-    if ( objects.size ())
+    if (!objects.empty())
     {
-        center =
-            (type::Vec3 (x, y, z) + type::Vec3 (size / 2, size / 2, size / 2));
+        const auto x_f = static_cast<float>(x);
+        const auto y_f = static_cast<float>(y);
+        const auto z_f = static_cast<float>(z);
+        const auto size_f = static_cast<float>(size);
+
+        const type::Vec3f center = type::Vec3f(x_f, y_f, z_f) + type::Vec3f(size_f / 2, size_f / 2, size_f / 2);
         drawTool->pushMatrix();
-        drawTool->translate((float)center[0], (float)center[1], (float)center[2]);
+        drawTool->translate(center[0], center[1], center[2]);
         drawTool->setPolygonMode(0, false);
-        drawTool->drawCube(size, sofa::type::RGBAColor(0.5, 0.5, 0.5, 1.0));
+        drawTool->drawCube(size_f, sofa::type::RGBAColor::gray());
         drawTool->popMatrix();
 
         drawTool->setPolygonMode(0, true);
     }
-    for (int i = 0; i < 8; i++)
+    for (auto& childOctree : childVec)
     {
-        if (childVec[i])
-            childVec[i]->draw(drawTool);
+        if (childOctree)
+        {
+            childOctree->draw(drawTool);
+        }
     }
 }
 
@@ -69,12 +74,12 @@ void TriangleOctree::insert (SReal _x, SReal _y, SReal _z,
     }
     else
     {
-        SReal size2 = size / 2;
-        int dx = (_x >= (x + size2)) ? 1 : 0;
-        int dy = (_y >= (y + size2)) ? 1 : 0;
-        int dz = (_z >= (z + size2)) ? 1 : 0;
+        const SReal size2 = size / 2;
+        const int dx = (_x >= (x + size2)) ? 1 : 0;
+        const int dy = (_y >= (y + size2)) ? 1 : 0;
+        const int dz = (_z >= (z + size2)) ? 1 : 0;
 
-        int i = dx * 4 + dy * 2 + dz;
+        const int i = dx * 4 + dy * 2 + dz;
         if (!childVec[i])
         {
             is_leaf = false;
@@ -789,14 +794,17 @@ void TriangleOctree::bbAll (const type::Vec3 & bbmin, const type::Vec3 & bbmax, 
     {
         return;
     }
-    int dx0 = (bbmin[0] > c[0]) ? 1 : 0;    int dx1 = (bbmax[0] >= c[0]) ? 1 : 0;
-    int dy0 = (bbmin[1] > c[1]) ? 1 : 0;    int dy1 = (bbmax[1] >= c[1]) ? 1 : 0;
-    int dz0 = (bbmin[2] > c[2]) ? 1 : 0;    int dz1 = (bbmax[2] >= c[2]) ? 1 : 0;
+    const int dx0 = (bbmin[0] > c[0]) ? 1 : 0;
+    const int dx1 = (bbmax[0] >= c[0]) ? 1 : 0;
+    const int dy0 = (bbmin[1] > c[1]) ? 1 : 0;
+    const int dy1 = (bbmax[1] >= c[1]) ? 1 : 0;
+    const int dz0 = (bbmin[2] > c[2]) ? 1 : 0;
+    const int dz1 = (bbmax[2] >= c[2]) ? 1 : 0;
     for (int dx = dx0; dx <= dx1; ++dx)
         for (int dy = dy0; dy <= dy1; ++dy)
             for (int dz = dz0; dz <= dz1; ++dz)
             {
-                int i = dx * 4 + dy * 2 + dz;
+                const int i = dx * 4 + dy * 2 + dz;
                 if (childVec[i])
                 {
                     childVec[i]->bbAll (bbmin, bbmax, results);
@@ -838,17 +846,15 @@ void TriangleOctreeRoot::buildOctree()
 
 int TriangleOctreeRoot::fillOctree (int tId, int /*d*/, type::Vec3 /*v*/)
 {
-    type::Vec3 corner (-cubeSize, -cubeSize, -cubeSize);
-
     SReal bb[6];
     SReal bbsize;
     calcTriangleAABB(tId, bb, bbsize);
 
     // computes the depth of the bounding box in a octree
-    int d1 = (int)((log10( (SReal) CUBE_SIZE * 2/ bbsize ) / log10( (SReal)2) ));
+    const int d1 = (int)((log10( (SReal) CUBE_SIZE * 2/ bbsize ) / log10( (SReal)2) ));
     // computes the size of the octree box that can store the bounding box
-    int divs = (1 << (d1));
-    SReal inc = (SReal) (2 * CUBE_SIZE) / divs;
+    const int divs = (1 << (d1));
+    const SReal inc = (SReal) (2 * CUBE_SIZE) / divs;
     if (bb[0] >= -CUBE_SIZE && bb[2] >= -CUBE_SIZE && bb[4] >= -CUBE_SIZE
         && bb[1] <= CUBE_SIZE && bb[3] <= CUBE_SIZE && bb[5] <= CUBE_SIZE)
         for (SReal x1 =

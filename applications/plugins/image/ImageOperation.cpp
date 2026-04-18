@@ -35,24 +35,28 @@ namespace engine
 
 using namespace defaulttype;
 
-int ImageOperationClass = core::RegisterObject("This class computes an image as an operation between two images")
-        .add<ImageOperation<ImageUC> >(true)
-        .add<ImageOperation<ImageD> >()
+void registerImageOperation(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(sofa::core::ObjectRegistrationData("This class computes an image as an operation between two images")
+    .add<ImageOperation<ImageUC> >(true)
+    .add<ImageOperation<ImageD> >()
+    .add<ImageOperation<ImageB> >()
 #if PLUGIN_IMAGE_COMPILE_SET == PLUGIN_IMAGE_COMPILE_SET_FULL
-        .add<ImageOperation<ImageC> >()
-        .add<ImageOperation<ImageI> >()
-        .add<ImageOperation<ImageUI> >()
-        .add<ImageOperation<ImageS> >()
-        .add<ImageOperation<ImageUS> >()
-        .add<ImageOperation<ImageL> >()
-        .add<ImageOperation<ImageUL> >()
-        .add<ImageOperation<ImageF> >()
-        .add<ImageOperation<ImageB> >()
+    .add<ImageOperation<ImageC> >()
+    .add<ImageOperation<ImageI> >()
+    .add<ImageOperation<ImageUI> >()
+    .add<ImageOperation<ImageS> >()
+    .add<ImageOperation<ImageUS> >()
+    .add<ImageOperation<ImageL> >()
+    .add<ImageOperation<ImageUL> >()
+    .add<ImageOperation<ImageF> >()
 #endif
-        ;
+    );
+}
 
 template class SOFA_IMAGE_API ImageOperation<ImageUC>;
 template class SOFA_IMAGE_API ImageOperation<ImageD>;
+template class SOFA_IMAGE_API ImageOperation<ImageB>;
 #if PLUGIN_IMAGE_COMPILE_SET == PLUGIN_IMAGE_COMPILE_SET_FULL
 template class SOFA_IMAGE_API ImageOperation<ImageC>;
 template class SOFA_IMAGE_API ImageOperation<ImageI>;
@@ -62,7 +66,6 @@ template class SOFA_IMAGE_API ImageOperation<ImageUS>;
 template class SOFA_IMAGE_API ImageOperation<ImageL>;
 template class SOFA_IMAGE_API ImageOperation<ImageUL>;
 template class SOFA_IMAGE_API ImageOperation<ImageF>;
-template class SOFA_IMAGE_API ImageOperation<ImageB>;
 #endif
 } //
 } // namespace component

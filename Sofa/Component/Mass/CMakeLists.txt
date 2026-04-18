@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(Sofa.Component.Mass LANGUAGES CXX)
 
 set(SOFACOMPONENTMASS_SOURCE_DIR "src/sofa/component/mass")
@@ -39,6 +39,10 @@ sofa_create_package_with_targets(
     INCLUDE_SOURCE_DIR "src"
     INCLUDE_INSTALL_DIR "${PROJECT_NAME}"
 )
+
+if(SOFA_BUILD_TESTS)
+    add_subdirectory(Testing)
+endif()
 
 # Tests
 # If SOFA_BUILD_TESTS exists and is OFF, then these tests will be auto-disabled

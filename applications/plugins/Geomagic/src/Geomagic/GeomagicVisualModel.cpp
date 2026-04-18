@@ -25,7 +25,7 @@
 #include <sofa/simulation/UpdateMappingVisitor.h>
 #include <sofa/simulation/mechanicalvisitor/MechanicalPropagateOnlyPositionAndVelocityVisitor.h>
 
-namespace sofa::component::controller
+namespace geomagic
 {
 
 using namespace sofa::type;
@@ -85,7 +85,7 @@ void GeomagicVisualModel::initDisplay(sofa::simulation::Node::SPtr node, const s
     m_omniVisualNode = node->createChild("GeomagicVisualModel " + _deviceName);
     m_omniVisualNode->updateContext();
 
-    rigidDOF = sofa::core::objectmodel::New<component::container::MechanicalObject<sofa::defaulttype::Rigid3Types> >();
+    rigidDOF = sofa::core::objectmodel::New<component::statecontainer::MechanicalObject<sofa::defaulttype::Rigid3Types> >();
     m_omniVisualNode->addObject(rigidDOF);
     rigidDOF->name.setValue("DeviceRigidDOF");
 
@@ -112,28 +112,26 @@ void GeomagicVisualModel::initDisplay(sofa::simulation::Node::SPtr node, const s
         visualNode[i].loader->init();
 
         // create the visual model and add it to the graph //
-        visualNode[i].visu = sofa::core::objectmodel::New<sofa::component::visualmodel::OglModel>();
+        visualNode[i].visu = sofa::core::objectmodel::New<sofa::gl::component::rendering3d::OglModel>();
         visualNode[i].node->addObject(visualNode[i].visu);
         visualNode[i].visu->setName(sectionName + "_visualModel");
         visualNode[i].visu->m_positions.setParent(&visualNode[i].loader->d_positions);
-        visualNode[i].visu->m_edges.setParent(&visualNode[i].loader->d_edges);
-        visualNode[i].visu->m_triangles.setParent(&visualNode[i].loader->d_triangles);
-        visualNode[i].visu->m_quads.setParent(&visualNode[i].loader->d_quads);
-        visualNode[i].visu->m_vtexcoords.setParent(&visualNode[i].loader->d_texCoords);
+        visualNode[i].visu->d_edges.setParent(&visualNode[i].loader->d_edges);
+        visualNode[i].visu->d_triangles.setParent(&visualNode[i].loader->d_triangles);
+        visualNode[i].visu->d_quads.setParent(&visualNode[i].loader->d_quads);
+        visualNode[i].visu->d_vtexcoords.setParent(&visualNode[i].loader->d_texCoords);
         
         visualNode[i].visu->init();
-        visualNode[i].visu->initVisual();
-        visualNode[i].visu->updateVisual();
 
         // create the visual mapping and at it to the graph //
-        visualNode[i].mapping = sofa::core::objectmodel::New< sofa::component::mapping::RigidMapping< Rigid3Types, Vec3Types > >();
+        visualNode[i].mapping = sofa::core::objectmodel::New< sofa::component::mapping::nonlinear::RigidMapping< Rigid3Types, Vec3Types > >();
         visualNode[i].node->addObject(visualNode[i].mapping);
         visualNode[i].mapping->setName(sectionName + "_rigidMapping");
         visualNode[i].mapping->setModels(rigidDOF.get(), visualNode[i].visu.get());
         visualNode[i].mapping->f_mapConstraints.setValue(false);
         visualNode[i].mapping->f_mapForces.setValue(false);
         visualNode[i].mapping->f_mapMasses.setValue(false);
-        visualNode[i].mapping->index.setValue(i + 1);
+        visualNode[i].mapping->d_index.setValue(i + 1);
         visualNode[i].mapping->init();
     }
 
@@ -141,10 +139,10 @@ void GeomagicVisualModel::initDisplay(sofa::simulation::Node::SPtr node, const s
 
     for (int j = 0; j<NVISUALNODE; j++)
     {
-        sofa::type::vector< sofa::type::Vec3 > &scaleMapping = *(visualNode[j].mapping->points.beginEdit());
+        sofa::type::vector< sofa::type::Vec3 > &scaleMapping = *(visualNode[j].mapping->d_points.beginEdit());
         for (size_t i = 0; i<scaleMapping.size(); i++)
             scaleMapping[i] *= (float)(_scale);
-        visualNode[j].mapping->points.endEdit();
+        visualNode[j].mapping->d_points.endEdit();
         visualNode[j].node->updateContext();
     }
 
@@ -260,4 +258,4 @@ void GeomagicVisualModel::drawDevice(bool button1Status, bool button2Status)
 }
 
 
-} // namespace sofa::component::controller
+} // namespace geomagic

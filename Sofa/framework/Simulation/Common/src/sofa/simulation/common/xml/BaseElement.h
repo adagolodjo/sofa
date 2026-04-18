@@ -23,7 +23,7 @@
 #include <sofa/helper/Factory.h>
 #include <sofa/core/objectmodel/Base.h>
 #include <sofa/core/objectmodel/BaseContext.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/objectmodel/BaseObjectDescription.h>
 #include <sofa/simulation/common/config.h>
 #include <string>
@@ -179,8 +179,8 @@ public:
         BaseElement* parent;
         ChildList::iterator it;
         Node* current;
-        child_iterator(BaseElement* parent, ChildList::iterator it)
-            : parent(parent), it(it), current(nullptr)
+        child_iterator(BaseElement* eparent, ChildList::iterator cit)
+            : parent(eparent), it(cit), current(nullptr)
         {
             checkIt();
         }
@@ -243,7 +243,7 @@ public:
 
 namespace sofa::helper
 {
-#if  !defined(SOFA_SIMULATION_COMMON_XML_BASEELEMENT_CPP)
+#if !defined(SOFA_SIMULATION_COMMON_XML_BASEELEMENT_CPP)
     extern template class SOFA_SIMULATION_COMMON_API Factory< std::string, sofa::simulation::xml::BaseElement, std::pair<std::string, std::string> >;
 #endif
 } // namespace sofa::helper

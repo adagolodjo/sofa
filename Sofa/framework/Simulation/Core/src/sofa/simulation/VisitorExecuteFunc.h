@@ -27,11 +27,7 @@
 #include <sofa/simulation/Visitor.h>
 #include <sofa/simulation/MechanicalVisitor.h>
 
-namespace sofa
-{
-namespace simulation
-{
-namespace common
+namespace sofa::simulation::common
 {
 
 struct VisitorExecuteFunc
@@ -43,9 +39,9 @@ public:
 
     bool precomputedTraversalOrder;
 
-    VisitorExecuteFunc(core::objectmodel::BaseContext& ctx, bool precomputedTraversalOrder=false)
-        : ctx(ctx)
-        , precomputedTraversalOrder(precomputedTraversalOrder)
+    VisitorExecuteFunc(core::objectmodel::BaseContext& context, bool bPrecomputedTraversalOrder=false)
+        : ctx(context)
+        , precomputedTraversalOrder(bPrecomputedTraversalOrder)
     {}
 
     template< class Visitor >
@@ -70,8 +66,6 @@ protected:
         prepareVisitor( (sofa::simulation::Visitor*)mv );
     }
 };
-}
-}
 }
 
 #endif // SOFA_SIMULATION_CORE_VISITOREXECUTE_H

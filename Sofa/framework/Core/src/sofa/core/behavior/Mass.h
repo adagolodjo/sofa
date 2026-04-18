@@ -112,8 +112,8 @@ public:
     ///
     /// This method retrieves the positions and velocity vectors and call the internal
     /// getMomentum(const MechanicalParams*, const VecCoord&, const VecDeriv&) method implemented by the component.
-    type::Vector6 getMomentum( const MechanicalParams* mparams ) const override;
-    virtual type::Vector6 getMomentum( const MechanicalParams* , const DataVecCoord& , const DataVecDeriv&  ) const;
+    type::Vec6 getMomentum( const MechanicalParams* mparams ) const override;
+    virtual type::Vec6 getMomentum( const MechanicalParams* , const DataVecCoord& , const DataVecDeriv&  ) const;
 
 
 
@@ -127,6 +127,7 @@ public:
 
     void addMToMatrix(const MechanicalParams* mparams, const sofa::core::behavior::MultiMatrixAccessor* matrix) override;
     virtual void addMToMatrix(sofa::linearalgebra::BaseMatrix * matrix, SReal mFact, unsigned int &offset);
+
 
     /// Compute the system matrix corresponding to m M + b B + k K
     ///
@@ -155,7 +156,7 @@ public:
 
 protected:
     /// stream to export Kinematic, Potential and Mechanical Energy to gnuplot files
-    std::ofstream* m_gnuplotFileEnergy;
+    std::unique_ptr<std::ofstream> m_gnuplotFileEnergy;
 
 public:
     bool insertInNode( objectmodel::BaseNode* node ) override { BaseMass::insertInNode(node); BaseForceField::insertInNode(node); return true; }
@@ -164,7 +165,7 @@ public:
 };
 
 
-#if  !defined(SOFA_CORE_BEHAVIOR_MASS_CPP)
+#if !defined(SOFA_CORE_BEHAVIOR_MASS_CPP)
 extern template class SOFA_CORE_API Mass<defaulttype::Vec3Types>;
 extern template class SOFA_CORE_API Mass<defaulttype::Vec2Types>;
 extern template class SOFA_CORE_API Mass<defaulttype::Vec1Types>;

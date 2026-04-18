@@ -28,7 +28,7 @@
 #include <sofa/simulation/InitTasks.h>
 
 
-namespace sofa::component::controller
+namespace geomagic
 {
 
 using namespace sofa::defaulttype;
@@ -68,12 +68,12 @@ public:
     /// Public method to init tool. Can be called from thirdparty if @sa d_manualStart is set to true
     virtual void initDevice() override;
 
-    /// Method to clear sheduler and free device. Called by default at driver destruction
+    /// Method to clear scheduler and free device. Called by default at driver destruction
     virtual void clearDevice() override;
 
 
 
-    Data <SReal> d_speedFactor; ///< factor to increase/decrease the movements speed    
+    Data <SReal> d_speedFactor; ///< factor to increase/decrease the movements speed
 
     void applyTranslation(sofa::type::Vec3 translation);
     void worldToLocal(sofa::type::Vec3& vector);
@@ -95,7 +95,7 @@ public:
 public:
     sofa::simulation::TaskScheduler* _taskScheduler;
     sofa::simulation::CpuTask::Status _simStepStatus;
-    sofa::type::Vector3 m_toolForceFeedBack;
+    sofa::type::Vec3 m_toolForceFeedBack;
 
     std::mutex lockPosition;
 
@@ -104,4 +104,4 @@ public:
     type::Vec3 m_toolPosition;
 };
 
-} // sofa::component::controller
+} // namespace geomagic

@@ -22,15 +22,20 @@
 #pragma once
 #include <sofa/component/collision/response/contact/config.h>
 
-#include <sofa/component/collision/response/contact/DefaultContactManager.h>
+#include <sofa/component/collision/response/contact/CollisionResponse.h>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
+
+#include <sofa/type/hardening.h>
 
 namespace sofa::component::collision::response::contact
 {
 
-class SOFA_COMPONENT_COLLISION_RESPONSE_CONTACT_API RuleBasedContactManager : public DefaultContactManager
+class SOFA_COMPONENT_COLLISION_RESPONSE_CONTACT_API RuleBasedContactManager : public CollisionResponse
 {
 public:
-    SOFA_CLASS(RuleBasedContactManager, DefaultContactManager);
+    SOFA_CLASS(RuleBasedContactManager, CollisionResponse);
 
     class Rule
     {
@@ -46,18 +51,32 @@ public:
             in >> r.name1 >> r.name2 >> r.response;
             if (!r.name1.empty() && r.name1.find_first_not_of("-0123456789") == std::string::npos)
             {
-                r.group1 = atoi(r.name1.c_str());
-                r.name1.clear();
+                int val{};
+                if(sofa::type::hardening::safeStrToInt(r.name1, val))
+                {
+                    r.group1 = val;
+                    r.name1.clear();
+                }
+                else
+                    r.group1 = 0;
             }
             else
                 r.group1 = 0;
+            
             if (!r.name2.empty() && r.name2.find_first_not_of("-0123456789") == std::string::npos)
             {
-                r.group2 = atoi(r.name2.c_str());
-                r.name2.clear();
+                int val{};
+                if(sofa::type::hardening::safeStrToInt(r.name2, val))
+                {
+                    r.group2 = val;
+                    r.name2.clear();
+                }
+                else
+                    r.group2 = 0;
             }
             else
                 r.group2 = 0;
+
             return in;
         }
 
@@ -85,7 +104,7 @@ public:
             }
             else
             {
-                if ( model1->getGroups().count(group1)==0 )
+                if (!model1->getGroups().contains(group1) )
                     return false;
             }
             if (!name2.empty())
@@ -95,7 +114,7 @@ public:
             }
             else
             {
-                if ( model2->getGroups().count(group2)==0 )
+                if (!model2->getGroups().contains(group2) )
                     return false;
             }
             return true;
@@ -103,7 +122,7 @@ public:
     };
 
     Data< std::string > d_variables; ///< Define a list of variables to be used inside the rules
-    Data< type::vector<Rule> > rules;
+    Data< type::vector<Rule> > d_rules;
 
     virtual std::string getContactResponse(core::CollisionModel* model1, core::CollisionModel* model2) override;
 

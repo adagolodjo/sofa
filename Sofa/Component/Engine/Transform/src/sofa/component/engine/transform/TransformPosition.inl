@@ -24,11 +24,14 @@
 #include <sofa/core/visual/VisualParams.h>
 #include <cmath>
 #include <sofa/helper/RandomGenerator.h>
+#include <sofa/type/hardening.h>
 
 #include <vector>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <cstdlib>
+#include <cerrno>
 
 namespace sofa::component::engine::transform
 {
@@ -42,7 +45,7 @@ TransformPosition<DataTypes>::TransformPosition()
     , f_translation(initData(&f_translation, "translation", "translation vector ") )
     , f_rotation(initData(&f_rotation, "rotation", "rotation vector ") )
     , f_scale(initData(&f_scale, Coord(1.0,1.0,1.0), "scale", "scale factor") )
-    , f_affineMatrix(initData(&f_affineMatrix, Mat4x4::s_identity, "matrix", "4x4 affine matrix") )
+    , f_affineMatrix(initData(&f_affineMatrix, Mat4x4::Identity(), "matrix", "4x4 affine matrix") )
     , f_method(initData(&f_method, "method", "transformation method either translation or scale or rotation or random or projectOnPlane") )
     , f_seed(initData(&f_seed, (long) 0, "seedValue", "the seed value for the random generator") )
     , f_maxRandomDisplacement(initData(&f_maxRandomDisplacement, (Real) 1.0, "maxRandomDisplacement", "the maximum displacement around initial position for the random transformation") )
@@ -57,7 +60,7 @@ TransformPosition<DataTypes>::TransformPosition()
 
     f_pointSize.setGroup("Visualization");
 
-    f_method.beginEdit()->setNames(9,
+    f_method.setValue({
         "projectOnPlane",
         "translation",
         "rotation",
@@ -66,8 +69,7 @@ TransformPosition<DataTypes>::TransformPosition()
         "scaleTranslation",
         "scaleRotationTranslation",
         "affine",
-        "fromFile");
-    f_method.endEdit();
+        "fromFile"});
 
     addInput(&f_inputX);
     addInput(&f_origin);
@@ -121,7 +123,7 @@ void TransformPosition<DataTypes>::selectTransformationMethod()
         transformationMethod=AFFINE;
         if (f_filename.isSet())
         {
-            std::string fname = f_filename.getValue();
+            const std::string fname = f_filename.getValue();
             if (fname.size()>=4 && fname.substr(fname.size()-4)==".trm")
                 getTransfoFromTrm();
             else if (fname.size()>=4 && (fname.substr(fname.size()-4)==".txt" || fname.substr(fname.size()-4)==".xfm"))
@@ -165,7 +167,7 @@ void TransformPosition<DataTypes>::reinit()
 
 /**************************************************
  * .tfm spec:
- * 12 values in the lines begining by "Parameters"
+ * 12 values in the lines beginning by "Parameters"
  **************************************************/
 template <class DataTypes>
 void TransformPosition<DataTypes>::getTransfoFromTfm()
@@ -177,7 +179,7 @@ void TransformPosition<DataTypes>::getTransfoFromTfm()
     if (stream)
     {
         std::string line;
-        Mat4x4 mat(Mat4x4::s_identity);
+        Mat4x4 mat(Mat4x4::Identity());
 
         bool found = false;
         while (getline(stream,line) && !found)
@@ -189,7 +191,7 @@ void TransformPosition<DataTypes>::getTransfoFromTfm()
                 typedef std::vector<std::string> vecString;
                 vecString vLine;
 
-                char *l = new char[line.size()];
+                char *l = new char[line.size() + 1];
                 strcpy(l, line.c_str());
                 char* p;
                 for (p = strtok(l, " "); p; p = strtok(nullptr, " "))
@@ -201,7 +203,17 @@ void TransformPosition<DataTypes>::getTransfoFromTfm()
                 {
                     std::string c = *it;
                     if ( c.find_first_of("1234567890.-") != std::string::npos)
-                        values.push_back((Real)atof(c.c_str()));
+                    {
+                        Real val{};
+                        if(sofa::type::hardening::safeStrToScalar(c, val))
+                        {
+                            values.push_back(val);
+                        }
+                        else
+                        {
+                            msg_error() << "error while parsing value " << c ;
+                        }
+                    }
                 }
 
                 if (values.size() != 12)
@@ -212,9 +224,9 @@ void TransformPosition<DataTypes>::getTransfoFromTfm()
                     {
                         for (unsigned int j = 0 ; j < 3; j++)
                         {
-                            mat[i][j] = values[i*3+j];//rotation matrix
+                            mat(i,j) = values[i*3+j];//rotation matrix
                         }
-                        mat[i][3] = values[values.size()-1-i];//translation
+                        mat(i,3) = values[values.size()-1-i];//translation
                     }
                 }
             }
@@ -245,7 +257,7 @@ void TransformPosition<DataTypes>::getTransfoFromTrm()
     {
         std::string line;
         unsigned int nbLines = 0;
-        Mat4x4 mat(Mat4x4::s_identity);
+        Mat4x4 mat(Mat4x4::Identity());
 
         while (getline(stream,line))
         {
@@ -260,7 +272,7 @@ void TransformPosition<DataTypes>::getTransfoFromTrm()
 
             std::vector<std::string> vLine;
 
-            char *l = new char[line.size()];
+            char *l = new char[line.size() + 1];
             strcpy(l, line.c_str());
             char* p;
             for (p = strtok(l, " "); p; p = strtok(nullptr, " "))
@@ -286,7 +298,14 @@ void TransformPosition<DataTypes>::getTransfoFromTrm()
                 Coord tr;
                 for ( unsigned int i = 0; i < std::min((unsigned int)vLine.size(),(unsigned int)3); i++)
                 {
-                    tr[i] = mat[i][3] = (Real)atof(vLine[i].c_str());
+                    Real val{};
+                    if(!sofa::type::hardening::safeStrToScalar(vLine[i], val))
+                    {
+                        msg_error() << "Invalid number in file: " << vLine[i];
+                        val = 0.0;
+                    }
+                    
+                    tr[i] = mat(i,3) = val;
                 }
                 f_translation.setValue(tr);
 
@@ -295,7 +314,16 @@ void TransformPosition<DataTypes>::getTransfoFromTrm()
             {
                 //rotation matrix
                 for ( unsigned int i = 0; i < std::min((unsigned int)vLine.size(),(unsigned int)3); i++)
-                    mat[nbLines-2][i] = (Real)atof(vLine[i].c_str());
+                {
+                    Real val{};
+                    if(!sofa::type::hardening::safeStrToScalar(vLine[i], val))
+                    {
+                        msg_error() << "Invalid number in file: " << vLine[i];
+                        val = 0.0;
+                    }
+                    
+                    mat(nbLines-2,i) = val;
+                }
             }
 
         }
@@ -323,7 +351,7 @@ void TransformPosition<DataTypes>::getTransfoFromTxt()
     {
         std::string line;
         unsigned int nbLines = 0;
-        Mat4x4 mat(Mat4x4::s_identity);
+        Mat4x4 mat(Mat4x4::Identity());
 
         while (getline(stream,line))
         {
@@ -338,7 +366,7 @@ void TransformPosition<DataTypes>::getTransfoFromTxt()
 
             std::vector<std::string> vLine;
 
-            char *l = new char[line.size()];
+            char *l = new char[line.size() + 1];
             strcpy(l, line.c_str());
             char* p;
             for (p = strtok(l, " "); p; p = strtok(nullptr, " "))
@@ -359,7 +387,16 @@ void TransformPosition<DataTypes>::getTransfoFromTxt()
             else if (vLine.size()<4) {msg_error() << "Matrix is not 4x4.";continue;}
 
             for ( unsigned int i = 0; i < std::min((unsigned int)vLine.size(),(unsigned int)4); i++)
-                mat[nbLines-1][i] = (Real)atof(vLine[i].c_str());
+            {
+                Real val{};
+                if(!sofa::type::hardening::safeStrToScalar(vLine[i], val))
+                {
+                    msg_error() << "Invalid number in file: " << vLine[i];
+                    val = 0.0;
+                }
+                
+                mat(nbLines-1,i) = (Real)val;
+            }
         }
         f_affineMatrix.setValue(mat);
 
@@ -385,8 +422,8 @@ void TransformPosition<DataTypes>::doUpdate()
     helper::ReadAccessor< Data<Coord> > rotation = f_rotation;
     helper::ReadAccessor< Data<Mat4x4> > affineMatrix = f_affineMatrix;
     helper::ReadAccessor< Data<Real> > maxDisplacement = f_maxRandomDisplacement;
-    helper::ReadAccessor< Data<long> > seed = f_seed;
-    helper::ReadAccessor< Data<SetIndex> > fixedIndices = f_fixedIndices;
+    const helper::ReadAccessor< Data<long> > seed = f_seed;
+    const helper::ReadAccessor< Data<SetIndex> > fixedIndices = f_fixedIndices;
 
     helper::WriteOnlyAccessor< Data<VecCoord> > out = f_outputX;
 
@@ -403,7 +440,7 @@ void TransformPosition<DataTypes>::doUpdate()
     case RANDOM :
     {
         sofa::helper::RandomGenerator rg;
-        double dis=(double) maxDisplacement.ref();
+        const double dis=(double) maxDisplacement.ref();
         if (seed.ref()!=0)
             rg.initSeed(seed.ref());
         for (i=0; i< in.size(); ++i)
@@ -433,7 +470,7 @@ void TransformPosition<DataTypes>::doUpdate()
         break;
     case ROTATION :
     {
-        sofa::type::Quat<SReal> q=type::Quat<Real>::createQuaterFromEuler( rotation.ref()*M_PI/180.0);
+        const sofa::type::Quat<SReal> q=type::Quat<Real>::createQuaterFromEuler( rotation.ref()*M_PI/180.0);
 
         for (i=0; i< in.size(); ++i)
         {
@@ -443,7 +480,7 @@ void TransformPosition<DataTypes>::doUpdate()
     break;
     case SCALE_ROTATION_TRANSLATION :
     {
-        sofa::type::Quat<SReal> q=type::Quat<Real>::createQuaterFromEuler( rotation.ref()*M_PI/180.0);
+        const sofa::type::Quat<SReal> q=type::Quat<Real>::createQuaterFromEuler( rotation.ref()*M_PI/180.0);
 
         for (i=0; i< in.size(); ++i)
         {
@@ -456,7 +493,7 @@ void TransformPosition<DataTypes>::doUpdate()
         {
             Vec4 coord = affineMatrix.ref()*Vec4(in[i], 1);
             if ( fabs(coord[3]) > 1e-10)
-                out[i]=coord/coord[3];
+                out[i]=type::toVec3(coord/coord[3]);
         }
         break;
     }
@@ -472,12 +509,12 @@ void TransformPosition<DataTypes>::doUpdate()
 template <class DataTypes>
 void TransformPosition<DataTypes>::draw(const core::visual::VisualParams* vparams)
 {
-    vparams->drawTool()->saveLastState();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
     if (f_drawInput.getValue())
     {
         helper::ReadAccessor< Data<VecCoord> > in = f_inputX;
-        std::vector<sofa::type::Vector3> points;
+        std::vector<sofa::type::Vec3> points;
         for (unsigned int i=0; i < in.size(); i++)
             points.push_back(in[i]);
         vparams->drawTool()->drawPoints(points, (float)f_pointSize.getValue(), sofa::type::RGBAColor(0.8f, 0.2f, 0.2f, 1.0f));
@@ -486,12 +523,12 @@ void TransformPosition<DataTypes>::draw(const core::visual::VisualParams* vparam
     if (f_drawOutput.getValue())
     {
         helper::ReadAccessor< Data<VecCoord> > out = f_outputX;
-        std::vector<sofa::type::Vector3> points;
+        std::vector<sofa::type::Vec3> points;
         for (unsigned int i=0; i < out.size(); i++)
             points.push_back(out[i]);
         vparams->drawTool()->drawPoints(points, (float)f_pointSize.getValue(), sofa::type::RGBAColor(0.2f, 0.8f, 0.2f, 1.0f));
     }
-    vparams->drawTool()->restoreLastState();
+
 }
 
 

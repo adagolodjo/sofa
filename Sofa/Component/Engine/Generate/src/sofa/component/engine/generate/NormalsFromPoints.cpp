@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_NormalsFromPoints_CPP
-#include "NormalsFromPoints.inl"
+#include <sofa/component/engine/generate/NormalsFromPoints.inl>
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/defaulttype/VecTypes.h>
 
@@ -29,13 +29,12 @@ namespace sofa::component::engine::generate
 
 using namespace sofa::defaulttype;
 
-int NormalsFromPointsClass = core::RegisterObject("Compute vertex normals by averaging face normals")
-        .add< NormalsFromPoints<Vec3Types> >()
- 
-        ;
+void registerNormalsFromPoints(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Compute vertex normals by averaging face normals.")
+        .add< NormalsFromPoints<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_GENERATE_API NormalsFromPoints<Vec3Types>;
- 
-
 
 } //namespace sofa::component::engine::generate

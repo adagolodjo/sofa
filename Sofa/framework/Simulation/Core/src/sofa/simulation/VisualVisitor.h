@@ -24,24 +24,24 @@
 
 #include <sofa/simulation/Visitor.h>
 #include <sofa/core/visual/VisualModel.h>
+#include <sofa/core/visual/BaseVisualStyle.h>
 
 
-namespace sofa
-{
-
-namespace simulation
+namespace sofa::simulation
 {
 
 class SOFA_SIMULATION_CORE_API VisualVisitor : public Visitor
 {
 public:
-    VisualVisitor(core::visual::VisualParams* params)
-        : Visitor(sofa::core::visual::visualparams::castToExecParams(params))
-        ,vparams(params)
+    VisualVisitor(core::visual::VisualParams* visuparams)
+        : Visitor(sofa::core::visual::visualparams::castToExecParams(visuparams))
+        ,vparams(visuparams)
     {}
 
     virtual void processVisualModel(simulation::Node* node, core::visual::VisualModel* vm) = 0;
-    virtual void processObject(simulation::Node* /*node*/, core::objectmodel::BaseObject* /*o*/) {}
+    virtual void fwdProcessVisualStyle(simulation::Node* node, core::visual::BaseVisualStyle* vm);
+    virtual void bwdProcessVisualStyle(simulation::Node* node, core::visual::BaseVisualStyle* vm);
+    virtual void processObject(simulation::Node* /*node*/, core::objectmodel::BaseComponent* /*o*/) {}
 
     Result processNodeTopDown(simulation::Node* node) override;
 
@@ -57,19 +57,19 @@ protected:
     core::visual::VisualParams* vparams;
 };
 
+
 class SOFA_SIMULATION_CORE_API VisualDrawVisitor : public VisualVisitor
 {
 public:
     bool hasShader;
-    VisualDrawVisitor(core::visual::VisualParams* params)
-        : VisualVisitor(params)
-    {
-    }
+    VisualDrawVisitor(core::visual::VisualParams* visuparams)
+    : VisualVisitor(visuparams)
+    {};
     Result processNodeTopDown(simulation::Node* node) override;
     void processNodeBottomUp(simulation::Node* node) override;
     virtual void fwdVisualModel(simulation::Node* node, core::visual::VisualModel* vm);
     void processVisualModel(simulation::Node* node, core::visual::VisualModel* vm) override;
-    void processObject(simulation::Node* node, core::objectmodel::BaseObject* o) override;
+    void processObject(simulation::Node* node, core::objectmodel::BaseComponent* o) override;
     virtual void bwdVisualModel(simulation::Node* node, core::visual::VisualModel* vm);
     const char* getClassName() const override { return "VisualDrawVisitor"; }
 #ifdef SOFA_DUMP_VISITOR_INFO
@@ -77,23 +77,29 @@ public:
 #endif
 };
 
-class SOFA_SIMULATION_CORE_API VisualUpdateVisitor : public Visitor
+class SOFA_SIMULATION_CORE_API VisualUpdateVisitor : public VisualVisitor
 {
 public:
-    VisualUpdateVisitor(const core::ExecParams* params) : Visitor(params) {}
+    VisualUpdateVisitor(core::visual::VisualParams* visuparams)
+        : VisualVisitor(visuparams)
+    {}
 
-    virtual void processVisualModel(simulation::Node*, core::visual::VisualModel* vm);
+    virtual void processVisualModel(simulation::Node*, core::visual::VisualModel* vm) override;
     Result processNodeTopDown(simulation::Node* node) override;
+    void processNodeBottomUp(simulation::Node* node) override;
 
     const char* getClassName() const override { return "VisualUpdateVisitor"; }
+
 };
 
-class SOFA_SIMULATION_CORE_API VisualInitVisitor : public Visitor
+class SOFA_SIMULATION_CORE_API VisualInitVisitor : public VisualVisitor
 {
 public:
-    VisualInitVisitor(const core::ExecParams* params):Visitor(params) {}
-
-    virtual void processVisualModel(simulation::Node*, core::visual::VisualModel* vm);
+    VisualInitVisitor(core::visual::VisualParams* visuparams)
+        : VisualVisitor(visuparams)
+    {}
+    
+    virtual void processVisualModel(simulation::Node*, core::visual::VisualModel* vm) override;
     Result processNodeTopDown(simulation::Node* node) override;
     const char* getClassName() const override { return "VisualInitVisitor"; }
 };
@@ -105,7 +111,7 @@ class SOFA_SIMULATION_CORE_API VisualComputeBBoxVisitor : public Visitor
 public:
     SReal minBBox[3];
     SReal maxBBox[3];
-    VisualComputeBBoxVisitor(const core::ExecParams* params);
+    VisualComputeBBoxVisitor(const core::ExecParams* eparams);
 
     virtual void processBehaviorModel(simulation::Node*, core::BehaviorModel* vm);
     virtual void processMechanicalState(simulation::Node*, core::behavior::BaseMechanicalState* vm);
@@ -119,7 +125,7 @@ public:
 class SOFA_SIMULATION_CORE_API VisualClearVisitor : public VisualVisitor
 {
 public:
-    VisualClearVisitor(core::visual::VisualParams* params) : VisualVisitor(params)
+    VisualClearVisitor(core::visual::VisualParams* visuparams) : VisualVisitor(visuparams)
     {}
 
     void processVisualModel(simulation::Node*, core::visual::VisualModel* vm) override
@@ -130,8 +136,7 @@ public:
 };
 
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

@@ -31,7 +31,7 @@ namespace sofa::component::topology::container::grid
 
 /**
 Build a SparseGridTopology for several given Triangular meshes.
-A stiffness coefficient has to be assigned for each mesh. The last found stiffness coefficient is used for an element shared by several meshes => The mesh ordering is important, and so, more specific stiffness informations must appear in last.
+A stiffness coefficient has to be assigned for each mesh. The last found stiffness coefficient is used for an element shared by several meshes => The mesh ordering is important, and so, more specific stiffness information must appear in last.
 */
 class SOFA_COMPONENT_TOPOLOGY_CONTAINER_GRID_API SparseGridMultipleTopology : public SparseGridRamificationTopology
 {
@@ -42,7 +42,7 @@ protected:
 public:
     void init() override
     {
-        if(_computeRamifications.getValue())
+        if(d_computeRamifications.getValue())
             SparseGridRamificationTopology::init(  );
         else
             SparseGridTopology::init(  );
@@ -51,7 +51,7 @@ public:
     void buildAsFinest() override;
     void buildFromFiner() override
     {
-        if(_computeRamifications.getValue())
+        if(d_computeRamifications.getValue())
             SparseGridRamificationTopology::buildFromFiner(  );
         else
             SparseGridTopology::buildFromFiner(  );
@@ -59,17 +59,17 @@ public:
     void buildVirtualFinerLevels() override;
 
 
-    Index findCube(const Vector3 &pos, SReal &fx, SReal &fy, SReal &fz) override
+    Index findCube(const type::Vec3 &pos, SReal &fx, SReal &fy, SReal &fz) override
     {
-        if(_computeRamifications.getValue())
+        if(d_computeRamifications.getValue())
             return SparseGridRamificationTopology::findCube( pos,fx,fy,fz  );
         else
             return SparseGridTopology::findCube( pos,fx,fy,fz );
     }
 
-    Index findNearestCube(const Vector3& pos, SReal& fx, SReal &fy, SReal &fz) override
+    Index findNearestCube(const type::Vec3& pos, SReal& fx, SReal &fy, SReal &fz) override
     {
-        if(_computeRamifications.getValue())
+        if(d_computeRamifications.getValue())
             return SparseGridRamificationTopology::findNearestCube( pos,fx,fy,fz );
         else
             return SparseGridTopology::findNearestCube( pos,fx,fy,fz );
@@ -78,16 +78,11 @@ public:
 
 
 protected :
-
-
-    Data< type::vector< std::string > > _fileTopologies; ///< All topology filenames
-    Data< type::vector< float > > _dataStiffnessCoefs; ///< A stiffness coefficient for each topology filename
-    Data< type::vector< float > > _dataMassCoefs; ///< A mass coefficient for each topology filename
-    Data<bool> _computeRamifications; ///< Are ramifications wanted?
-    Data<bool> _erasePreviousCoef; ///< Does a new stiffness/mass coefficient replace the previous or blend half/half with it?
-
-
-
+    Data< type::vector< std::string > > d_fileTopologies; ///< All topology filenames
+    Data< type::vector< float > > d_dataStiffnessCoefs; ///< A stiffness coefficient for each topology filename
+    Data< type::vector< float > > d_dataMassCoefs; ///< A mass coefficient for each topology filename
+    Data<bool> d_computeRamifications; ///< Are ramifications wanted?
+    Data<bool> d_erasePreviousCoef; ///< Does a new stiffness/mass coefficient replace the previous or blend half/half with it?
 
     void buildFromTriangleMesh(helper::io::Mesh*, unsigned fileIdx);
     type::vector< RegularGridTopology::SPtr > _regularGrids;

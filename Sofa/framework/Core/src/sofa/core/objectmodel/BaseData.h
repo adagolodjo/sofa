@@ -19,21 +19,14 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_OBJECTMODEL_BASEDATA_H
-#define SOFA_CORE_OBJECTMODEL_BASEDATA_H
+#pragma once
 
 #include <sofa/core/config.h>
 #include <sofa/defaulttype/DataTypeInfo.h>
 #include <sofa/core/objectmodel/DDGNode.h>
 #include <sofa/core/objectmodel/DataLink.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace objectmodel
+namespace sofa::core::objectmodel
 {
 
 class Base;
@@ -70,13 +63,12 @@ public:
     class BaseInitData
     {
     public:
-        BaseInitData() : data(nullptr), helpMsg(""), dataFlags(FLAG_DEFAULT), owner(nullptr), name(""), ownerClass(""), group(""), widget("") {}
+        BaseInitData() : data(nullptr), helpMsg(""), dataFlags(FLAG_DEFAULT), owner(nullptr), name(""), group(""), widget("") {}
         BaseData* data;
         std::string helpMsg;
         DataFlags dataFlags;
         Base* owner;
         std::string name;
-        std::string ownerClass;
         std::string group;
         std::string widget;
     };
@@ -120,6 +112,9 @@ public:
     /// Get a string representation of the value held in this %Data.
     virtual std::string getValueString() const = 0;
 
+    /// Get a string representation of the default value held in this %Data.
+    virtual std::string getDefaultValueString() const = 0;
+
     /// Get the name of the type of the value held in this %Data.
     virtual std::string getValueTypeString() const = 0;
 
@@ -152,14 +147,6 @@ public:
     /// Set the help message.
     void setHelp(const std::string& val) { help = val; }
 
-    /// Get owner class
-    SOFA_ATTRIBUTE_DEPRECATED__BASEDATA_OWNERCLASS_ACCESSOR("Replace getOwnerClass() by getOwner()->getClassName().")
-    const std::string& getOwnerClass() const { return ownerClass; }
-
-    /// Set owner class
-    SOFA_ATTRIBUTE_DEPRECATED__BASEDATA_OWNERCLASS_ACCESSOR("This feature will be totally removed. You are not supposed to change Owner's type name.")
-    void setOwnerClass(const char* val) { ownerClass = val; }
-
     /// Get group
     const std::string& getGroup() const { return group; }
 
@@ -172,9 +159,6 @@ public:
     /// Set widget
     void setWidget(const char* val) { widget = val; }
 
-    /// True if the counter of modification gives valid information.
-    SOFA_ATTRIBUTE_DEPRECATED__TDATA_INTO_DATA("Data<> must have, by design, their counter valid.")
-    bool isCounterValid() const { return true; }
 
     /// @name Flags
     /// @{
@@ -210,6 +194,7 @@ public:
 
     /// If we use the Data as a link and not as value directly
     virtual std::string getLinkPath() const;
+    std::string getPathName()const;
 
     /// Return whether this %Data can be used as a linkPath.
     ///
@@ -243,24 +228,16 @@ public:
     /// True if the value has been modified
     /// If this data is linked, the value of this data will be considered as modified
     /// (even if the parent's value has not been modified)s
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    bool isSet(const core::ExecParams*) const { return isSet(); }
     bool isSet() const { return m_isSet; }
 
     /// Reset the isSet flag to false, to indicate that the current value is the default for this %Data.
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    void unset(const core::ExecParams*) { unset(); }
     void unset() { m_isSet = false; }
 
     /// Reset the isSet flag to true, to indicate that the current value has been modified.
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    void forceSet(const core::ExecParams*) { forceSet(); }
     void forceSet() { m_isSet = true; }
 
     /// Return the number of changes since creation
     /// This can be used to efficiently detect changes
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    int getCounter(const core::ExecParams*) const { return getCounter(); }
     int getCounter() const { return m_counter; }
     /// @}
 
@@ -271,17 +248,10 @@ public:
     /// Check if a given Data can be linked as a parent of this data
     virtual bool validParent(const BaseData *parent);
 
-    BaseData* getParent() { return parentData.getTarget(); }
+    BaseData* getParent() const { return parentData.getTarget(); }
 
     /// Update the value of this %Data
     void update() override;
-
-    /// Copy the value from another Data.
-    ///
-    /// Note that this is a one-time copy and not a permanent link (otherwise see setParent())
-    /// @return true if the copy was successful.
-    SOFA_ATTRIBUTE_DEPRECATED__TDATA_INTO_DATA("Use copyValueFrom() instead.")
-    bool copyValue(const BaseData* data){ return copyValueFrom(data); }
 
     /// Copy the value from another Data.
     ///
@@ -319,12 +289,16 @@ public:
 
     /// Helper method to get the type name of type T
     template<class T>
-    static std::string typeName(const T* = nullptr)
+    static std::string typeName()
     {
-        if (defaulttype::DataTypeInfo<T>::ValidInfo)
+        if constexpr (defaulttype::DataTypeInfo<T>::ValidInfo)
+        {
             return defaulttype::DataTypeName<T>::name();
+        }
         else
+        {
             return decodeTypeName(typeid(T));
+        }
     }
 
 protected:
@@ -342,7 +316,7 @@ private:
     virtual const void* doGetValueVoidPtr() const = 0;
     virtual void* doBeginEditVoidPtr() = 0;
     virtual void doEndEditVoidPtr() = 0;
-    virtual void doOnUpdate() {};
+    virtual void doOnUpdate() {}
 };
 
 /** A WriteAccessWithRawPtr is a RAII class, holding a reference to a given container
@@ -358,7 +332,7 @@ private:
 class WriteAccessWithRawPtr
 {
 public:
-    WriteAccessWithRawPtr(BaseData* data)
+    explicit WriteAccessWithRawPtr(BaseData* data)
     {
         m_data = data;
         ptr = data->beginEditVoidPtr();
@@ -369,16 +343,12 @@ public:
         m_data->endEditVoidPtr();
     }
 
-    void*     ptr;
+    void*     ptr { nullptr };
 private:
-    WriteAccessWithRawPtr(){}
-    BaseData* m_data;
+    WriteAccessWithRawPtr() = default;
+    BaseData* m_data { nullptr };
 };
 
-} // namespace objectmodel
+SOFA_CORE_API std::ostream& operator<<(std::ostream &out, const sofa::core::objectmodel::BaseData& df);
 
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core::objectmodel

@@ -20,23 +20,27 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #include <sofa/component/setting/init.h>
+#include <sofa/core/ObjectFactory.h>
+#include <sofa/helper/system/PluginManager.h>
 
 namespace sofa::component::setting
 {
+
+extern void registerBackgroundSetting(sofa::core::ObjectFactory* factory);
+extern void registerSofaDefaultPathSetting(sofa::core::ObjectFactory* factory);
+extern void registerStatsSetting(sofa::core::ObjectFactory* factory);
+extern void registerViewerSetting(sofa::core::ObjectFactory* factory);
 
 extern "C" {
     SOFA_EXPORT_DYNAMIC_LIBRARY void initExternalModule();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleName();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleVersion();
+    SOFA_EXPORT_DYNAMIC_LIBRARY void registerObjects(sofa::core::ObjectFactory* factory);
 }
 
 void initExternalModule()
 {
-    static bool first = true;
-    if (first)
-    {
-        first = false;
-    }
+    init();
 }
 
 const char* getModuleName()
@@ -49,9 +53,24 @@ const char* getModuleVersion()
     return MODULE_VERSION;
 }
 
+void registerObjects(sofa::core::ObjectFactory* factory)
+{
+    registerBackgroundSetting(factory);
+    registerSofaDefaultPathSetting(factory);
+    registerStatsSetting(factory);
+    registerViewerSetting(factory);
+}
+
 void init()
 {
-    initExternalModule();
+    static bool first = true;
+    if (first)
+    {
+        // make sure that this plugin is registered into the PluginManager
+        sofa::helper::system::PluginManager::getInstance().registerPlugin(MODULE_NAME);
+
+        first = false;
+    }
 }
 
 } // namespace sofa::component::setting

@@ -31,6 +31,10 @@
 #include <sstream>
 #include <list>
 
+#include <sofa/component/linearsolver/iterative/GraphScatteredTypes.h>
+#include <sofa/helper/ScopedAdvancedTimer.h>
+
+
 namespace sofa::component::constraint::lagrangian::correction
 {
 
@@ -43,8 +47,9 @@ template<class DataTypes>
 LinearSolverConstraintCorrection<DataTypes>::LinearSolverConstraintCorrection(sofa::core::behavior::MechanicalState<DataTypes> *mm)
 : Inherit(mm)
 , wire_optimization(initData(&wire_optimization, false, "wire_optimization", "constraints are reordered along a wire-like topology (from tip to base)"))
-, solverName( initData(&solverName, "solverName", "search for the following names upward the scene graph") )
-, odesolver(nullptr)
+, d_regularizationTerm(initData(&d_regularizationTerm, 0.0_sreal, "regularizationTerm", "Add regularization factor times the identity matrix to the compliance W when solving constraints"))
+, l_linearSolver(initLink("linearSolver", "Link towards the linear solver used to compute the compliance matrix, requiring the inverse of the linear system matrix"))
+, l_ODESolver(initLink("ODESolver", "Link towards the ODE solver used to recover the integration factors"))
 {
 }
 
@@ -52,7 +57,6 @@ template<class DataTypes>
 LinearSolverConstraintCorrection<DataTypes>::~LinearSolverConstraintCorrection()
 {
 }
-
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -64,43 +68,60 @@ void LinearSolverConstraintCorrection<DataTypes>::init()
 {
     Inherit::init();
 
-    sofa::core::objectmodel::BaseContext* c = this->getContext();
+    sofa::core::objectmodel::BaseContext* context = this->getContext();
 
-    odesolver = c->get<sofa::core::behavior::OdeSolver>() ;
 
-    const type::vector<std::string>& solverNames = solverName.getValue();
-
-    linearsolvers.clear();
-
-    std::stringstream tmp ;
-    if (solverNames.size() == 0)
+    // Find linear solver
+    if (l_linearSolver.empty())
     {
-        linearsolvers.push_back(c->get<sofa::core::behavior::LinearSolver>());
+        msg_info() << "Link \"linearSolver\" to the desired linear solver should be set to ensure right behavior." << msgendl
+                   << "First LinearSolver found in current context will be used.";
+        l_linearSolver.set( context->get<sofa::core::behavior::LinearSolver>(sofa::core::objectmodel::BaseContext::Local) );
     }
 
+    if (l_linearSolver.get() == nullptr)
+    {
+        msg_error() << "No LinearSolver component found at path: " << l_linearSolver.getLinkedPath() << ", nor in current context: " << context->name;
+        this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+        return;
+    }
     else
     {
-        for (unsigned int i=0; i<solverNames.size(); ++i)
+        if (l_linearSolver->getTemplateName() == "GraphScattered")
         {
-            sofa::core::behavior::LinearSolver* s = nullptr;
-            c->get(s, solverNames[i]);
-            if (s) linearsolvers.push_back(s);
-            else tmp << "- searching for solver \'" << solverNames[i] << "\' but cannot find it upward in the scene graph." << msgendl ;
+            msg_error() << "Can not use the solver " << l_linearSolver->getName() << " because it is templated on GraphScatteredType";
+            this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+            return;
+        }
+        else
+        {
+            msg_info() << "LinearSolver path used: '" << l_linearSolver.getLinkedPath() << "'";
         }
     }
 
-    if (odesolver == nullptr)
+    // Find ODE solver
+    if (l_ODESolver.empty())
     {
-        msg_error() << "No OdeSolver found (component is disabled)." ;
-        d_componentState.setValue(ComponentState::Invalid) ;
+        msg_info() << "Link \"ODESolver\" to the desired ODE solver should be set to ensure right behavior." << msgendl
+                   << "First ODESolver found in current context will be used.";
+        l_ODESolver.set( context->get<sofa::core::behavior::OdeSolver>(sofa::core::objectmodel::BaseContext::Local) );
+        if (l_ODESolver.get() == nullptr)
+        {
+            l_ODESolver.set( context->get<sofa::core::behavior::OdeSolver>(sofa::core::objectmodel::BaseContext::SearchRoot) );
+        }
+    }
+
+    if (l_ODESolver.get() == nullptr)
+    {
+        msg_error() << "No ODESolver component found at path: " << l_ODESolver.getLinkedPath() << ", nor in current context: " << context->name;
+        this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
-    if (linearsolvers.size()==0)
+    else
     {
-        msg_error() << "No LinearSolver found (component is disabled)." << tmp.str() ;
-        d_componentState.setValue(ComponentState::Invalid) ;
-        return;
+        msg_info() << "ODESolver path used: '" << l_ODESolver.getLinkedPath() << "'";
     }
+
 
     if(mstate==nullptr)
     {
@@ -112,21 +133,24 @@ void LinearSolverConstraintCorrection<DataTypes>::init()
 }
 
 template<class TDataTypes>
-void LinearSolverConstraintCorrection<TDataTypes>::computeJ(sofa::linearalgebra::BaseMatrix* W, const MatrixDeriv& c)
+void LinearSolverConstraintCorrection<TDataTypes>::convertConstraintMatrix(const sofa::SignedIndex numberOfConstraints, const MatrixDeriv& inputConstraintMatrix)
 {
-    if(d_componentState.getValue() != ComponentState::Valid)
+    if (d_componentState.getValue() != ComponentState::Valid)
+    {
         return ;
+    }
+
+    SCOPED_TIMER("convertConstraintMatrix");
 
     const unsigned int numDOFs = mstate->getSize();
-    const unsigned int N = Deriv::size();
-    const unsigned int numDOFReals = numDOFs*N;
-    const unsigned int totalNumConstraints = W->rowSize();
+    static constexpr unsigned int N = Deriv::size();
+    const unsigned int numDOFReals = numDOFs * N;
 
-    J.resize(totalNumConstraints, numDOFReals);
+    m_constraintJacobian.resize(numberOfConstraints, numDOFReals);
 
-    MatrixDerivRowConstIterator rowItEnd = c.end();
+    MatrixDerivRowConstIterator rowItEnd = inputConstraintMatrix.end();
 
-    for (MatrixDerivRowConstIterator rowIt = c.begin(); rowIt != rowItEnd; ++rowIt)
+    for (MatrixDerivRowConstIterator rowIt = inputConstraintMatrix.begin(); rowIt != rowItEnd; ++rowIt)
     {
         const int cid = rowIt.index();
 
@@ -135,14 +159,31 @@ void LinearSolverConstraintCorrection<TDataTypes>::computeJ(sofa::linearalgebra:
         for (MatrixDerivColConstIterator colIt = rowIt.begin(); colIt != colItEnd; ++colIt)
         {
             const unsigned int dof = colIt.index();
-            const Deriv n = colIt.val();
+            const Deriv& n = colIt.val();
 
             for (unsigned int r = 0; r < N; ++r)
             {
-                J.add(cid, dof * N + r, n[r]);
+                m_constraintJacobian.add(cid, dof * N + r, n[r]);
             }
         }
     }
+}
+
+template<class DataTypes>
+void LinearSolverConstraintCorrection<DataTypes>::addRegularization(linearalgebra::BaseMatrix* W)
+{
+    SReal regularization = d_regularizationTerm.getValue();
+    if (regularization > std::numeric_limits<SReal>::epsilon())
+    {
+        for (auto rowIt = m_constraintJacobian.begin(); rowIt != m_constraintJacobian.end(); ++rowIt)
+        {
+            if (rowIt->second.size() != 0)
+            {
+                W->add(rowIt->first,rowIt->first,regularization);
+            }
+        }
+    }
+
 }
 
 template<class DataTypes>
@@ -152,43 +193,28 @@ void LinearSolverConstraintCorrection<DataTypes>::addComplianceInConstraintSpace
         return ;
 
     // use the OdeSolver to get the position integration factor
-    double factor = 1.0;
+    const SReal factor = core::behavior::BaseConstraintCorrection::correctionFactor(l_ODESolver.get(), cparams->constOrder());
 
-    switch (cparams->constOrder())
+    // J is read from the mechanical state and converted to m_constraintJacobian
     {
-    case core::ConstraintParams::POS_AND_VEL :
-    case core::ConstraintParams::POS :
-        factor = odesolver->getPositionIntegrationFactor();
-        break;
-
-    case core::ConstraintParams::ACC :
-    case core::ConstraintParams::VEL :
-        factor = odesolver->getVelocityIntegrationFactor();
-        break;
-
-    default :
-        break;
+        helper::ReadAccessor inputConstraintMatrix ( *cparams->readJ(this->mstate.get()) );
+        const sofa::SignedIndex numberOfConstraints = W->rowSize();
+        convertConstraintMatrix(numberOfConstraints, inputConstraintMatrix.ref());
     }
 
-    // Compute J
-    this->computeJ(W, cparams->readJ(this->mstate)->getValue());
+    // use the Linear solver to compute J*A^-1*J^T, where A is the mechanical linear system matrix
+    l_linearSolver->getLinearSystem()->setSystemSolution(sofa::core::MultiVecDerivId::null());
+    l_linearSolver->addJMInvJt(W, &m_constraintJacobian, factor);
 
-    // use the Linear solver to compute J*inv(M)*Jt, where M is the mechanical linear system matrix
-    for (unsigned i = 0; i < linearsolvers.size(); i++)
-    {
-        linearsolvers[i]->setSystemLHVector(sofa::core::MultiVecDerivId::null());
-        linearsolvers[i]->addJMInvJt(W, &J, factor);
-    }
+    addRegularization(W);
 }
 
 
 template<class DataTypes>
-void LinearSolverConstraintCorrection<DataTypes>::rebuildSystem(double massFactor, double forceFactor)
+void LinearSolverConstraintCorrection<DataTypes>::rebuildSystem(SReal massFactor, SReal forceFactor)
 {
-    for (unsigned i = 0; i < linearsolvers.size(); i++)
-    {
-        linearsolvers[i]->rebuildSystem(massFactor, forceFactor);
-    }
+    SOFA_UNUSED(massFactor);
+    SOFA_UNUSED(forceFactor);
 }
 
 template<class DataTypes>
@@ -197,7 +223,7 @@ void LinearSolverConstraintCorrection<DataTypes>::getComplianceMatrix(linearalge
     if(d_componentState.getValue() != ComponentState::Valid)
         return ;
 
-    const double factor = odesolver->getPositionIntegrationFactor();
+    const SReal factor = l_ODESolver.get()->getPositionIntegrationFactor();
 
     const unsigned int numDOFs = mstate->getSize();
     const unsigned int N = Deriv::size();
@@ -213,17 +239,18 @@ void LinearSolverConstraintCorrection<DataTypes>::getComplianceMatrix(linearalge
     Minv->resize(numDOFReals,numDOFReals);
 
     // use the Linear solver to compute J*inv(M)*Jt, where M is the mechanical linear system matrix
-    linearsolvers[0]->addJMInvJt(Minv, &J, factor);
+    l_linearSolver->addJMInvJt(Minv, &J, factor);
 }
 
 template< class DataTypes >
 void LinearSolverConstraintCorrection< DataTypes >::computeMotionCorrection(const core::ConstraintParams* /*cparams*/, core::MultiVecDerivId dx, core::MultiVecDerivId f)
 {
-    if (mstate && !linearsolvers.empty())
+    if (mstate && l_linearSolver.get())
     {
-        linearsolvers[0]->setSystemRHVector(f);
-        linearsolvers[0]->setSystemLHVector(dx);
-        linearsolvers[0]->solveSystem();
+        l_linearSolver->getLinearSystem()->setRHS(f);
+        l_linearSolver->getLinearSystem()->setSystemSolution(dx);
+        l_linearSolver->solveSystem();
+        l_linearSolver->getLinearSystem()->dispatchSystemSolution(dx);
     }
 }
 
@@ -239,11 +266,11 @@ void LinearSolverConstraintCorrection< DataTypes >::applyMotionCorrection(const 
         auto dx = sofa::helper::getWriteAccessor(dx_d);
 
         const VecDeriv& correction = correction_d.getValue();
-        const VecCoord& x_free = cparams->readX(mstate)->getValue();
-        const VecDeriv& v_free = cparams->readV(mstate)->getValue();
+        const VecCoord& x_free = cparams->readX(mstate.get())->getValue();
+        const VecDeriv& v_free = cparams->readV(mstate.get())->getValue();
 
-        const double positionFactor = odesolver->getPositionIntegrationFactor();
-        const double velocityFactor = odesolver->getVelocityIntegrationFactor();
+        const SReal positionFactor = l_ODESolver.get()->getPositionIntegrationFactor();
+        const SReal velocityFactor = l_ODESolver.get()->getVelocityIntegrationFactor();
 
         for (unsigned int i = 0; i < numDOFs; i++)
         {
@@ -267,9 +294,9 @@ void LinearSolverConstraintCorrection< DataTypes >::applyPositionCorrection(cons
         auto dx = sofa::helper::getWriteAccessor(dx_d);
 
         const VecDeriv& correction = correction_d.getValue();
-        const VecCoord& x_free = cparams->readX(mstate)->getValue();
+        const VecCoord& x_free = cparams->readX(mstate.get())->getValue();
 
-        const double positionFactor = odesolver->getPositionIntegrationFactor();
+        const SReal positionFactor = l_ODESolver.get()->getPositionIntegrationFactor();
         for (unsigned int i = 0; i < numDOFs; i++)
         {
             const Deriv dxi = correction[i] * positionFactor;
@@ -291,9 +318,9 @@ void LinearSolverConstraintCorrection< DataTypes >::applyVelocityCorrection(cons
         auto dv = sofa::helper::getWriteAccessor(dv_d);
 
         const VecDeriv& correction = correction_d.getValue();
-        const VecDeriv& v_free = cparams->readV(mstate)->getValue();
+        const VecDeriv& v_free = cparams->readV(mstate.get())->getValue();
 
-        const double velocityFactor = odesolver->getVelocityIntegrationFactor();
+        const SReal velocityFactor = l_ODESolver.get()->getVelocityIntegrationFactor();
 
         for (unsigned int i = 0; i < numDOFs; i++)
         {
@@ -309,7 +336,7 @@ template<class DataTypes>
 void LinearSolverConstraintCorrection<DataTypes>::applyContactForce(const linearalgebra::BaseVector *f)
 {
     core::VecDerivId forceID(core::VecDerivId::V_FIRST_DYNAMIC_INDEX);
-    core::VecDerivId dxID = core::VecDerivId::dx();
+    core::VecDerivId dxID = core::vec_id::write_access::dx;
 
     const unsigned int numDOFs = mstate->getSize();
 
@@ -329,13 +356,13 @@ void LinearSolverConstraintCorrection<DataTypes>::applyContactForce(const linear
     for (unsigned int i=0; i< numDOFs; i++)
         force[i] = Deriv();
 
-    const MatrixDeriv& c = mstate->read(core::ConstMatrixDerivId::constraintJacobian())->getValue();
+    const MatrixDeriv& c = mstate->read(core::vec_id::read_access::constraintJacobian)->getValue();
 
     MatrixDerivRowConstIterator rowItEnd = c.end();
 
     for (MatrixDerivRowConstIterator rowIt = c.begin(); rowIt != rowItEnd; ++rowIt)
     {
-        const double fC1 = f->element(rowIt.index());
+        const SReal fC1 = f->element(rowIt.index());
 
         if (fC1 != 0.0)
         {
@@ -347,22 +374,23 @@ void LinearSolverConstraintCorrection<DataTypes>::applyContactForce(const linear
             }
         }
     }
-    linearsolvers[0]->setSystemRHVector(forceID);
-    linearsolvers[0]->setSystemLHVector(dxID);
-    linearsolvers[0]->solveSystem();
+    l_linearSolver->getLinearSystem()->setRHS(forceID);
+    l_linearSolver->getLinearSystem()->setSystemSolution(dxID);
+    l_linearSolver->solveSystem();
+    l_linearSolver->getLinearSystem()->dispatchSystemSolution(dxID);
 
     //TODO: tell the solver not to recompute the matrix
 
     // use the OdeSolver to get the position integration factor
-    const double positionFactor = odesolver->getPositionIntegrationFactor();
+    const SReal positionFactor = l_ODESolver.get()->getPositionIntegrationFactor();
 
     // use the OdeSolver to get the position integration factor
-    const double velocityFactor = odesolver->getVelocityIntegrationFactor();
+    const SReal velocityFactor = l_ODESolver.get()->getVelocityIntegrationFactor();
 
-    Data<VecCoord>& xData     = *mstate->write(core::VecCoordId::position());
-    Data<VecDeriv>& vData     = *mstate->write(core::VecDerivId::velocity());
-    const Data<VecCoord> & xfreeData = *mstate->read(core::ConstVecCoordId::freePosition());
-    const Data<VecDeriv> & vfreeData = *mstate->read(core::ConstVecDerivId::freeVelocity());
+    Data<VecCoord>& xData     = *mstate->write(core::vec_id::write_access::position);
+    Data<VecDeriv>& vData     = *mstate->write(core::vec_id::write_access::velocity);
+    const Data<VecCoord> & xfreeData = *mstate->read(core::vec_id::read_access::freePosition);
+    const Data<VecDeriv> & vfreeData = *mstate->read(core::vec_id::read_access::freeVelocity);
     VecCoord& x = *xData.beginEdit();
     VecDeriv& v = *vData.beginEdit();
     const VecCoord& x_free = xfreeData.getValue();
@@ -375,8 +403,6 @@ void LinearSolverConstraintCorrection<DataTypes>::applyContactForce(const linear
         x[i] = x_free[i] + dxi;
         v[i] = v_free[i] + dvi;
         dx[i] = dxi;
-
-        msg_info() << "dx[" << i << "] = " << dx[i] ;
     }
 
     dataDx.endEdit();
@@ -394,7 +420,7 @@ void LinearSolverConstraintCorrection<DataTypes>::applyContactForce(const linear
 template<class DataTypes>
 void LinearSolverConstraintCorrection<DataTypes>::resetContactForce()
 {
-    Data<VecDeriv>& forceData = *mstate->write(core::VecDerivId::force());
+    Data<VecDeriv>& forceData = *mstate->write(core::vec_id::write_access::force);
     VecDeriv& force = *forceData.beginEdit();
     for( unsigned i=0; i<force.size(); ++i )
         force[i] = Deriv();
@@ -405,7 +431,7 @@ void LinearSolverConstraintCorrection<DataTypes>::resetContactForce()
 template<class DataTypes>
 bool LinearSolverConstraintCorrection<DataTypes>::hasConstraintNumber(int index)
 {
-    const MatrixDeriv& c = mstate->read(core::ConstMatrixDerivId::constraintJacobian())->getValue();
+    const MatrixDeriv& c = mstate->read(core::vec_id::read_access::constraintJacobian)->getValue();
 
     return c.readLine(index) != c.end();
 }
@@ -418,11 +444,11 @@ void LinearSolverConstraintCorrection<DataTypes>::verify_constraints()
 }
 
 template<class DataTypes>
-void LinearSolverConstraintCorrection<DataTypes>::resetForUnbuiltResolution(double * f, std::list<unsigned int>& renumbering)
+void LinearSolverConstraintCorrection<DataTypes>::resetForUnbuiltResolution(SReal* f, std::list<unsigned int>& renumbering)
 {
     verify_constraints();
 
-    const MatrixDeriv& constraints = mstate->read(core::ConstMatrixDerivId::constraintJacobian())->getValue();
+    const MatrixDeriv& constraints = mstate->read(core::vec_id::read_access::constraintJacobian)->getValue();
 
     constraint_force.clear();
     constraint_force.resize(mstate->getSize());
@@ -445,7 +471,7 @@ void LinearSolverConstraintCorrection<DataTypes>::resetForUnbuiltResolution(doub
 
         // buf the value of force applied on concerned dof : constraint_force
         // buf a table of indice of involved dof : constraint_dofs
-        double fC = f[indexC];
+        SReal fC = f[indexC];
 
         if (fC != 0.0)
         {
@@ -515,17 +541,18 @@ void LinearSolverConstraintCorrection<DataTypes>::resetForUnbuiltResolution(doub
 
     /////////////// SET INFO FOR LINEAR SOLVER /////////////
     core::VecDerivId forceID(core::VecDerivId::V_FIRST_DYNAMIC_INDEX);
-    core::VecDerivId dxID = core::VecDerivId::dx();
+    core::VecDerivId dxID = core::vec_id::write_access::dx;
 
-    linearsolvers[0]->setSystemRHVector(forceID);
-    linearsolvers[0]->setSystemLHVector(dxID);
+    l_linearSolver->getLinearSystem()->setRHS(forceID);
+    l_linearSolver->getLinearSystem()->setSystemSolution(dxID);
 
 
-    systemMatrix_buf   = linearsolvers[0]->getSystemBaseMatrix();
-    systemRHVector_buf = linearsolvers[0]->getSystemRHBaseVector();
-    systemLHVector_buf = linearsolvers[0]->getSystemLHBaseVector();
+    systemMatrix_buf   = l_linearSolver->getLinearSystem()->getSystemBaseMatrix();
+    systemRHVector_buf = l_linearSolver->getLinearSystem()->getSystemRHSBaseVector();
+    systemLHVector_buf = l_linearSolver->getLinearSystem()->getSystemSolutionBaseVector();
+    systemLHVector_buf_fullvector = dynamic_cast<linearalgebra::FullVector<Real>*>(systemLHVector_buf); // Cast checking whether the LH vector is a FullVector to improve performances
 
-    const unsigned int derivDim = Deriv::size();
+    constexpr const auto derivDim = Deriv::total_size;
     const unsigned int systemSize = mstate->getSize() * derivDim;
     systemRHVector_buf->resize(systemSize) ;
     systemLHVector_buf->resize(systemSize) ;
@@ -537,7 +564,7 @@ void LinearSolverConstraintCorrection<DataTypes>::resetForUnbuiltResolution(doub
     }
 
     // Init the internal data of the solver for partial solving
-    linearsolvers[0]->init_partial_solve();
+    l_linearSolver->init_partial_solve();
 
 
     ///////// new : precalcul des liste d'indice ///////
@@ -560,19 +587,40 @@ void LinearSolverConstraintCorrection<DataTypes>::resetForUnbuiltResolution(doub
 }
 
 template<class DataTypes>
-void LinearSolverConstraintCorrection<DataTypes>::addConstraintDisplacement(double *d, int begin, int end)
+void LinearSolverConstraintCorrection<DataTypes>::addConstraintDisplacement(SReal*d, int begin, int end)
 {
-    const MatrixDeriv& constraints = mstate->read(core::ConstMatrixDerivId::constraintJacobian())->getValue();
-    const auto derivDim = Deriv::size();
+    const MatrixDeriv& constraints = mstate->read(core::vec_id::read_access::constraintJacobian)->getValue();
 
     last_disp = begin;
 
-
-    linearsolvers[0]->partial_solve(Vec_I_list_dof[last_disp], Vec_I_list_dof[last_force], _new_force);
+    l_linearSolver->partial_solve(Vec_I_list_dof[last_disp], Vec_I_list_dof[last_force], _new_force);
 
     _new_force = false;
 
-    // TODO => optimisation => for each bloc store J[bloc,dof]
+    // Lambda function adding the constraint displacement using [] if a FullVector is detected or element() else
+    constexpr auto addConstraintDisplacement_impl = [](SReal* d, unsigned int id, auto* systemLHVector_buf, SReal positionIntegrationFactor, unsigned int dof, const Deriv& val)
+    {
+        constexpr const auto derivDim = Deriv::total_size;
+        Deriv disp(type::NOINIT);
+
+        for (Size j = 0; j < derivDim; j++)
+        {
+            if constexpr (std::is_same_v<decltype(systemLHVector_buf), linearalgebra::FullVector<SReal>*>)
+            {
+                disp[j] = (*systemLHVector_buf)[dof * derivDim + j] * positionIntegrationFactor;
+            }
+            else
+            {
+                disp[j] = (Real)(systemLHVector_buf->element(dof * derivDim + j)) * positionIntegrationFactor;
+            }
+        }
+
+        d[id] += val * disp;
+    };
+
+    const auto positionIntegrationFactor = l_ODESolver->getPositionIntegrationFactor();
+
+    // TODO => optimisation => for each block store J[block,dof]
     for (int i = begin; i <= end; i++)
     {
         MatrixDerivRowConstIterator rowIt = constraints.readLine(i);
@@ -581,37 +629,36 @@ void LinearSolverConstraintCorrection<DataTypes>::addConstraintDisplacement(doub
         {
             MatrixDerivColConstIterator rowEnd = rowIt.end();
 
-            for (MatrixDerivColConstIterator colIt = rowIt.begin(); colIt != rowEnd; ++colIt)
+            if (systemLHVector_buf_fullvector)
             {
-                const auto dof = colIt.index();
-                Deriv disp;
-
-                for(Size j = 0; j < derivDim; j++)
+                for (MatrixDerivColConstIterator colIt = rowIt.begin(); colIt != rowEnd; ++colIt)
                 {
-                    disp[j] = (Real)(systemLHVector_buf->element(dof * derivDim + j) * odesolver->getPositionIntegrationFactor());
+                    addConstraintDisplacement_impl(d, i, systemLHVector_buf_fullvector, positionIntegrationFactor, colIt.index(), colIt.val());
                 }
-
-                d[i] += colIt.val() * disp;
+            }
+            else
+            {
+                for (MatrixDerivColConstIterator colIt = rowIt.begin(); colIt != rowEnd; ++colIt)
+                {
+                    addConstraintDisplacement_impl(d, i, systemLHVector_buf, positionIntegrationFactor, colIt.index(), colIt.val());
+                }
             }
         }
     }
 }
 
 template<class DataTypes>
-void LinearSolverConstraintCorrection<DataTypes>::setConstraintDForce(double *df, int begin, int end, bool update)
+void LinearSolverConstraintCorrection<DataTypes>::setConstraintDForce(SReal* df, int begin, int end, bool update)
 {
-
-
-    const MatrixDeriv& constraints = mstate->read(core::ConstMatrixDerivId::constraintJacobian())->getValue();
-    const unsigned int derivDim = Deriv::size();
-
-
     last_force = begin;
 
     if (!update)
         return;
 
     _new_force = true;
+
+    constexpr const auto derivDim = Deriv::total_size;
+    const MatrixDeriv& constraints = mstate->read(core::vec_id::read_access::constraintJacobian)->getValue();
 
     // TODO => optimisation !!!
     for (int i = begin; i <= end; i++)
@@ -633,7 +680,7 @@ void LinearSolverConstraintCorrection<DataTypes>::setConstraintDForce(double *df
         }
     }
 
-    // course on indices of the dofs involved invoved in the bloc //
+    // course on indices of the dofs involved invoved in the block //
     auto it_dof(Vec_I_list_dof[last_force].cbegin()), it_end(Vec_I_list_dof[last_force].cend());
     for(; it_dof!=it_end; ++it_dof)
     {
@@ -651,17 +698,17 @@ void LinearSolverConstraintCorrection<DataTypes>::getBlockDiagonalCompliance(lin
         return ;
 
     // use the OdeSolver to get the position integration factor
-    const double factor = odesolver->getPositionIntegrationFactor(); //*odesolver->getPositionIntegrationFactor(); // dt*dt
+    const SReal factor = l_ODESolver.get()->getPositionIntegrationFactor(); //*m_ODESolver->getPositionIntegrationFactor(); // dt*dt
 
     const unsigned int numDOFs = mstate->getSize();
-    const unsigned int N = Deriv::size();
-    const unsigned int numDOFReals = numDOFs*N;
+    static constexpr unsigned int N = Deriv::size();
+    const unsigned int numDOFReals = numDOFs * N;
 
     // Compute J
-    const MatrixDeriv& constraints = mstate->read(core::ConstMatrixDerivId::constraintJacobian())->getValue();
-    const unsigned int totalNumConstraints = W->rowSize();
+    const MatrixDeriv& constraints = mstate->read(core::vec_id::read_access::constraintJacobian)->getValue();
+    const sofa::SignedIndex totalNumConstraints = W->rowSize();
 
-    J.resize(totalNumConstraints, numDOFReals);
+    m_constraintJacobian.resize(totalNumConstraints, numDOFReals);
 
     for (int i = begin; i <= end; i++)
     {
@@ -674,7 +721,7 @@ void LinearSolverConstraintCorrection<DataTypes>::getBlockDiagonalCompliance(lin
             MatrixDerivColConstIterator colItEnd = rowIt.end();
 
             unsigned int dof_buf = 0;
-            int debug = 0;
+            const int debug = 0;
 
             for (MatrixDerivColConstIterator colIt = rowIt.begin(); colIt != colItEnd; ++colIt)
             {
@@ -682,11 +729,11 @@ void LinearSolverConstraintCorrection<DataTypes>::getBlockDiagonalCompliance(lin
                 const Deriv n = colIt.val();
 
                 for (unsigned int r = 0; r < N; ++r)
-                    J.add(i, dof * N + r, n[r]);
+                    m_constraintJacobian.add(i, dof * N + r, n[r]);
 
                 if (debug!=0)
                 {
-                    int test = dof_buf - dof;
+                    const int test = dof_buf - dof;
                     if (test>2 || test< -2)
                         dmsg_info() << "For constraint id1 dof1 = " << dof_buf << " dof2 = " << dof;
                 }
@@ -697,7 +744,7 @@ void LinearSolverConstraintCorrection<DataTypes>::getBlockDiagonalCompliance(lin
     }
 
     // use the Linear solver to compute J*inv(M)*Jt, where M is the mechanical linear system matrix
-    linearsolvers[0]->addJMInvJt(W, &J, factor);
+    l_linearSolver->addJMInvJt(W, &m_constraintJacobian, factor);
 
     // construction of  Vec_I_list_dof : vector containing, for each constraint block, the list of dof concerned
 
@@ -727,6 +774,9 @@ void LinearSolverConstraintCorrection<DataTypes>::getBlockDiagonalCompliance(lin
     {
         Vec_I_list_dof[i] = list_dof;
     }
+
+    addRegularization(W);
+
 }
 
 } //namespace sofa::component::constraint::lagrangian::correction

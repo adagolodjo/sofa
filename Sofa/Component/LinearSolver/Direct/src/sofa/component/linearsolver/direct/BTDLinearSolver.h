@@ -24,11 +24,15 @@
 
 #include <sofa/core/behavior/LinearSolver.h>
 #include <sofa/component/linearsolver/iterative/MatrixLinearSolver.h>
+#include <sofa/component/linearsystem/TypedMatrixLinearSystem.h>
+#include <sofa/component/linearsystem/MatrixLinearSystem.h>
 #include <sofa/linearalgebra/SparseMatrix.h>
 #include <sofa/linearalgebra/BTDMatrix.h>
 #include <sofa/linearalgebra/BlockVector.h>
 #include <cmath>
 #include <sofa/type/Mat.h>
+#include <sofa/component/linearsolver/direct/MatrixLinearSystem[BTDMatrix].h>
+#include <sofa/component/linearsolver/direct/TypedMatrixLinearSystem[BTDMatrix].h>
 
 namespace sofa::component::linearsolver::direct
 {
@@ -45,12 +49,10 @@ class BTDLinearSolver : public sofa::component::linearsolver::MatrixLinearSolver
 public:
     SOFA_CLASS(SOFA_TEMPLATE2(BTDLinearSolver, Matrix, Vector), SOFA_TEMPLATE2(sofa::component::linearsolver::MatrixLinearSolver, Matrix, Vector));
 
-    Data<bool> f_verbose; ///< Dump system state at each iteration
-    Data<bool> problem; ///< display debug informations about subpartSolve computation
-    Data<bool> subpartSolve; ///< Allows for the computation of a subpart of the system
-
-    Data<bool> verification; ///< verification of the subpartSolve
-    Data<bool> test_perf; ///< verification of performance
+    Data<bool> d_verbose; ///< Dump system state at each iteration
+    Data<bool> d_problem; ///< display debug information about subpartSolve computation
+    Data<bool> d_subpartSolve; ///< Allows for the computation of a subpart of the system
+    Data<bool> d_verification; ///< verification of the subpartSolve
 
     typedef typename Vector::SubVectorType SubVector;
     typedef typename Matrix::SubMatrixType SubMatrix;
@@ -77,31 +79,21 @@ public:
     Vector _rh_buf;		 //				// buf the right hand term
     //Vector _df_buf;		 //
     SubVector _acc_rh_bloc;		// accumulation of rh through the browsing of the structure
-    SubVector _acc_lh_bloc;		// accumulation of lh through the browsing of the strucutre
+    SubVector _acc_lh_bloc;		// accumulation of lh through the browsing of the structure
     Index	current_bloc, first_block;
     std::vector<SubVector> Vec_dRH;			// buf the dRH on block that are not current_bloc...
     ////////////////////////////
 
     type::vector<Index> nBlockComputedMinv;
     Vector Y;
-
-    Data<int> f_blockSize; ///< dimension of the blocks in the matrix
 protected:
     BTDLinearSolver()
-        : f_verbose( initData(&f_verbose,false,"verbose","Dump system state at each iteration") )
-        , problem(initData(&problem, false,"showProblem", "display debug informations about subpartSolve computation") )
-        , subpartSolve(initData(&subpartSolve, false,"subpartSolve", "Allows for the computation of a subpart of the system") )
-        , verification(initData(&verification, false,"verification", "verification of the subpartSolve"))
-        , test_perf(initData(&test_perf, false,"test_perf", "verification of performance"))
-        , f_blockSize( initData(&f_blockSize,6,"blockSize","dimension of the blocks in the matrix") )
+        : d_verbose( initData(&d_verbose,false,"verbose","Dump system state at each iteration") )
+        , d_problem(initData(&d_problem, false,"showProblem", "display debug information about subpartSolve computation") )
+        , d_subpartSolve(initData(&d_subpartSolve, false,"subpartSolve", "Allows for the computation of a subpart of the system") )
+        , d_verification(initData(&d_verification, false,"verification", "verification of the subpartSolve"))
     {
-        Index bsize = Matrix::getSubMatrixDim(0);
-        if (bsize > 0)
-        {
-            // the template uses fixed bloc size
-            f_blockSize.setValue((int)bsize);
-            f_blockSize.setReadOnly(true);
-        }
+
     }
 public:
     void my_identity(SubMatrix& Id, const Index size_id);
@@ -117,15 +109,12 @@ public:
     /// Solve Mx=b
     void solve (Matrix& /*M*/, Vector& x, Vector& b) override;
 
-
-
     /// Multiply the inverse of the system matrix by the transpose of the given matrix, and multiply the result with the given matrix J
     ///
     /// @param result the variable where the result will be added
     /// @param J the matrix J to use
     /// @return false if the solver does not support this operation, of it the system matrix is not invertible
     bool addJMInvJt(linearalgebra::BaseMatrix* result, linearalgebra::BaseMatrix* J, SReal fact) override;
-
 
     /// Init the partial solve
     void init_partial_solve() override;
@@ -139,16 +128,22 @@ public:
     //void partial_solve_old(ListIndex&  Iout, ListIndex&  Iin , bool NewIn);
     void partial_solve(ListIndex&  Iout, ListIndex&  Iin , bool NewIn) override;
 
-
-
     void init_partial_inverse(const Index &nb, const Index &bsize);
-
-
 
     template<class RMatrix, class JMatrix>
     bool addJMInvJt(RMatrix& result, JMatrix& J, double fact);
 
 
+    void parse(sofa::core::objectmodel::BaseObjectDescription* arg) override
+    {
+        Inherit1::parse(arg);
+
+        if (arg->getAttribute("blockSize"))
+        {
+            msg_deprecated() << "The attribute 'blockSize' is deprecated since SOFA 23.06." << msgendl
+                << "This data was not take into account to get the block size, as it can be deduced automatically from the Matrix template parameter.";
+        }
+    }
 
 private:
 
@@ -170,15 +165,13 @@ private:
     void fwdAccumulateRHGlobal(Index indMinBloc);
 
 
-    /// step4=> compute solution for the indices in the bloc
+    /// step4=> compute solution for the indices in the block
     /// (and accumulate the potential local dRH (set in Vec_dRH) [set in step1] that have not been yet taken into account by the global bwd and fwd
     void fwdComputeLHinBloc(Index indMaxBloc);
 
-
 };
 
-#if  !defined(SOFA_COMPONENT_LINEARSOLVER_BTDLINEARSOLVER_CPP)
+#if !defined(SOFA_COMPONENT_LINEARSOLVER_BTDLINEARSOLVER_CPP)
 extern template class SOFA_COMPONENT_LINEARSOLVER_DIRECT_API BTDLinearSolver< linearalgebra::BTDMatrix<6, SReal>, linearalgebra::BlockVector<6, SReal> >;
 #endif
-
 } //namespace sofa::component::linearsolver::direct

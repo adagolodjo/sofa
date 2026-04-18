@@ -85,7 +85,7 @@ protected:
         {
             while(!queue.pop(value)) 
                 std::this_thread::yield();
-            EXPECT_TRUE(lastValue < value);
+            EXPECT_LT(lastValue, value);
             lastValue = value;
         }
     }
@@ -132,33 +132,28 @@ protected:
     }
     void produce(int n)
     {
-        // fprintf(stderr, "Starting producer %d\n", n); // using fprintf because it is thread-safe on Unix.
-
         for(int i = 0; i < TokenCount; ++i)
         {
-            int token = i + n * TokenCount;
-            while(!queue.push(token));// fprintf(stderr, "producer %d yield\n", n);
+            const int token = i + n * TokenCount;
+            while(!queue.push(token));
 
-            int queueSize = queue.size();
+            const int queueSize = queue.size();
             if(queueSize < 0)        emptyFault++;
             if(queueSize > Capacity) fullFault++;
 
-            // fprintf(stderr, "producer %d push %d size %d\n", n, token, queueSize);
         }
     }
     void consume(int n)
     {
-        // fprintf(stderr, "Starting consumer %d\n", n);
+        SOFA_UNUSED(n);
 
         for(std::atomic<int> value = 0; value != ExitToken; ++counter)
         {
-            while(!queue.pop(value));// fprintf(stderr, "consumer %d yield\n", n);
+            while(!queue.pop(value));
 
-            int queueSize = queue.size();
+            const int queueSize = queue.size();
             if(queueSize < 0)        emptyFault++;
             if(queueSize > Capacity) fullFault++;
-
-            // fprintf(stderr, "consumer %d pop %d size %d\n", n, value.operator int(), queueSize);
         }
     }
     std::unique_ptr<std::thread> prod[ProducerCount];

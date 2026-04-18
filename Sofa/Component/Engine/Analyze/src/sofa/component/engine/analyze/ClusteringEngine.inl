@@ -44,7 +44,7 @@ using sofa::helper::WriteOnlyAccessor;
 
 template <class DataTypes>
 ClusteringEngine<DataTypes>::ClusteringEngine()
-    : d_useTopo(initData(&d_useTopo, true, "useTopo", "Use avalaible topology to compute neighborhood."))
+    : d_useTopo(initData(&d_useTopo, true, "useTopo", "Use available topology to compute neighborhood."))
     , d_radius(initData(&d_radius, (Real)1.0, "radius", "Neighborhood range."))
     , d_fixedRadius(initData(&d_fixedRadius, (Real)1.0, "fixedRadius", "Neighborhood range (for non mechanical particles)."))
     , d_nbClusters(initData(&d_nbClusters, (int)-1, "number", "Number of clusters (-1 means that all input points are selected)."))
@@ -192,7 +192,7 @@ void ClusteringEngine<DataTypes>::farthestPointSampling(VI& ptIndices,VI& vorono
     ReadAccessor< Data< VecCoord > > restPositions = this->d_position;
     const Real distMax = numeric_limits<Real>::max();
 
-    unsigned int nbp=restPositions.size();
+    const unsigned int nbp=restPositions.size();
     unsigned int nbc=(unsigned int)this->d_nbClusters.getValue();
     if(nbc>nbp) nbc=nbp;
 
@@ -311,11 +311,24 @@ bool ClusteringEngine<DataTypes>::load()
     WriteOnlyAccessor< Data< VVI > > clust = this->d_cluster;
     clust.clear();
 
-    bool usetopo; fileStream >> usetopo;	this->d_useTopo.setValue(usetopo);
-    Real rad; fileStream >> rad;		this->d_radius.setValue(usetopo);
-    fileStream >> rad;		this->d_fixedRadius.setValue(usetopo);
-    unsigned int nb; fileStream >> nb;			clust.resize(nb);
-    int numb; fileStream >> numb;		this->d_nbClusters.setValue(usetopo);
+    bool usetopo = false; 
+    fileStream >> usetopo;	
+    this->d_useTopo.setValue(usetopo);
+
+    Real rad; 
+    fileStream >> rad;		
+    this->d_radius.setValue(rad);
+
+    fileStream >> rad;		
+    this->d_fixedRadius.setValue(rad);
+
+    unsigned int nb; 
+    fileStream >> nb;			
+    clust.resize(nb);
+
+    int numb; 
+    fileStream >> numb;		
+    this->d_nbClusters.setValue(numb);
 
     for (unsigned int i=0; i<nb; ++i)
     {
@@ -339,7 +352,7 @@ bool ClusteringEngine<DataTypes>::save()
     ofstream fileStream (fname.c_str(), ofstream::out);
     if (!fileStream.is_open())	{ msg_error() << "ClusteringEngine: cannot open "<<fname;  return false;	}
 
-    ReadAccessor< Data< VVI > > clust = this->d_cluster;
+    const ReadAccessor< Data< VVI > > clust = this->d_cluster;
 
     fileStream << this->d_useTopo.getValue() << " ";
     fileStream << this->d_radius.getValue() << " ";
@@ -368,13 +381,13 @@ void ClusteringEngine<DataTypes>::draw(const core::visual::VisualParams* vparams
         if(this->mstate==nullptr)
             return;
 
-        vparams->drawTool()->saveLastState();
+        const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
-        const VecCoord& currentPositions = this->mstate->read(core::ConstVecCoordId::position())->getValue();
-        ReadAccessor< Data< VVI > > clust = this->d_cluster;
+        const VecCoord& currentPositions = this->mstate->read(core::vec_id::read_access::position)->getValue();
+        const ReadAccessor< Data< VVI > > clust = this->d_cluster;
         const unsigned int nbp = currentPositions.size();
 
-        std::vector<sofa::type::Vector3> vertices;
+        std::vector<sofa::type::Vec3> vertices;
         std::vector<sofa::type::RGBAColor> colors;
         vparams->drawTool()->disableLighting();
         
@@ -398,7 +411,7 @@ void ClusteringEngine<DataTypes>::draw(const core::visual::VisualParams* vparams
                 }
         }
         vparams->drawTool()->drawLines(vertices, 1.0, colors);
-        vparams->drawTool()->restoreLastState();
+
     }
 }
 

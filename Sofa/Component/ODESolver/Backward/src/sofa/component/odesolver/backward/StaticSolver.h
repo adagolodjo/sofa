@@ -20,62 +20,46 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
-#include <sofa/component/odesolver/backward/config.h>
 
+#include <sofa/component/odesolver/backward/NewtonRaphsonSolver.h>
+#include <sofa/component/odesolver/backward/config.h>
 #include <sofa/core/behavior/OdeSolver.h>
-#include <sofa/core/behavior/MultiVec.h>
+#include <sofa/core/behavior/LinearSolverAccessor.h>
+#include <optional>
 
 namespace sofa::component::odesolver::backward
 {
 
-using sofa::core::objectmodel::Data;
-
-/**
- * Implementation of a static ODE solver compatible with non-linear materials.
- *
- * We are trying to solve to following
- * \f{eqnarray*}{
- *     \vec{R}(\vec{x}) - \vec{P} = 0
- * \f}
- *
- * Where \f$\vec{R}\f$ is the (possibly non-linear) internal elastic force residual and \f$\vec{P}\f$ is the external
- * force vector (for example, gravitation force or surface traction).
- *
- * Following the <a href="https://en.wikipedia.org/wiki/Newton's_method#Nonlinear_systems_of_equations">Newton-Raphson method</a>,
- * we pose
- *
- * \f{align*}{
- *     \vec{F}(\vec{x}_{n+1}) &= \vec{R}(\vec{x}_{n+1}) - \vec{P}_n \\
- *     \mat{J} = \frac{\partial \vec{F}}{\partial \vec{x}_{n+1}} \bigg\rvert_{\vec{x}_{n+1}^i} &= \mat{K}(\vec{x}_{n+1})
- * \f}
- *
- * where \f$\vec{x}_{n+1}\f$ is the unknown position vector at the \f$n\f$th time step. We then iteratively solve
- *
- * \f{align*}{
- *     \mat{K}(\vec{x}_{n+1}^i) \left [ \Delta \vec{x}_{n+1}^{i+1} \right ] &= - \vec{F}(\vec{x}_{n+1}^i) \\
- *     \vec{x}_{n+1}^{i+1} &= \vec{x}_{n+1}^{i} + \Delta \vec{x}_{n+1}^{i+1}
- * \f}
- */
-class SOFA_COMPONENT_ODESOLVER_BACKWARD_API StaticSolver : public sofa::core::behavior::OdeSolver
+class SOFA_COMPONENT_ODESOLVER_BACKWARD_API StaticSolver :
+    public core::behavior::OdeSolver,
+    public core::behavior::LinearSolverAccessor
 {
 public:
-    SOFA_CLASS(StaticSolver, sofa::core::behavior::OdeSolver);
+    SOFA_CLASS2(StaticSolver, core::behavior::OdeSolver, core::behavior::LinearSolverAccessor);
     StaticSolver();
 
-public:
-    void solve (const sofa::core::ExecParams* params /* PARAMS FIRST */, SReal dt, sofa::core::MultiVecCoordId xResult, sofa::core::MultiVecDerivId vResult) override;
+    void solve(
+        const core::ExecParams* params,
+        SReal dt,
+        core::MultiVecCoordId xResult,
+        core::MultiVecDerivId vResult) override;
 
-    /** The list of squared residual norms (r.dot(r) = ||r||^2) of every newton iterations of the last solve call. */
-    auto squared_residual_norms() const -> const std::vector<SReal> & { return p_squared_residual_norms; }
+    void parse(core::objectmodel::BaseObjectDescription* arg) override;
+    void init() override;
 
-    /** The list of squared correction increment norms (dx.dot(dx) = ||dx||^2) of every newton iterations of the last solve call. */
-    auto squared_increment_norms() const -> const std::vector<SReal> & { return p_squared_increment_norms; }
+    SingleLink<StaticSolver, NewtonRaphsonSolver,
+               BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK>
+        l_newtonSolver;
+
+    auto squared_residual_norms() const -> const std::vector<SReal> & = delete;
+    auto squared_increment_norms() const -> const std::vector<SReal> & = delete;
+
 
     /// Given a displacement as computed by the linear system inversion, how much will it affect the velocity
     ///
     /// This method is used to compute the compliance for contact corrections
     /// For Euler methods, it is typically dt.
-    double getVelocityIntegrationFactor() const override
+    SReal getVelocityIntegrationFactor() const override
     {
         return 1.0; // getContext()->getDt();
     }
@@ -84,12 +68,12 @@ public:
     ///
     /// This method is used to compute the compliance for contact corrections
     /// For Euler methods, it is typically dt².
-    double getPositionIntegrationFactor() const override
+    SReal getPositionIntegrationFactor() const override
     {
         return getPositionIntegrationFactor(getContext()->getDt());
     }
 
-    virtual double getPositionIntegrationFactor(double dt ) const
+    virtual SReal getPositionIntegrationFactor(SReal dt ) const
     {
         return dt;
     }
@@ -109,14 +93,14 @@ public:
     /// v_{t+dt}     0    1      0    1
     /// a_{t+dt}     0    0      0    1/dt
     /// The last column is returned by the getSolutionIntegrationFactor method.
-    double getIntegrationFactor(int inputDerivative, int outputDerivative) const override
+    SReal getIntegrationFactor(int inputDerivative, int outputDerivative) const override
     {
         return getIntegrationFactor(inputDerivative, outputDerivative, getContext()->getDt());
     }
 
-    double getIntegrationFactor(int inputDerivative, int outputDerivative, double dt) const
+    SReal getIntegrationFactor(int inputDerivative, int outputDerivative, SReal dt) const
     {
-        double matrix[3][3] =
+        const SReal matrix[3][3] =
             {
                 { 1, dt, 0},
                 { 0, 1, 0},
@@ -130,40 +114,39 @@ public:
 
     /// Given a solution of the linear system,
     /// how much will it affect the output derivative of the given order.
-    double getSolutionIntegrationFactor(int outputDerivative) const override
+    SReal getSolutionIntegrationFactor(int outputDerivative) const override
     {
         return getSolutionIntegrationFactor(outputDerivative, getContext()->getDt());
     }
 
-    double getSolutionIntegrationFactor(int outputDerivative, double dt) const
+    SReal getSolutionIntegrationFactor(int outputDerivative, SReal dt) const
     {
-        double vect[3] = { dt, 1, 1/dt};
+        const SReal vect[3] = { dt, 1, 1/dt};
         if (outputDerivative >= 3)
             return 0;
         else
             return vect[outputDerivative];
     }
 
-    virtual void parse(core::objectmodel::BaseObjectDescription* arg) override;
 
 protected:
 
-    Data<unsigned> d_newton_iterations; ///< Number of newton iterations between each load increments (normally, one load increment per simulation time-step.
-    Data<double> d_absolute_correction_tolerance_threshold; ///< Convergence criterion: The newton iterations will stop when the norm |du| is smaller than this threshold.
-    Data<double> d_relative_correction_tolerance_threshold; ///< Convergence criterion: The newton iterations will stop when the ratio |du| / |U| is smaller than this threshold.
-    Data<double> d_absolute_residual_tolerance_threshold; ///< Convergence criterion: The newton iterations will stop when the norm of the residual |R| is smaller than this threshold. Use a negative value to disable this criterion.
-    Data<double> d_relative_residual_tolerance_threshold; ///< Convergence criterion: The newton iterations will stop when the ratio |R|/|R0| is smaller than this threshold. Use a negative value to disable this criterion.
-    Data<bool> d_should_diverge_when_residual_is_growing; ///< Divergence criterion: The newton iterations will stop when the residual is greater than the one from the previous iteration.
+    template<class T>
+    struct NewtonRaphsonDeprecatedData : core::objectmodel::lifecycle::RemovedData
+    {
+        NewtonRaphsonDeprecatedData(Base* b, const std::string name)
+            : RemovedData(b, "v25.06", "v25.12", name, "The Data related to the Newton-Raphson parameters must be defined in the NewtonRaphsonSolver component.")
+        {}
 
-private:
-    /// Sum of displacement increments since the beginning of the time step
-    sofa::core::behavior::MultiVecDeriv U;
+        std::optional<T> value;
+    };
 
-    /// List of squared residual norms (r.dot(R) = ||r||^2) of every newton iterations of the last solve call.
-    std::vector<SReal> p_squared_residual_norms;
-
-    /// List of squared correction increment norms (dx.dot(dx) = ||dx||^2) of every newton iterations of the last solve call.
-    std::vector<SReal> p_squared_increment_norms;
+    SOFA_ATTRIBUTE_DISABLED__NEWTONRAPHSON_IN_STATICSOLVER() NewtonRaphsonDeprecatedData<int> d_newton_iterations;
+    SOFA_ATTRIBUTE_DISABLED__NEWTONRAPHSON_IN_STATICSOLVER() NewtonRaphsonDeprecatedData<SReal> d_absolute_correction_tolerance_threshold;
+    SOFA_ATTRIBUTE_DISABLED__NEWTONRAPHSON_IN_STATICSOLVER() NewtonRaphsonDeprecatedData<SReal> d_relative_correction_tolerance_threshold;
+    SOFA_ATTRIBUTE_DISABLED__NEWTONRAPHSON_IN_STATICSOLVER() NewtonRaphsonDeprecatedData<SReal> d_absolute_residual_tolerance_threshold;
+    SOFA_ATTRIBUTE_DISABLED__NEWTONRAPHSON_IN_STATICSOLVER() NewtonRaphsonDeprecatedData<SReal> d_relative_residual_tolerance_threshold;
+    SOFA_ATTRIBUTE_DISABLED__NEWTONRAPHSON_IN_STATICSOLVER() NewtonRaphsonDeprecatedData<SReal> d_should_diverge_when_residual_is_growing;
 };
 
-} // namespace sofa::component::odesolver::backward
+}

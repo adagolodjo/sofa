@@ -41,156 +41,167 @@
 namespace sofa::component::topology::mapping
 {
 
-using namespace sofa::defaulttype;
-
 using namespace sofa::component::topology::mapping;
 using namespace sofa::core::topology;
 
-// Register in the Factory
-int Hexa2TetraTopologicalMappingClass = core::RegisterObject("Special case of mapping where HexahedronSetTopology is converted to TetrahedronSetTopology")
-        .add< Hexa2TetraTopologicalMapping >()
-
-        ;
-
-// Implementation
-
-Hexa2TetraTopologicalMapping::Hexa2TetraTopologicalMapping()
-    : swapping(initData(&swapping, false, "swapping","Boolean enabling to swapp hexa-edges\n in order to avoid bias effect"))
+void registerHexa2TetraTopologicalMapping(sofa::core::ObjectFactory* factory)
 {
+    factory->registerObjects(core::ObjectRegistrationData("Topological mapping where HexahedronSetTopology is converted to TetrahedronSetTopology")
+        .add< Hexa2TetraTopologicalMapping >());
 }
 
-Hexa2TetraTopologicalMapping::~Hexa2TetraTopologicalMapping()
+Hexa2TetraTopologicalMapping::Hexa2TetraTopologicalMapping()
+    : sofa::core::topology::TopologicalMapping(),
+      d_swapping(initData(&d_swapping, false, "swapping",
+                          "Boolean enabling to swap edges to hexahedrons based on their grid "
+                          "position in order to avoid numerical bias effect"))
 {
+    m_inputType = geometry::ElementType::HEXAHEDRON;
+    m_outputType = geometry::ElementType::TETRAHEDRON;
 }
 
 void Hexa2TetraTopologicalMapping::init()
 {
     using namespace container::dynamic;
 
-    // INITIALISATION of TETRAHEDRAL mesh from HEXAHEDRAL mesh :
+    Inherit1::init();
 
-    // recheck models
-    bool modelsOk = true;
-    if (!fromModel)
+    if (toModel == nullptr)
     {
-        msg_error() << "Pointer to input topology is invalid.";
-        modelsOk = false;
-    }
-
-    if (!toModel)
-    {
-        msg_error() << "Pointer to output topology is invalid.";
-        modelsOk = false;
-    }
-    else
-    {
-        TetrahedronSetTopologyModifier *to_tstm;
-        toModel->getContext()->get(to_tstm);
-        if (!to_tstm)
-        {
-            msg_error() << "No TetrahedronSetTopologyModifier found in the Tetrahedron topology Node.";
-            modelsOk = false;
-        }
-    }
-
-    if (!modelsOk)
-    {
+        msg_error() << "No target topology container found.";
         this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
 
-    TetrahedronSetTopologyContainer *to_tstc;
-    toModel->getContext()->get(to_tstc);
+    // INITIALISATION of TETRAHEDRAL mesh from HEXAHEDRAL mesh :
+
     // Clear output topology
-    to_tstc->clear();
+    toModel->clear();
 
     // Set the same number of points
     toModel->setNbPoints(fromModel->getNbPoints());
 
-    sofa::type::vector<Index>& Loc2GlobVec = *(Loc2GlobDataVec.beginEdit());
-
+    auto Loc2GlobVec = sofa::helper::getWriteOnlyAccessor(Loc2GlobDataVec);
     Loc2GlobVec.clear();
     Glob2LocMap.clear();
 
-    size_t nbcubes = fromModel->getNbHexahedra();
+    const sofa::Size nbCubes = fromModel->getNbHexahedra();
 
     // These values are only correct if the mesh is a grid topology
     int nx = 2;
     int ny = 1;
-    //int nz = 1;
+    // int nz = 1;
     {
-        auto* grid = dynamic_cast<container::grid::GridTopology*>(fromModel.get());
+        const auto* grid = dynamic_cast<container::grid::GridTopology*>(fromModel.get());
         if (grid != nullptr)
         {
-            nx = grid->getNx()-1;
-            ny = grid->getNy()-1;
-            //nz = grid->getNz()-1;
+            nx = grid->getNx() - 1;
+            ny = grid->getNy() - 1;
+            // nz = grid->getNz()-1;
         }
     }
 
-    // Tesselation of each cube into 6 tetrahedra
-    for (size_t i=0; i<nbcubes; i++)
+    static constexpr int numberTetraInHexa = 6;
+    Loc2GlobVec.reserve(nbCubes * numberTetraInHexa);
+
+    const bool swapping = d_swapping.getValue();
+
+    // Tessellation of each cube into 6 tetrahedra
+    for (sofa::Index i = 0; i < nbCubes; ++i)
     {
-        core::topology::BaseMeshTopology::Hexa c = fromModel->getHexahedron(i);
-#define swap(a,b) { int t = a; a = b; b = t; }
-        // TODO : swap indexes where needed (currently crash in TriangleSetContainer)
+        // take a copy of the hexahedron in case vertices must be swapped
+        sofa::topology::Hexahedron c = fromModel->getHexahedron(i);
+
         bool swapped = false;
 
-        if(swapping.getValue())
+        if (swapping)
         {
-            if (!((i%nx)&1))
+            // Check if hexahedron is at an even x-position in the grid
+            if (!((i % nx) & 1))
             {
-                // swap all points on the X edges
-                swap(c[0],c[1]);
-                swap(c[3],c[2]);
-                swap(c[4],c[5]);
-                swap(c[7],c[6]);
+                // swap all nodes on the X edges
+                //     Y  n3---------n2             Y  n2---------n3
+                //     ^  /          /|             ^  /          /|
+                //     | /          / |             | /          / |
+                //     n7---------n6  |             n6---------n7  |
+                //     |          |   |             |          |   |
+                //     |  n0------|--n1      =>     |  n1------|--n0
+                //     | /        | /               | /        | /
+                //     |/         |/                |/         |/
+                //     n4---------n5-->X            n5---------n4-->X
+                //    /                            /
+                //   /                            /
+                //  Z                            Z
+                for (const auto [v0, v1] : sofa::geometry::Hexahedron::xEdges)
+                {
+                    std::swap(c[v0], c[v1]);
+                }
                 swapped = !swapped;
             }
-            if (((i/nx)%ny)&1)
+            // Check if hexahedron is at an odd y-position in the grid
+            if (((i / nx) % ny) & 1)
             {
-                // swap all points on the Y edges
-                swap(c[0],c[3]);
-                swap(c[1],c[2]);
-                swap(c[4],c[7]);
-                swap(c[5],c[6]);
+                // swap all nodes on the Y edges
+                //     Y  n3---------n2             Y  n0---------n1
+                //     ^  /          /|             ^  /          /|
+                //     | /          / |             | /          / |
+                //     n7---------n6  |             n4---------n5  |
+                //     |          |   |             |          |   |
+                //     |  n0------|--n1      =>     |  n3------|--n2
+                //     | /        | /               | /        | /
+                //     |/         |/                |/         |/
+                //     n4---------n5-->X            n7---------n6-->X
+                //    /                            /
+                //   /                            /
+                //  Z                            Z
+                for (const auto [v0, v1] : sofa::geometry::Hexahedron::yEdges)
+                {
+                    std::swap(c[v0], c[v1]);
+                }
                 swapped = !swapped;
             }
-            if ((i/(nx*ny))&1)
+            // Check if hexahedron is at an odd z-position in the grid
+            if ((i / (nx * ny)) & 1)
             {
-                // swap all points on the Z edges
-                swap(c[0],c[4]);
-                swap(c[1],c[5]);
-                swap(c[2],c[6]);
-                swap(c[3],c[7]);
+                // swap all nodes on the Z edges
+                //     Y  n3---------n2             Y  n7---------n6
+                //     ^  /          /|             ^  /          /|
+                //     | /          / |             | /          / |
+                //     n7---------n6  |             n3---------n2  |
+                //     |          |   |             |          |   |
+                //     |  n0------|--n1      =>     |  n4------|--n5
+                //     | /        | /               | /        | /
+                //     |/         |/                |/         |/
+                //     n4---------n5-->X            n0---------n1-->X
+                //    /                            /
+                //   /                            /
+                //  Z                            Z
+                for (const auto [v0, v1] : sofa::geometry::Hexahedron::zEdges)
+                {
+                    std::swap(c[v0], c[v1]);
+                }
                 swapped = !swapped;
             }
         }
-#undef swap
-        if(!swapped)
-        {
-            to_tstc->addTetra(c[0],c[5],c[1],c[6]);
-            to_tstc->addTetra(c[0],c[1],c[3],c[6]);
-            to_tstc->addTetra(c[1],c[3],c[6],c[2]);
-            to_tstc->addTetra(c[6],c[3],c[0],c[7]);
-            to_tstc->addTetra(c[6],c[7],c[0],c[5]);
-            to_tstc->addTetra(c[7],c[5],c[4],c[0]);
-        }
-        else
-        {
-            to_tstc->addTetra(c[0],c[5],c[6],c[1]);
-            to_tstc->addTetra(c[0],c[1],c[6],c[3]);
-            to_tstc->addTetra(c[1],c[3],c[2],c[6]);
-            to_tstc->addTetra(c[6],c[3],c[7],c[0]);
-            to_tstc->addTetra(c[6],c[7],c[5],c[0]);
-            to_tstc->addTetra(c[7],c[5],c[0],c[4]);
-        }
-        for(int j=0; j<6; j++)
-            Loc2GlobVec.push_back(i);
-        Glob2LocMap[i] = (unsigned int)Loc2GlobVec.size()-1;
-    }
 
-    Loc2GlobDataVec.endEdit();
+        static constexpr std::array<std::array<sofa::Index, 4>, 6> nonSwappedPattern{
+            {{0, 5, 1, 6}, {0, 1, 3, 6}, {1, 3, 6, 2}, {6, 3, 0, 7}, {6, 7, 0, 5}, {7, 5, 4, 0}}};
+
+        static constexpr std::array<std::array<sofa::Index, 4>, 6> swappedPattern{
+            {{0, 5, 6, 1}, {0, 1, 6, 3}, {1, 3, 2, 6}, {6, 3, 7, 0}, {6, 7, 5, 0}, {7, 5, 0, 4}}};
+
+        const auto& pattern = swapped ? swappedPattern : nonSwappedPattern;
+        for (const auto& id : pattern)
+        {
+            toModel->addTetra(c[id[0]], c[id[1]], c[id[2]], c[id[3]]);
+        }
+
+        for (int j = 0; j < numberTetraInHexa; j++)
+        {
+            Loc2GlobVec.push_back(i);
+        }
+        Glob2LocMap[i] = static_cast<unsigned int>(Loc2GlobVec.size()) - 1;
+    }
 
     // Need to fully init the target topology
     toModel->init();
@@ -198,17 +209,14 @@ void Hexa2TetraTopologicalMapping::init()
     this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Valid);
 }
 
-Index Hexa2TetraTopologicalMapping::getFromIndex(Index /*ind*/)
-{
-
-    return sofa::InvalidID;
-}
-
 void Hexa2TetraTopologicalMapping::updateTopologicalMappingTopDown()
 {
-    msg_warning() << "Method Hexa2TetraTopologicalMapping::updateTopologicalMappingTopDown() not yet implemented!";
-// TODO...
+    msg_warning() << "Method Hexa2TetraTopologicalMapping::updateTopologicalMappingTopDown() not "
+                     "yet implemented!";
+    // TODO...
 }
+
+Index Hexa2TetraTopologicalMapping::getFromIndex(Index /*ind*/) { return sofa::InvalidID; }
 
 
 } //namespace sofa::component::topology::mapping

@@ -36,7 +36,6 @@ class BlockDiagonalMatrix : public linearalgebra::BaseMatrix
 public:
     typedef T Real;
     typedef type::Mat<LC,LC,Real> Block;
-    using Bloc SOFA_ATTRIBUTE_DEPRECATED__BLOCK_RENAMING_2404() = Block;
     typedef matrix_bloc_traits<Block, Index> traits;
 
     enum { BSIZE = LC };
@@ -209,7 +208,7 @@ public:
         traits::split_row_index(nblocs, szlast);
         for (sofa::Index b=0; b<(sofa::Size) nblocs; b++)
         {
-            sofa::Index i = b*LC;
+            const sofa::Index i = b*LC;
             for (sofa::Index bj=0; bj<Index(LC); bj++)
             {
                 Real2 r = 0;
@@ -223,7 +222,7 @@ public:
         if (szlast)
         {
             sofa::Size b = nblocs;
-            sofa::Index i = b*LC;
+            const sofa::Index i = b*LC;
             for (sofa::Index bj=0; bj<(sofa::Size) szlast; bj++)
             {
                 Real2 r = 0;
@@ -264,5 +263,10 @@ typedef BlockDiagonalMatrix<3> BlockDiagonalMatrix3;
 typedef BlockDiagonalMatrix<6> BlockDiagonalMatrix6;
 typedef BlockDiagonalMatrix<9> BlockDiagonalMatrix9;
 typedef BlockDiagonalMatrix<12> BlockDiagonalMatrix12;
+
+#if !defined(SOFA_LINEARALGEBRA_BLOCKDIAGONALMATRIX_CPP)
+extern template class SOFA_LINEARALGEBRA_API BlockDiagonalMatrix<3, SReal>;
+#endif
+
 
 } // namespace sofa::linearalgebra

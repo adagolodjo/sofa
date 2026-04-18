@@ -34,8 +34,7 @@ using namespace sofa::component::collision::geometry;
 
 IntersectorCreator<DiscreteIntersection, MeshDiscreteIntersection> MeshDiscreteIntersectors("Mesh");
 
-MeshDiscreteIntersection::MeshDiscreteIntersection(DiscreteIntersection* object, bool addSelf)
-    : intersection(object)
+MeshDiscreteIntersection::MeshDiscreteIntersection(DiscreteIntersection* intersection, bool addSelf)
 {
     if (addSelf)
     {
@@ -43,36 +42,42 @@ MeshDiscreteIntersection::MeshDiscreteIntersection(DiscreteIntersection* object,
     }
 }
 
-bool MeshDiscreteIntersection::testIntersection(Triangle&, Line&)
+bool MeshDiscreteIntersection::testIntersection(Triangle&, Line&, const sofa::core::collision::Intersection*)
 {
     return true;
 }
 
-int MeshDiscreteIntersection::computeIntersection(Triangle& e1, Line& e2, OutputVector* contacts)
+int MeshDiscreteIntersection::computeIntersection(Triangle& e1, Line& e2, OutputVector* contacts, const core::collision::Intersection* currentIntersection)
 {
-    Vector3 A = e1.p1();
-    Vector3 AB = e1.p2()-A;
-    Vector3 AC = e1.p3()-A;
-    Vector3 P = e2.p1();
-    Vector3 PQ = e2.p2()-P;
-    Matrix3 M, Minv;
-    Vector3 right;
+    SOFA_UNUSED(currentIntersection);
+
+    static_assert(std::is_same_v<Triangle::Coord, Line::Coord>, "Data mismatch");
+    static_assert(Triangle::Coord::total_size == 3, "Must be a vec type");
+
+    const Triangle::Coord& A = e1.p1();
+    const Triangle::Coord AB = e1.p2()-A;
+    const Triangle::Coord AC = e1.p3()-A;
+    const Line::Coord& P = e2.p1();
+    const Line::Coord PQ = e2.p2()-P;
+    Mat<3, 3, Triangle::Coord::value_type> M(NOINIT);
+    Mat<3, 3, Triangle::Coord::value_type> Minv(NOINIT);
+    Triangle::Coord right(NOINIT);
     for (int i=0; i<3; i++)
     {
-        M[i][0] = AB[i];
-        M[i][1] = AC[i];
-        M[i][2] = -PQ[i];
+        M(i,0) = AB[i];
+        M(i,1) = AC[i];
+        M(i,2) = -PQ[i];
         right[i] = P[i]-A[i];
     }
     if (!Minv.invert(M))
         return 0;
-    Vector3 baryCoords = Minv * right;
+    const Triangle::Coord baryCoords = Minv * right;
     if (baryCoords[0] < 0 || baryCoords[1] < 0 || baryCoords[0]+baryCoords[1] > 1)
         return 0; // out of the triangle
     if (baryCoords[2] < 0 || baryCoords[2] > 1)
         return 0; // out of the line
 
-    Vector3 X = P+PQ*baryCoords[2];
+    const Triangle::Coord X = P+PQ*baryCoords[2];
 
     contacts->resize(contacts->size()+1);
     DetectionOutput *detection = &*(contacts->end()-1);

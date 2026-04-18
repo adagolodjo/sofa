@@ -21,7 +21,7 @@
 ******************************************************************************/
 #include <sofa/helper/AdvancedTimer.h>
 
-#include <SofaSimulationCommon/SceneLoaderXML.h>
+#include <sofa/simulation/common/SceneLoaderXML.h>
 using sofa::simulation::SceneLoaderXML ;
 using sofa::simulation::Node ;
 using sofa::core::ExecParams;
@@ -40,7 +40,7 @@ namespace sofa {
 struct AdvancedTimerTest: public BaseSimulationTest
 {
 protected:
-	void onSetUp() override
+	void doSetUp() override
 	{
 		using namespace sofa::helper;
 
@@ -54,9 +54,7 @@ protected:
 				 "<Node 	name='Root' gravity='0 -9.81 0' time='0' animate='0' >               \n"
 				 "</Node>                                                                        \n" ;
 
-		root = SceneLoaderXML::loadFromMemory ("testscene",
-											scene.str().c_str(),
-											scene.str().size()) ;
+		root = SceneLoaderXML::loadFromMemory("testscene", scene.str().c_str());
 	}
 
 public:

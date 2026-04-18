@@ -22,7 +22,7 @@
 #pragma once
 #include <sofa/component/mapping/linear/config.h>
 #include <sofa/linearalgebra/CompressedRowSparseMatrix.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/defaulttype/VecTypes.h>
 
 namespace sofa::component::mapping::linear::_barycentricmapper_
@@ -33,12 +33,12 @@ using sofa::defaulttype::Vec3Types;
 
 /// Base class for barycentric mapping topology-specific mappers
 template<class In, class Out>
-class BarycentricMapper : public virtual core::objectmodel::BaseObject
+class BarycentricMapper : public virtual core::objectmodel::BaseComponent
 {
 
 public:
 
-    SOFA_CLASS(SOFA_TEMPLATE2(BarycentricMapper,In,Out),core::objectmodel::BaseObject);
+    SOFA_CLASS(SOFA_TEMPLATE2(BarycentricMapper,In,Out),core::objectmodel::BaseComponent);
 
     typedef typename In::Real Real;
     typedef typename In::Real InReal;
@@ -50,8 +50,9 @@ public:
     typedef typename Out::VecDeriv OutVecDeriv;
     typedef typename Out::Deriv OutDeriv;
 
-    enum { NIn = sofa::defaulttype::DataTypeInfo<InDeriv>::Size };
-    enum { NOut = sofa::defaulttype::DataTypeInfo<OutDeriv>::Size };
+    static constexpr sofa::Size NIn = sofa::defaulttype::DataTypeInfo<InDeriv>::Size;
+    static constexpr sofa::Size NOut = sofa::defaulttype::DataTypeInfo<OutDeriv>::Size;
+    
     typedef type::Mat<NOut, NIn, Real> MBloc;
     typedef sofa::linearalgebra::CompressedRowSparseMatrix<MBloc> MatrixType;
 
@@ -59,10 +60,10 @@ public:
 
 public:
 
-    using BaseObject::init;
+    using BaseComponent::init;
     virtual void init(const typename Out::VecCoord& out, const typename In::VecCoord& in) = 0;
 
-    using BaseObject::draw;
+    using BaseComponent::draw;
     virtual void draw(const core::visual::VisualParams*, const typename Out::VecCoord& out, const typename In::VecCoord& in) = 0;
 
     virtual void apply( typename Out::VecCoord& out, const typename In::VecCoord& in ) = 0;
@@ -78,26 +79,28 @@ public:
 
 
 protected:
-    void addMatrixContrib(MatrixType* m, int row, int col, Real value);
+    void addMatrixContrib(MatrixType* m, sofa::Index row, sofa::Index col, Real value);
 
-    template< int NC,  int NP>
+    template< sofa::Size NC, sofa::Size NP>
     class MappingData
     {
     public:
+        static constexpr std::size_t NumberOfCoordinates = NC;
+        
         Index in_index;
-        Real baryCoords[NC];
+        std::array<Real, NC> baryCoords;
 
         inline friend std::istream& operator >> ( std::istream& in, MappingData< NC, NP> &m )
         {
             in>>m.in_index;
-            for (int i=0; i<NC; i++) in >> m.baryCoords[i];
+            for (sofa::Index i=0; i<NC; i++) in >> m.baryCoords[i];
             return in;
         }
 
         inline friend std::ostream& operator << ( std::ostream& out, const MappingData< NC , NP > & m )
         {
             out << m.in_index;
-            for (int i=0; i<NC; i++)
+            for (sofa::Index i=0; i<NC; i++)
                 out << " " << m.baryCoords[i];
             out << "\n";
             return out;

@@ -19,19 +19,12 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_COLLISION_DETECTION_H
-#define SOFA_CORE_COLLISION_DETECTION_H
+#pragma once
 
 #include <sofa/core/collision/CollisionAlgorithm.h>
 #include <map>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace collision
+namespace sofa::core::collision
 {
 
 class Intersection;
@@ -68,17 +61,10 @@ protected:
     {
         storedIntersectionMethod[instance] = intersectionMethod;
         intersectionMethod = storedIntersectionMethod[inst];
-        // callback overriden by BroadPhaseDetection
+        // callback overridden by BroadPhaseDetection
         changeInstanceBP(inst);
-        // callback overriden by NarrowPhaseDetection
+        // callback overridden by NarrowPhaseDetection
         changeInstanceNP(inst);
     }
 };
-
-} // namespace collision
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core::collision

@@ -28,10 +28,11 @@
 #include <sofa/simulation/Node.h>
 #include <sofa/core/behavior/BaseInteractionForceField.h>
 #include <sofa/simulation/mechanicalvisitor/MechanicalBeginIntegrationVisitor.h>
-#include <sofa/simulation/mechanicalvisitor/MechanicalAccumulateConstraint.h>
 #include <sofa/simulation/mechanicalvisitor/MechanicalProjectPositionAndVelocityVisitor.h>
 #include <sofa/simulation/mechanicalvisitor/MechanicalPropagateOnlyPositionAndVelocityVisitor.h>
 #include <sofa/simulation/mechanicalvisitor/MechanicalEndIntegrationVisitor.h>
+#include <sofa/simulation/mechanicalvisitor/MechanicalAccumulateMatrixDeriv.h>
+#include <sofa/simulation/mechanicalvisitor/MechanicalBuildConstraintMatrix.h>
 
 namespace sofa::simulation::mechanicalvisitor
 {
@@ -45,17 +46,24 @@ Visitor::Result MechanicalIntegrationVisitor::fwdOdeSolver(simulation::Node* nod
     sofa::core::MechanicalParams mparams(*this->params);
     mparams.setDt(dt);
 
+    core::ConstraintParams cparams;
     {
         unsigned int constraintId=0;
-        core::ConstraintParams cparams;
-        MechanicalAccumulateConstraint(&cparams, core::MatrixDerivId::constraintJacobian(), constraintId).execute(node);
+        MechanicalBuildConstraintMatrix buildConstraintMatrix(&cparams, core::vec_id::write_access::constraintJacobian, constraintId );
+        buildConstraintMatrix.execute(node);
     }
+
+    {
+        MechanicalAccumulateMatrixDeriv accumulateMatrixDeriv(&cparams, core::vec_id::write_access::constraintJacobian);
+        accumulateMatrixDeriv.execute(node);
+    }
+
     obj->solve(params, dt);
 
-    MechanicalProjectPositionAndVelocityVisitor(&mparams, nextTime,core::VecCoordId::position(),core::VecDerivId::velocity()
+    MechanicalProjectPositionAndVelocityVisitor(&mparams, nextTime,core::vec_id::write_access::position,core::vec_id::write_access::velocity
     ).execute( node );
 
-    MechanicalPropagateOnlyPositionAndVelocityVisitor(&mparams, nextTime,core::VecCoordId::position(),core::VecDerivId::velocity()).execute( node );
+    MechanicalPropagateOnlyPositionAndVelocityVisitor(&mparams, nextTime,core::vec_id::write_access::position,core::vec_id::write_access::velocity).execute( node );
 
     MechanicalEndIntegrationVisitor endVisitor( this->params, dt );
     node->execute(&endVisitor);
@@ -65,7 +73,7 @@ Visitor::Result MechanicalIntegrationVisitor::fwdOdeSolver(simulation::Node* nod
 
 Visitor::Result MechanicalIntegrationVisitor::fwdInteractionForceField(simulation::Node* /*node*/, core::behavior::BaseInteractionForceField* obj)
 {
-    core::MultiVecDerivId   ffId      = core::VecDerivId::externalForce();
+    const core::MultiVecDerivId   ffId      = core::vec_id::write_access::externalForce;
     core::MechanicalParams m_mparams(*this->params);
     m_mparams.setDt(this->dt);
 

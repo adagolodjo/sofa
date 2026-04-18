@@ -25,8 +25,8 @@
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/core/CollisionElement.h>
 #include <sofa/core/ObjectFactory.h>
-#include <sofa/component/collision/geometry/CubeModel.h>
-#include <SofaMeshCollision/BarycentricContactMapper.inl>
+#include <sofa/component/collision/geometry/CubeCollisionModel.h>
+#include <sofa/component/collision/response/mapper/BarycentricContactMapper.inl>
 #include <sofa/helper/Factory.inl>
 
 namespace sofa::component::collision::response::mapper

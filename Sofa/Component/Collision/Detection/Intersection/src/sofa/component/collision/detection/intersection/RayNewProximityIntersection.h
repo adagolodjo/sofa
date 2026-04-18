@@ -23,12 +23,12 @@
 #include <sofa/component/collision/detection/intersection/config.h>
 
 #include <sofa/component/collision/detection/intersection/NewProximityIntersection.h>
-#include <sofa/component/collision/geometry/SphereModel.h>
-#include <sofa/component/collision/geometry/TriangleModel.h>
-#include <sofa/component/collision/geometry/LineModel.h>
-#include <sofa/component/collision/geometry/PointModel.h>
-#include <sofa/component/collision/geometry/CubeModel.h>
-#include <sofa/component/collision/geometry/RayModel.h>
+#include <sofa/component/collision/geometry/SphereCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
+#include <sofa/component/collision/geometry/LineCollisionModel.h>
+#include <sofa/component/collision/geometry/PointCollisionModel.h>
+#include <sofa/component/collision/geometry/CubeCollisionModel.h>
+#include <sofa/component/collision/geometry/RayCollisionModel.h>
 
 namespace sofa::component::collision::detection::intersection
 {
@@ -38,19 +38,14 @@ class SOFA_COMPONENT_COLLISION_DETECTION_INTERSECTION_API RayNewProximityInterse
     typedef NewProximityIntersection::OutputVector OutputVector;
 
 public:
-    RayNewProximityIntersection(NewProximityIntersection* object, bool addSelf=true);
+    RayNewProximityIntersection(NewProximityIntersection* intersection, bool addSelf=true);
 
-	bool testIntersection(collision::geometry::Ray & t1, collision::geometry::Triangle& t2);
-    int computeIntersection(collision::geometry::Ray& t1, collision::geometry::Triangle& t2, OutputVector*);
+    bool testIntersection(collision::geometry::Ray & t1, collision::geometry::Triangle& t2, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Ray& t1, collision::geometry::Triangle& t2, OutputVector*, const core::collision::Intersection* currentIntersection);
 
     // why rigidsphere has a different collision detection compared to RayDiscreteIntersection?
-    bool testIntersection(collision::geometry::Ray& rRay, collision::geometry::RigidSphere& rSphere);
-    int computeIntersection(collision::geometry::Ray& rRay, collision::geometry::RigidSphere& rSphere, OutputVector*);
-
-
-protected:
-
-    NewProximityIntersection* intersection;
+    bool testIntersection(collision::geometry::Ray& rRay, collision::geometry::RigidSphere& rSphere, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Ray& rRay, collision::geometry::RigidSphere& rSphere, OutputVector*, const core::collision::Intersection* currentIntersection);
 };
 
 } //namespace sofa::component::collision::detection::intersection

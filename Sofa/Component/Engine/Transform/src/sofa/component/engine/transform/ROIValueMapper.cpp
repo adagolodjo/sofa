@@ -19,20 +19,16 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#define ROIValueMapper_CPP_
-
-#include "ROIValueMapper.h"
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/component/engine/transform/ROIValueMapper.h>
 #include <sofa/core/ObjectFactory.h>
 
 namespace sofa::component::engine::transform
 {
 
-using namespace sofa;
-
-int ROIValueMapperClass = core::RegisterObject("Generate a list of values from value-indices pairs")
-        .add< ROIValueMapper >(true)
-        ;
-
+void registerROIValueMapper(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Generate a list of values from value-indices pairs.")
+        .add< ROIValueMapper >());
+}
 
 } //namespace sofa::component::engine::transform

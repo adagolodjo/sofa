@@ -23,19 +23,12 @@
 * User of this library should read the documentation
 * in the messaging.h file.
 ******************************************************************************/
-#ifndef RICHCONSOLESTYLEMESSAGEFORMATTER_H
-#define RICHCONSOLESTYLEMESSAGEFORMATTER_H
+#pragma once
 
 #include <sofa/core/config.h>
 #include <sofa/helper/logging/MessageFormatter.h>
 
-namespace sofa
-{
-
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 class Message;
@@ -46,7 +39,7 @@ class Message;
 ///  The class implement a message formatter dedicated to console pretty printing on a console
 ///  Among other thing it feature formatting using a markdown like syntax:
 ///     - color rendering, 'italics' or *italics*
-///     - alignement and wrapping for long message that are then much easier to read.
+///     - alignment and wrapping for long message that are then much easier to read.
 ///     - automatic reading of the console number of column for prettier display.
 ///
 ///
@@ -69,9 +62,4 @@ private:
 
     bool m_showFileInfo ;
 };
-
-} // logging
-} // helper
-} // sofa
-
-#endif // DEFAULTSTYLEMESSAGEFORMATTER_H
+} // sofa::helper::logging

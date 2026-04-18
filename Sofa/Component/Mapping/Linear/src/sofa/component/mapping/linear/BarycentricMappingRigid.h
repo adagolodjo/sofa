@@ -67,8 +67,8 @@ public:
     using Index = sofa::Index;
 
 protected:
-    core::topology::PointData< sofa::type::vector<MappingData > >  map; ///< mapper data
-    core::topology::PointData< sofa::type::vector<MappingOrientData > >  mapOrient; ///< mapper data for mapped frames
+    core::topology::PointData< sofa::type::vector<MappingData > >  d_map; ///< mapper data
+    core::topology::PointData< sofa::type::vector<MappingOrientData > >  d_mapOrient; ///< mapper data for mapped frames
 
     VecCoord actualTetraPosition;
 
@@ -100,8 +100,6 @@ public:
 
     void draw(const core::visual::VisualParams*,const typename Out::VecCoord& out, const typename In::VecCoord& in) override;
     void resize( core::State<Out>* toModel ) override;
-
-    //virtual int addContactPointFromInputMapping(const typename In::VecDeriv& in, const sofa::type::Vector3& /*pos*/, std::vector< std::pair<int, double> > & /*baryCoords*/);
 };
 
 template<class TInReal, class TOutReal>
@@ -121,7 +119,7 @@ public:
 
 
 
-#if  !defined(SOFA_COMPONENT_MAPPING_BARYCENTRICMAPPINGRIGID_CPP)
+#if !defined(SOFA_COMPONENT_MAPPING_BARYCENTRICMAPPINGRIGID_CPP)
 extern template class SOFA_COMPONENT_MAPPING_LINEAR_API BarycentricMapping< defaulttype::Vec3Types, defaulttype::Rigid3Types >;
 extern template class SOFA_COMPONENT_MAPPING_LINEAR_API BarycentricMapperRegularGridTopology< defaulttype::Vec3Types, defaulttype::Rigid3Types >;
 extern template class SOFA_COMPONENT_MAPPING_LINEAR_API BarycentricMapperSparseGridTopology< defaulttype::Vec3Types, defaulttype::Rigid3Types >;
@@ -139,12 +137,12 @@ extern template class SOFA_COMPONENT_MAPPING_LINEAR_API BarycentricMapperHexahed
 namespace _topologybarycentricmapper_
 {
     extern template class SOFA_COMPONENT_MAPPING_LINEAR_API TopologyBarycentricMapper< defaulttype::Vec3Types, defaulttype::Rigid3Types >;
-} // namesapce _topologybarycentricmapper_
+} // namespace _topologybarycentricmapper_
 
 namespace _barycentricmapper_
 {
     extern template class SOFA_COMPONENT_MAPPING_LINEAR_API BarycentricMapper< defaulttype::Vec3Types, defaulttype::Rigid3Types >;
-} // namesapce _barycentricmapper_
+} // namespace _barycentricmapper_
 
 } // namespace sofa::component::mapping::linear
 

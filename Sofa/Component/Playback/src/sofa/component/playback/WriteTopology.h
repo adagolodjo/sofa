@@ -23,7 +23,7 @@
 #include <sofa/component/playback/config.h>
 
 #include <sofa/core/topology/BaseMeshTopology.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/objectmodel/Event.h>
 
 #include <sofa/simulation/AnimateBeginEvent.h>
@@ -41,26 +41,26 @@
 namespace sofa::component::playback
 {
 
-/** Write Topology containers informations into a file at a given set of time instants
- * A period can be etablished at the last time instant.
- * The informations to write can be choosen. by default there will be only commun containers.
+/** Write Topology containers information into a file at a given set of time instants
+ * A period can be established at the last time instant.
+ * The information to write can be chosen. by default there will be only commun containers.
  * An option is available to write shells containers.
  *
  * This part is not handle yet:
  * Stop to write infos if the kinematic energy reach a given threshold (stopAt)
  * The energy will be measured at each period determined by keperiod
 */
-class SOFA_COMPONENT_PLAYBACK_API WriteTopology: public core::objectmodel::BaseObject
+class SOFA_COMPONENT_PLAYBACK_API WriteTopology: public core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(WriteTopology,core::objectmodel::BaseObject);
+    SOFA_CLASS(WriteTopology,core::objectmodel::BaseComponent);
 
-    sofa::core::objectmodel::DataFileName f_filename;
-    Data < bool > f_writeContainers; ///< flag enabling output of common topology containers.
-    Data < bool > f_writeShellContainers; ///< flag enabling output of specific shell topology containers.
-    Data < double > f_interval; ///< time duration between outputs
-    Data < type::vector<double> > f_time; ///< set time to write outputs
-    Data < double > f_period; ///< period between outputs
+    sofa::core::objectmodel::DataFileName d_filename;
+    Data < bool > d_writeContainers; ///< flag enabling output of common topology containers.
+    Data < bool > d_writeShellContainers; ///< flag enabling output of specific shell topology containers.
+    Data < double > d_interval; ///< time duration between outputs
+    Data < type::vector<double> > d_time; ///< set time to write outputs
+    Data < double > d_period; ///< period between outputs
 
     /// Link to be set to the topology container in the component graph.
     SingleLink<WriteTopology, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
@@ -93,7 +93,7 @@ public:
             return false;
         }
 
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
 };

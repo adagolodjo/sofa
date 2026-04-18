@@ -1,23 +1,20 @@
 /******************************************************************************
-*       SOFA, Simulation Open-Framework Architecture, version 1.0 RC 1        *
-*                (c) 2006-2020 MGH, INRIA, USTL, UJF, CNRS                    *
+*                 SOFA, Simulation Open-Framework Architecture                *
+*                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
-* This library is free software; you can redistribute it and/or modify it     *
+* This program is free software; you can redistribute it and/or modify it     *
 * under the terms of the GNU Lesser General Public License as published by    *
 * the Free Software Foundation; either version 2.1 of the License, or (at     *
 * your option) any later version.                                             *
 *                                                                             *
-* This library is distributed in the hope that it will be useful, but WITHOUT *
+* This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
 * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
 * for more details.                                                           *
 *                                                                             *
 * You should have received a copy of the GNU Lesser General Public License    *
-* along with this library; if not, write to the Free Software Foundation,     *
-* Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA.          *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
-*                               SOFA :: Modules                               *
-*                                                                             *
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
@@ -28,6 +25,8 @@
 #include <sofa/core/behavior/ForceField.inl>
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/helper/AdvancedTimer.h>
+#include <sofa/helper/ScopedAdvancedTimer.h>
+
 
 namespace sofa::component::solidmechanics::spring
 {
@@ -49,15 +48,14 @@ PolynomialSpringsForceField<DataTypes>::PolynomialSpringsForceField(MechanicalSt
     , d_computeZeroLength(initData(&d_computeZeroLength, 1, "computeZeroLength", "flag to compute initial length for springs"))
     , d_zeroLength(initData(&d_zeroLength, "zeroLength", "initial length for springs"))
     , d_recomputeIndices(initData(&d_recomputeIndices, false, "recompute_indices", "Recompute indices (should be false for BBOX)"))
-    , d_compressible(initData(&d_compressible, false, "compressible", "Indicates if object compresses without reactio force"))
+    , d_compressible(initData(&d_compressible, false, "compressible", "Indicates if object compresses without any reaction force"))
     , d_drawMode(initData(&d_drawMode, 0, "drawMode", "The way springs will be drawn:\n- 0: Line\n- 1:Cylinder\n- 2: Arrow"))
     , d_showArrowSize(initData(&d_showArrowSize, 0.01f, "showArrowSize","size of the axis"))
     , d_springColor(initData(&d_springColor, sofa::type::RGBAColor(0.0f, 1.0f, 0.0f, 1.0f), "springColor", "spring color"))
-    , d_showIndicesScale(initData(&d_showIndicesScale, (float)0.02, "showIndicesScale", "Scale for indices display. (default=0.02)"))
+    , d_showIndicesScale(initData(&d_showIndicesScale, (float)0.02, "showIndicesScale", "Scale for indices display (default=0.02)"))
     , m_dimension(Coord::total_size)
 {
 }
-
 
 template<class DataTypes>
 void PolynomialSpringsForceField<DataTypes>::bwdInit()
@@ -104,7 +102,7 @@ void PolynomialSpringsForceField<DataTypes>::bwdInit()
     }
 
     // read and fill polynomial parameters
-    helper::ReadAccessor<Data<type::vector<unsigned int>>> vPolynomialDegree = d_polynomialDegree;
+    const helper::ReadAccessor<Data<type::vector<unsigned int>>> vPolynomialDegree = d_polynomialDegree;
 
     m_polynomialsMap.clear();
     type::vector<unsigned int> polynomial;
@@ -160,7 +158,7 @@ void PolynomialSpringsForceField<DataTypes>::recomputeIndices()
 
     if (m_firstObjectIndices.size() > m_secondObjectIndices.size())
     {
-        msg_error() << "Error : the dimention of the source and the targeted points are different ";
+        msg_error() << "Error : the dimension of the source and the targeted points are different ";
         m_firstObjectIndices.clear();
         m_secondObjectIndices.clear();
     }
@@ -290,17 +288,17 @@ void PolynomialSpringsForceField<DataTypes>::ComputeJacobian(unsigned int stiffn
     {
         for(unsigned int secondIndex = 0; secondIndex < m_dimension; secondIndex++)
         {
-            jacobMatrix[firstIndex][secondIndex] = (polynomialDerivativeRes - polynomialForceRes) *
+            jacobMatrix(firstIndex,secondIndex) = (polynomialDerivativeRes - polynomialForceRes) *
                     m_weightedCoordinateDifference[springIndex][firstIndex] * m_weightedCoordinateDifference[springIndex][secondIndex];
         }
-        jacobMatrix[firstIndex][firstIndex] += polynomialForceRes;
+        jacobMatrix(firstIndex,firstIndex) += polynomialForceRes;
     }
 
     for(unsigned int firstIndex = 0; firstIndex < m_dimension; firstIndex++)
     {
         for(unsigned int secondIndex = 0; secondIndex < m_dimension; secondIndex++)
         {
-            msg_info() << "for indices " << firstIndex << " and " << secondIndex << " the values is: " << jacobMatrix[firstIndex][secondIndex];
+            msg_info() << "for indices " << firstIndex << " and " << secondIndex << " the values is: " << jacobMatrix(firstIndex,secondIndex);
         }
     }
 }
@@ -336,15 +334,15 @@ void PolynomialSpringsForceField<DataTypes>::draw(const core::visual::VisualPara
     if (!((this->mstate1 == this->mstate2)?vparams->displayFlags().getShowForceFields():vparams->displayFlags().getShowInteractionForceFields()))
         return;
 
-    vparams->drawTool()->saveLastState();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
-    const VecCoord& p1 =this->mstate1->read(core::ConstVecCoordId::position())->getValue();
-    const VecCoord& p2 =this->mstate2->read(core::ConstVecCoordId::position())->getValue();
+    const VecCoord& p1 =this->mstate1->read(core::vec_id::read_access::position)->getValue();
+    const VecCoord& p2 =this->mstate2->read(core::vec_id::read_access::position)->getValue();
 
     const VecIndex& firstObjectIndices = d_firstObjectPoints.getValue();
     const VecIndex& secondObjectIndices = d_secondObjectPoints.getValue();
 
-    std::vector< type::Vector3 > points;
+    std::vector< type::Vec3 > points;
     for (unsigned int i = 0; i < firstObjectIndices.size(); i++)
     {
         const unsigned int index1 = firstObjectIndices[i];
@@ -377,22 +375,20 @@ void PolynomialSpringsForceField<DataTypes>::draw(const core::visual::VisualPara
 
     Real scale = (vparams->sceneBBox().maxBBox() - vparams->sceneBBox().minBBox()).norm() * d_showIndicesScale.getValue();
 
-    type::vector<type::Vector3> positions;
+    type::vector<type::Vec3> positions;
     for (size_t i = 0; i < firstObjectIndices.size(); i++) {
         const unsigned int index = firstObjectIndices[i];
-        positions.push_back(type::Vector3(p1[index][0], p1[index][1], p1[index][2] ));
+        positions.push_back(type::Vec3(p1[index][0], p1[index][1], p1[index][2] ));
     }
     for (size_t i = 0; i < secondObjectIndices.size(); i++) {
         const unsigned int index = secondObjectIndices[i];
-        positions.push_back(type::Vector3(p2[index][0], p2[index][1], p2[index][2] ));
+        positions.push_back(type::Vec3(p2[index][0], p2[index][1], p2[index][2] ));
     }
 
     vparams->drawTool()->drawPoints(positions, scale, color);
 
-    vparams->drawTool()->restoreLastState();
+
 }
-
-
 
 template<class DataTypes>
 void PolynomialSpringsForceField<DataTypes>::addKToMatrix(const core::MechanicalParams* mparams,
@@ -400,7 +396,7 @@ void PolynomialSpringsForceField<DataTypes>::addKToMatrix(const core::Mechanical
 {
     msg_info() << "[" <<  this->getName() << "]: addKToMatrix";
 
-    sofa::helper::AdvancedTimer::stepBegin("restShapeSpringAddKToMatrix");
+    SCOPED_TIMER("restShapeSpringAddKToMatrix");
 
     Real kFact = (Real)sofa::core::mechanicalparams::kFactorIncludingRayleighDamping(mparams, this->rayleighStiffness.getValue());
     unsigned int firstIndex = 0;
@@ -408,10 +404,10 @@ void PolynomialSpringsForceField<DataTypes>::addKToMatrix(const core::Mechanical
 
     if (this->mstate1 == this->mstate2)
     {
-        sofa::core::behavior::MultiMatrixAccessor::MatrixRef mref = matrix->getMatrix(this->mstate1);
+        const sofa::core::behavior::MultiMatrixAccessor::MatrixRef mref = matrix->getMatrix(this->mstate1);
         if (!mref) return;
         sofa::linearalgebra::BaseMatrix* mat = mref.matrix;
-        unsigned int offset = mref.offset;
+        const unsigned int offset = mref.offset;
 
         for (unsigned int index = 0; index < m_firstObjectIndices.size(); index++)
         {
@@ -423,7 +419,7 @@ void PolynomialSpringsForceField<DataTypes>::addKToMatrix(const core::Mechanical
             {
                 for (unsigned int j = 0; j < m_dimension; j++)
                 {
-                    Real stiffnessDeriv = jacobMatrix[i][j] * kFact;
+                    Real stiffnessDeriv = jacobMatrix(i,j) * kFact;
                     mat->add(offset + m_dimension * firstIndex + i, offset + m_dimension * firstIndex + j, -stiffnessDeriv);
                     mat->add(offset + m_dimension * firstIndex + i, offset + m_dimension * secondIndex + j, stiffnessDeriv);
                     mat->add(offset + m_dimension * secondIndex + i, offset + m_dimension * firstIndex + j, stiffnessDeriv);
@@ -448,7 +444,7 @@ void PolynomialSpringsForceField<DataTypes>::addKToMatrix(const core::Mechanical
             {
                 for (unsigned int j = 0; j < m_dimension; j++)
                 {
-                    Real stiffnessDeriv = jacobMatrix[i][j] * kFact;
+                    Real stiffnessDeriv = jacobMatrix(i,j) * kFact;
                     mref11.matrix->add(mref11.offset + m_dimension * firstIndex + i, mref11.offset + m_dimension * firstIndex + j, -stiffnessDeriv);
                     mref12.matrix->add(mref12.offRow + m_dimension * firstIndex + i, mref12.offCol + m_dimension * secondIndex + j, stiffnessDeriv);
                     mref21.matrix->add(mref21.offRow + m_dimension * secondIndex + i, mref21.offCol + m_dimension * firstIndex + j, stiffnessDeriv);
@@ -457,15 +453,85 @@ void PolynomialSpringsForceField<DataTypes>::addKToMatrix(const core::Mechanical
             }
         }
     }
+}
 
-    sofa::helper::AdvancedTimer::stepEnd("restShapeSpringAddKToMatrix");
+template<class DataTypes>
+void PolynomialSpringsForceField<DataTypes>::buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix)
+{
+    unsigned int firstIndex = 0;
+    unsigned int secondIndex = 0;
+
+    if (this->mstate1 == this->mstate2)
+    {
+        auto dfdx = matrix->getForceDerivativeIn(this->mstate1.get())
+                .withRespectToPositionsIn(this->mstate1.get());
+
+        for (unsigned int index = 0; index < m_firstObjectIndices.size(); index++)
+        {
+            firstIndex = m_firstObjectIndices[index];
+            secondIndex = m_secondObjectIndices[index];
+            const JacobianMatrix& jacobMatrix = m_differential[index];
+
+            for(unsigned int i = 0; i < m_dimension; i++)
+            {
+                for (unsigned int j = 0; j < m_dimension; j++)
+                {
+                    Real stiffnessDeriv = jacobMatrix(i,j);
+                    dfdx(m_dimension * firstIndex + i, m_dimension * firstIndex + j) += - stiffnessDeriv;
+                    dfdx(m_dimension * firstIndex + i, m_dimension * secondIndex + j) += stiffnessDeriv;
+                    dfdx(m_dimension * secondIndex + i, m_dimension * firstIndex + j) += stiffnessDeriv;
+                    dfdx(m_dimension * secondIndex + i, m_dimension * secondIndex + j) += - stiffnessDeriv;
+                }
+            }
+        }
+    }
+    else
+    {
+        auto* m1 = this->mstate1.get();
+        auto* m2 = this->mstate2.get();
+
+        auto df1_dx1 = matrix->getForceDerivativeIn(m1).withRespectToPositionsIn(m1);
+        auto df1_dx2 = matrix->getForceDerivativeIn(m1).withRespectToPositionsIn(m2);
+        auto df2_dx1 = matrix->getForceDerivativeIn(m2).withRespectToPositionsIn(m1);
+        auto df2_dx2 = matrix->getForceDerivativeIn(m2).withRespectToPositionsIn(m2);
+
+        df1_dx1.checkValidity(this);
+        df1_dx2.checkValidity(this);
+        df2_dx1.checkValidity(this);
+        df2_dx2.checkValidity(this);
+
+        for (unsigned int index = 0; index < m_firstObjectIndices.size(); index++)
+        {
+            firstIndex = m_firstObjectIndices[index];
+            secondIndex = m_secondObjectIndices[index];
+            const JacobianMatrix& jacobMatrix = m_differential[index];
+
+            for(unsigned int i = 0; i < m_dimension; i++)
+            {
+                for (unsigned int j = 0; j < m_dimension; j++)
+                {
+                    Real stiffnessDeriv = jacobMatrix(i,j);
+                    df1_dx1(m_dimension * firstIndex + i, m_dimension * firstIndex + j) += -stiffnessDeriv;
+                    df1_dx2(m_dimension * firstIndex + i, m_dimension * secondIndex + j) +=  stiffnessDeriv;
+                    df2_dx1(m_dimension * secondIndex + i, m_dimension * firstIndex + j) +=  stiffnessDeriv;
+                    df2_dx2(m_dimension * secondIndex + i, m_dimension * secondIndex + j) += -stiffnessDeriv;
+                }
+            }
+        }
+    }
+}
+
+template <class DataTypes>
+void PolynomialSpringsForceField<DataTypes>::buildDampingMatrix(core::behavior::DampingMatrix*)
+{
+    // No damping in this ForceField
 }
 
 template<class DataTypes>
 double PolynomialSpringsForceField<DataTypes>::PolynomialValue(unsigned int springIndex, double strainValue)
 {
     helper::ReadAccessor<Data<VecReal>> vPolynomialStiffness = d_polynomialStiffness;
-    helper::ReadAccessor<Data<type::vector<unsigned int> >> vPolynomialDegree = d_polynomialDegree;
+    const helper::ReadAccessor<Data<type::vector<unsigned int> >> vPolynomialDegree = d_polynomialDegree;
 
     msg_info() << "Polynomial data: ";
     double highOrderStrain = 1.0;
@@ -484,7 +550,7 @@ template<class DataTypes>
 double PolynomialSpringsForceField<DataTypes>::PolynomialDerivativeValue(unsigned int springIndex, double strainValue)
 {
     helper::ReadAccessor<Data<VecReal>> vPolynomialStiffness = d_polynomialStiffness;
-    helper::ReadAccessor<Data<type::vector<unsigned int> >> vPolynomialDegree = d_polynomialDegree;
+    const helper::ReadAccessor<Data<type::vector<unsigned int> >> vPolynomialDegree = d_polynomialDegree;
 
     msg_info() << "Polynomial derivative data: ";
     double highOrderStrain = 1.0;

@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -23,6 +23,7 @@
 
 #include <sofa/gui/batch/config.h>
 #include <sofa/gui/common/BaseGUI.h>
+#include <sofa/simulation/Node.h>
 #include <sofa/simulation/fwd.h>
 #include <string>
 #include <sstream>
@@ -68,6 +69,8 @@ public:
     static const signed int DEFAULT_NUMBER_OF_ITERATIONS;
     /// @}
 
+    bool canBeDefaultGUI() const override { return false; }
+
 protected:
     /// The destructor should not be called directly. Use the closeGUI() method instead.
     ~BatchGUI() override;
@@ -81,6 +84,7 @@ protected:
     std::string filename;
     static signed int nbIter;
     static std::string nbIterInp;
+    inline static bool hideProgressBar { false };
 
     /// Return true if the timer output string has a json string and the timer is setup to output json
     static bool canExportJson(const std::string& timerOutputStr, const std::string& timerId);

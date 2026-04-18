@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(Sofa.DefaultType LANGUAGES CXX)
 
 set(SRC_ROOT "src/sofa/defaulttype")
@@ -6,19 +6,21 @@ set(SRC_ROOT "src/sofa/defaulttype")
 set(HEADER_FILES
     ${SRC_ROOT}/AbstractTypeInfo.h
     ${SRC_ROOT}/DataTypeInfo.h
+    ${SRC_ROOT}/DataTypeOperations.h
     ${SRC_ROOT}/MapMapSparseMatrix.h
     ${SRC_ROOT}/MapMapSparseMatrixEigenUtils.h
     ${SRC_ROOT}/MatrixExporter.h
+    ${SRC_ROOT}/RigidCoord.h
+    ${SRC_ROOT}/RigidDeriv.h
+    ${SRC_ROOT}/RigidMass.h
     ${SRC_ROOT}/RigidTypes.h
     ${SRC_ROOT}/RigidVec6Types.h
     ${SRC_ROOT}/SolidTypes.h
     ${SRC_ROOT}/SolidTypes.inl
     ${SRC_ROOT}/TemplatesAliases.h
-    ${SRC_ROOT}/TopologyTypes.h
     ${SRC_ROOT}/TypeInfoID.h
     ${SRC_ROOT}/TypeInfoRegistry.h
     ${SRC_ROOT}/TypeInfoRegistryTools.h
-    ${SRC_ROOT}/TopologyTypes.h
     ${SRC_ROOT}/VecTypes.h
     ${SRC_ROOT}/config.h.in
     ${SRC_ROOT}/init.h
@@ -37,6 +39,7 @@ set(HEADER_FILES
     ${SRC_ROOT}/typeinfo/TypeInfo_RGBAColor.h
     ${SRC_ROOT}/typeinfo/TypeInfo_Set.h
     ${SRC_ROOT}/typeinfo/TypeInfo_Scalar.h
+    ${SRC_ROOT}/typeinfo/TypeInfo_SelectableItem.h
     ${SRC_ROOT}/typeinfo/TypeInfo_Text.h
     ${SRC_ROOT}/typeinfo/TypeInfo_Vector.h
     ${SRC_ROOT}/typeinfo/TypeInfo_Vec.h

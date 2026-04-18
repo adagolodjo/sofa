@@ -1,15 +1,15 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(image VERSION 0.1)
 
 set(PLUGIN_IMAGE_COMPILE_SET "standard" CACHE STRING "Set of image type to compile. Values are: none, standard (default), full.")
 set_property(CACHE PLUGIN_IMAGE_COMPILE_SET PROPERTY STRINGS none standard full)
 
-find_package(SofaBase REQUIRED)
-find_package(SofaGeneralVisual REQUIRED)
+find_package(Sofa.Core REQUIRED)
+sofa_find_package(Sofa.Component.Visual REQUIRED)
+sofa_find_package(CImgPlugin REQUIRED)
 
 sofa_find_package(Sofa.GL QUIET)
-sofa_find_package(SofaGuiQt QUIET)
-sofa_find_package(CImgPlugin REQUIRED)
+sofa_find_package(Sofa.Qt QUIET)
 sofa_find_package(SofaPython QUIET)
 sofa_find_package(MultiThreading QUIET)
 sofa_find_package(ZLIB)
@@ -120,8 +120,7 @@ endif()
 
 add_library(${PROJECT_NAME} SHARED ${HEADER_FILES} ${SOURCE_FILES} ${README_FILES} ${PYTHON_FILES})
 target_compile_definitions(${PROJECT_NAME} PRIVATE "-DSOFA_BUILD_IMAGE")
-target_link_libraries(${PROJECT_NAME} Sofa.Core SofaBase SofaGeneralVisual CImgPlugin)
-
+target_link_libraries(${PROJECT_NAME} Sofa.Core CImgPlugin Sofa.Component.Visual)
 
 if(Sofa.GL_FOUND)
     target_link_libraries(${PROJECT_NAME} Sofa.GL)    
@@ -144,18 +143,18 @@ if(SofaPython_FOUND)
 endif()
 
 if(MultiThreading_FOUND)
-    target_link_libraries(${PROJECT_NAME} MultiThreading)
+    sofa_add_subdirectory(plugin image_multithread image_multithread ON)
 endif()
 
 if(SOFA_BUILD_TESTS)
-    find_package(SofaTest QUIET)
-    if(SofaTest_FOUND)
-        add_subdirectory(image_test)
-    endif()
+    add_subdirectory(image_test)
 endif()
 
-if(SofaGuiQt_FOUND)
-    add_subdirectory(image_gui)
+if(Sofa.Qt_FOUND)
+    option(PLUGIN_IMAGE_COMPILE_GUI "Build Qt-based image GUI" OFF)
+    if(PLUGIN_IMAGE_COMPILE_GUI)
+        add_subdirectory(image_gui)
+    endif ()
 endif()
 
 ## Install rules for the library and headers; CMake package configurations files

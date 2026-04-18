@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -25,8 +25,8 @@
 #include <sofa/simulation/VectorOperations.h>
 #include <sofa/linearalgebra/FullVector.h>
 #include <SofaEigen2Solver/EigenSparseMatrix.h>
-#include <SofaBaseMechanics/MechanicalObject.h>
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/component/statecontainer/MechanicalObject.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 #include <SceneCreator/SceneCreator.h>
 #include <sofa/type/vector.h>
 #include <sofa/core/MultiMapping.h>
@@ -110,7 +110,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
     simulation::Node::SPtr parentsIn1, parentsIn2; ///< Parent nodes, created by setupScene
     simulation::Simulation* simulation; ///< created by the constructor an re-used in the tests
     std::pair<Real, Real> deltaRange; ///< The minimum and maximum magnitudes of the change of each scalar value of the small displacement is deltaRange * numeric_limits<Real>::epsilon. This epsilon is 1.19209e-07 for float and 2.22045e-16 for double.
-    Real errorMax; ///< The test is successfull if the (infinite norm of the) difference is less than  maxError * numeric_limits<Real>::epsilon
+    Real errorMax; ///< The test is successful if the (infinite norm of the) difference is less than  maxError * numeric_limits<Real>::epsilon
 
 
     /// Constructor
@@ -126,7 +126,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
             sofa::simulation::getSimulation()->unload(root);
     }
 
-    /** Returns OutCoord substraction a-b (should return a OutDeriv, but???)
+    /** Returns OutCoord subtraction a-b (should return a OutDeriv, but???)
     */
     OutDeriv difference(const OutCoord& c1, const OutCoord& c2)
     {
@@ -163,7 +163,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
     * the resulting child position is compared with the expected one.
     * Additionally, the Jacobian-related methods are tested using finite differences.
     *
-    * The parent coordinates are transfered in the parent states, then the scene is initialized, then various mapping functions are applied.
+    * The parent coordinates are transferred in the parent states, then the scene is initialized, then various mapping functions are applied.
     * The parent states are resized based on the size of the parentCoords vectors. The child state is not resized. Its should be already sized,
     * or its size set automatically during initialization.
     *
@@ -178,7 +178,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
 
         core::MechanicalParams mparams;
         mparams.setKFactor(1.0);
-        mparams.setSymmetricMatrix(false);
+        mparams.setSupportOnlySymmetricMatrix(false);
 
         // transfer the parent values in the parent states
         // --- Rigid dofs
@@ -201,8 +201,8 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
 
         /// Apply the mapping
         // --- Use of the method apply
-        this->mapping->apply(&mparams, core::VecCoordId::position(), core::VecCoordId::position());
-        this->mapping->applyJ(&mparams, core::VecDerivId::velocity(), core::VecDerivId::velocity() );
+        this->mapping->apply(&mparams, core::vec_id::write_access::position, core::vec_id::read_access::position);
+        this->mapping->applyJ(&mparams, core::vec_id::write_access::velocity, core::vec_id::read_access::velocity );
         // ================ test apply : check if the child positions are the expected ones
         bool succeed = true;
         ReadOutVecCoord xout = this->outDofs->readPositions();
@@ -250,7 +250,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
 
         WriteOutVecDeriv fout = outDofs->writeForces();
         copyToData(fout, fc);
-        this->mapping->applyJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        this->mapping->applyJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         for (Index i = 0; i < Np1.size(); i++) copyFromData(fIn1p[i], this->in1Dofs[i]->readForces());
         for (Index i = 0; i < Np2.size(); i++) copyFromData(fIn2p[i], this->in2Dofs[i]->readForces());
 
@@ -285,7 +285,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
             WriteIn2VecDeriv vIn2 = this->in2Dofs[p]->writeVelocities();
             copyToData(vIn2, vIn2p[p]);
         }
-        this->mapping->applyJ(&mparams, core::VecDerivId::velocity(), core::VecDerivId::velocity() );
+        this->mapping->applyJ(&mparams, core::vec_id::write_access::velocity, core::vec_id::read_access::velocity );
         ReadOutVecDeriv vout = this->outDofs->readVelocities();
         copyFromData(vc, vout);
 
@@ -308,7 +308,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
             WriteIn2VecDeriv fin2 = this->in2Dofs[p]->writeForces();
             copyToData( fin2, dfIn2p[p] );
         }
-        mapping->applyDJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        mapping->applyDJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         for( Index p=0; p<Np1.size(); p++ ) copyFromData( dfIn1p[p], in1Dofs[p]->readForces() ); // fp + df due to geometric stiffness
         for( Index p=0; p<Np2.size(); p++ ) copyFromData( dfIn2p[p], in2Dofs[p]->readForces() ); // fp + df due to geometric stiffness
 
@@ -367,7 +367,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
             copyToData(fin, fIn2p[p]);  // reset parent forces before accumulating child forces
         }
         copyToData(fout, fc);
-        this->mapping->applyJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        this->mapping->applyJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         for (Index i = 0; i < Np1.size(); i++) copyFromData(fIn1p[i], this->in1Dofs[i]->readForces());
         for (Index i = 0; i < Np2.size(); i++) copyFromData(fIn2p[i], this->in2Dofs[i]->readForces());
 
@@ -383,7 +383,7 @@ struct Multi2Mapping_test : public Sofa_test<typename _MultiMapping::Real>
             WriteIn2VecCoord pin2 = in2Dofs[p]->writePositions();
             copyToData(pin2, xIn2p1[p]);
         }
-        this->mapping->apply(&mparams, core::VecCoordId::position(), core::VecCoordId::position());
+        this->mapping->apply(&mparams, core::vec_id::write_access::position, core::vec_id::read_access::position);
         WriteOutVecCoord pout = this->outDofs->writePositions();
         copyFromData(xc1, pout);
 

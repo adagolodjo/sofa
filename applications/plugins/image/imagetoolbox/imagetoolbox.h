@@ -22,15 +22,15 @@
 #ifndef IMAGETOOLBOX_H
 #define IMAGETOOLBOX_H
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 #include <image/ImageTypes.h>
 #include <image/VectorVis.h>
 
 #include <sofa/helper/io/Image.h>
 #include <sofa/core/objectmodel/BaseContext.h>
 #include <sofa/core/objectmodel/Event.h>
-#include <SofaBaseVisual/VisualModelImpl.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/component/visual/VisualModelImpl.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/objectmodel/KeypressedEvent.h>
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/type/Vec.h>
@@ -49,7 +49,7 @@ namespace misc
 
 using namespace cimg_library;
 using type::Vec;
-using type::Vector3;
+using type::Vec3;
 
 
 template<class _ImageTypes>
@@ -112,7 +112,7 @@ public:
     Data<defaulttype::VectorVis> vectorVisualization;
     /**@}*/
     
-    typedef component::visualmodel::VisualModelImpl VisuModelType;
+    typedef component::visual::VisualModelImpl VisuModelType;
     
      typedef sofa::component::engine::LabelImageToolBox Label;
     typedef type::vector<Label*> VecLabel;

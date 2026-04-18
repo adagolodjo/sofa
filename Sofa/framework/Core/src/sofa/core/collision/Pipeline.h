@@ -19,19 +19,15 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_COLLISION_PIPELINE_H
-#define SOFA_CORE_COLLISION_PIPELINE_H
+#pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 
-#include <sofa/helper/set.h>
+#include <set>
 #include <sofa/type/vector.h>
 
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 class CollisionModel;
@@ -50,10 +46,10 @@ class NarrowPhaseDetection;
  * @brief Pipeline component gather list of collision models and control the sequence of computations
 */
 
-class SOFA_CORE_API Pipeline : public virtual sofa::core::objectmodel::BaseObject
+class SOFA_CORE_API Pipeline : public virtual sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(Pipeline, sofa::core::objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(Pipeline, sofa::core::objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(Pipeline)
 
 protected:
@@ -80,11 +76,11 @@ protected:
     ~Pipeline() override;
 	
 private:
-	Pipeline(const Pipeline& n) ;
-	Pipeline& operator=(const Pipeline& n) ;
-	
-	
-	
+    Pipeline(const Pipeline& n) = delete;
+    Pipeline& operator=(const Pipeline& n) = delete;
+
+
+
 public:
     void reset() override = 0;
 
@@ -127,9 +123,5 @@ public:
 };
 
 } // namespace collision
+} // namespace sofa::core
 
-} // namespace core
-
-} // namespace sofa
-
-#endif

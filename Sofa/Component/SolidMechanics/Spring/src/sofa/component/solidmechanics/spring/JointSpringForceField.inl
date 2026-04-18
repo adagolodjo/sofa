@@ -21,6 +21,7 @@
 ******************************************************************************/
 #pragma once
 #include <sofa/component/solidmechanics/spring/JointSpringForceField.h>
+#include <sofa/core/behavior/PairInteractionForceField.inl>
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/core/MechanicalParams.h>
 #include <sofa/component/solidmechanics/spring/JointSpring.h>
@@ -30,7 +31,7 @@ namespace sofa::component::solidmechanics::spring
 {
 
 using sofa::type::Vec4f;
-using sofa::type::Vector3;
+using sofa::type::Vec3;
 
 template<class DataTypes>
 JointSpringForceField<DataTypes>::JointSpringForceField()
@@ -44,10 +45,10 @@ JointSpringForceField<DataTypes>::JointSpringForceField(MechanicalState* object1
     , m_lastTime((Real)0.0)
     , m_infile(nullptr)
     , m_outfile(nullptr)
-    , f_outfilename( initData(&f_outfilename, "outfile", "output file name"))
-    , f_infilename( initData(&f_infilename, "infile", "input file containing constant joint force"))
-    , f_period( initData(&f_period, (Real)0.0, "period", "period between outputs"))
-    , f_reinit( initData(&f_reinit, false, "reinit", "flag enabling reinitialization of the output file at each timestep"))
+    , d_outfilename(initData(&d_outfilename, "outfile", "output file name"))
+    , d_infilename(initData(&d_infilename, "infile", "input file containing constant joint force"))
+    , d_period(initData(&d_period, (Real)0.0, "period", "period between outputs"))
+    , d_reinit(initData(&d_reinit, false, "reinit", "flag enabling reinitialization of the output file at each timestep"))
     , d_springs(initData(&d_springs,"spring","pairs of indices, stiffness, damping, rest length"))
     , d_showLawfulTorsion(initData(&d_showLawfulTorsion, false, "showLawfulTorsion", "display the lawful part of the joint rotation"))
     , d_showExtraTorsion(initData(&d_showExtraTorsion, false, "showExtraTorsion", "display the illicit part of the joint rotation"))
@@ -68,7 +69,7 @@ void JointSpringForceField<DataTypes>::init()
 {
     Inherit1::init();
 
-    const std::string& outfilename = f_outfilename.getFullPath();
+    const std::string& outfilename = d_outfilename.getFullPath();
     if (!outfilename.empty())
     {
         m_outfile = new std::ofstream(outfilename.c_str());
@@ -80,7 +81,7 @@ void JointSpringForceField<DataTypes>::init()
         }
     }
 
-    const std::string& infilename = f_infilename.getFullPath();
+    const std::string& infilename = d_infilename.getFullPath();
     if (!infilename.empty())
     {
         m_infile = new std::ifstream(infilename.c_str());
@@ -98,9 +99,9 @@ template <class DataTypes>
 void JointSpringForceField<DataTypes>::bwdInit()
 {
 
-    const VecCoord& x1= this->mstate1->read(core::ConstVecCoordId::position())->getValue();
+    const VecCoord& x1= this->mstate1->read(core::vec_id::read_access::position)->getValue();
 
-    const VecCoord& x2= this->mstate2->read(core::ConstVecCoordId::position())->getValue();
+    const VecCoord& x2= this->mstate2->read(core::vec_id::read_access::position)->getValue();
     type::vector<Spring> &springsVector=*(d_springs.beginEdit());
     for (sofa::Index i=0; i<d_springs.getValue().size(); ++i)
     {
@@ -203,30 +204,30 @@ void JointSpringForceField<DataTypes>::addSpringForce( SReal& /*potentialEnergy*
     {
         Mat M;
         Mp1p2.writeRotationMatrix(M);
-        Real crossnorm=sqrt(M[1][0]*M[1][0]+M[2][0]*M[2][0]);
-        Real thet=atan2(crossnorm,M[0][0]);
+        Real crossnorm=sqrt(M(1,0)*M(1,0)+M(2,0)*M(2,0));
+        Real thet=atan2(crossnorm,M(0,0));
         fR0[0]=spring.torsion[0]*spring.KR[0]; // soft constraint
-        fR0[1]=-M[2][0]*thet*spring.KR[1];
-        fR0[2]=M[1][0]*thet*spring.KR[2];
+        fR0[1]=-M(2,0)*thet*spring.KR[1];
+        fR0[2]=M(1,0)*thet*spring.KR[2];
     }
     else if(!spring.freeMovements[3] && spring.freeMovements[4] && !spring.freeMovements[5] && spring.torsion[1]>spring.limitAngles[2] && spring.torsion[1]<spring.limitAngles[3]) // pivot /y
     {
         Mat M;
         Mp1p2.writeRotationMatrix(M);
-        Real crossnorm=sqrt(M[0][1]*M[0][1]+M[2][1]*M[2][1]);
-        Real thet=atan2(crossnorm,M[1][1]);
-        fR0[0]=M[2][1]*thet*spring.KR[0];
+        Real crossnorm=sqrt(M(0,1)*M(0,1)+M(2,1)*M(2,1));
+        Real thet=atan2(crossnorm,M(1,1));
+        fR0[0]=M(2,1)*thet*spring.KR[0];
         fR0[1]=spring.torsion[1]*spring.KR[1]; // soft constraint
-        fR0[2]=-M[0][1]*thet*spring.KR[2];
+        fR0[2]=-M(0,1)*thet*spring.KR[2];
     }
     else if(!spring.freeMovements[3] && !spring.freeMovements[4] && spring.freeMovements[5] && spring.torsion[2]>spring.limitAngles[4] && spring.torsion[2]<spring.limitAngles[5]) // pivot /z
     {
         Mat M;
         Mp1p2.writeRotationMatrix(M);
-        Real crossnorm=sqrt(M[1][2]*M[1][2]+M[0][2]*M[0][2]);
-        Real thet=atan2(crossnorm,M[2][2]);
-        fR0[0]=-M[1][2]*thet*spring.KR[0];
-        fR0[1]=M[0][2]*thet*spring.KR[1];
+        Real crossnorm=sqrt(M(1,2)*M(1,2)+M(0,2)*M(0,2));
+        Real thet=atan2(crossnorm,M(2,2));
+        fR0[0]=-M(1,2)*thet*spring.KR[0];
+        fR0[1]=M(0,2)*thet*spring.KR[1];
         fR0[2]=spring.torsion[2]*spring.KR[2]; // soft constraint
     }
     else // general case
@@ -260,12 +261,12 @@ void JointSpringForceField<DataTypes>::addSpringForce( SReal& /*potentialEnergy*
     // write output file
     if (m_outfile)
     {
-        if(f_reinit.getValue()) m_outfile->seekp(std::ios::beg);
+        if(d_reinit.getValue()) m_outfile->seekp(std::ios::beg);
 
         SReal time = this->getContext()->getTime();
-        if (time >= (m_lastTime + f_period.getValue()))
+        if (time >= (m_lastTime + d_period.getValue()))
         {
-            m_lastTime += f_period.getValue();
+            m_lastTime += d_period.getValue();
             (*m_outfile) << "T= "<< time << "\n";
 
             const Coord xrel(spring.ref.inverseRotate(Mp1p2.getCenter()), Mp1p2.getOrientation());
@@ -283,7 +284,7 @@ void JointSpringForceField<DataTypes>::addSpringForce( SReal& /*potentialEnergy*
 
             (*m_outfile) << "  F= " << force << "\n";
 
-            if(f_reinit.getValue()) (*m_outfile) << "\n\n\n\n\n";
+            if(d_reinit.getValue()) (*m_outfile) << "\n\n\n\n\n";
             m_outfile->flush();
         }
     }
@@ -357,46 +358,52 @@ void JointSpringForceField<DataTypes>::addDForce(const core::MechanicalParams *m
     data_df2.endEdit();
 }
 
+template <class DataTypes>
+void JointSpringForceField<DataTypes>::buildDampingMatrix(core::behavior::DampingMatrix*)
+{
+    // No damping in this ForceField
+}
+
 template<class DataTypes>
 void JointSpringForceField<DataTypes>::draw(const core::visual::VisualParams* vparams)
 {
     if (!((this->mstate1 == this->mstate2)?vparams->displayFlags().getShowForceFields():vparams->displayFlags().getShowInteractionForceFields())) return;
-    const VecCoord& p1 = this->mstate1->read(core::ConstVecCoordId::position())->getValue();
-    const VecCoord& p2 = this->mstate2->read(core::ConstVecCoordId::position())->getValue();
-    vparams->drawTool()->saveLastState();
+    const VecCoord& p1 = this->mstate1->read(core::vec_id::read_access::position)->getValue();
+    const VecCoord& p2 = this->mstate2->read(core::vec_id::read_access::position)->getValue();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
     vparams->drawTool()->setLightingEnabled(true);
 
-    bool external = (this->mstate1!=this->mstate2);
+    const bool external = (this->mstate1!=this->mstate2);
     const type::vector<Spring>& springs = d_springs.getValue();
 
-    type::vector<Vector3> vertices;
+    type::vector<Vec3> vertices;
     std::vector<sofa::type::RGBAColor> colors;
 
     constexpr auto yellow = sofa::type::RGBAColor::yellow();
 
     for (sofa::Index i=0; i<springs.size(); i++)
     {
-        Vec4f color;
+        sofa::type::RGBAColor color;
 
-        Real d = (p2[springs[i].m2]-p1[springs[i].m1]).getCenter().norm();
+        Real d = (p2[springs[i].m2] - p1[springs[i].m1]).getCenter().norm();
         if (external)
         {
             if (d<springs[i].initTrans.norm()*0.9999)
-                color = Vec4f(1,0,0,1);
+                color = sofa::type::RGBAColor::red();
             else
-                color = Vec4f(0,1,0,1);
+                color = sofa::type::RGBAColor::green();
         }
         else
         {
             if (d<springs[i].initTrans.norm()*0.9999)
-                color = Vec4f(1,0.5f,0,1);
+                color = sofa::type::RGBAColor(1,0.5f,0,1);
             else
-                color = Vec4f(0,1,0.5f,1);
+                color = sofa::type::RGBAColor(0,1,0.5f,1);
         }
 
-        Vector3 v0(p1[springs[i].m1].getCenter()[0], p1[springs[i].m1].getCenter()[1], p1[springs[i].m1].getCenter()[2]);
-        Vector3 v1(p2[springs[i].m2].getCenter()[0], p2[springs[i].m2].getCenter()[1], p2[springs[i].m2].getCenter()[2]);
+        Vec3 v0(p1[springs[i].m1].getCenter()[0], p1[springs[i].m1].getCenter()[1], p1[springs[i].m1].getCenter()[2]);
+        Vec3 v1(p2[springs[i].m2].getCenter()[0], p2[springs[i].m2].getCenter()[1], p2[springs[i].m2].getCenter()[2]);
 
         vertices.push_back(v0);
         vertices.push_back(v1);
@@ -406,23 +413,23 @@ void JointSpringForceField<DataTypes>::draw(const core::visual::VisualParams* vp
         const float cylinderSize = float(d_showFactorSize.getValue() / 15.0f);
         if(springs[i].freeMovements[3] == 1)
         {
-            Vector3 axis((Real)(1.0*d_showFactorSize.getValue()),0,0);
-            Vector3 vrot = v0 + q0.rotate(axis);
+            Vec3 axis((Real)(1.0*d_showFactorSize.getValue()),0,0);
+            Vec3 vrot = v0 + q0.rotate(axis);
 
             vparams->drawTool()->drawCylinder(v0, vrot, cylinderSize,yellow );
         }
         if(springs[i].freeMovements[4] == 1)
         {
-            Vector3 axis(0,(Real)(1.0*d_showFactorSize.getValue()),0);
-            Vector3 vrot = v0 + q0.rotate(axis);
+            Vec3 axis(0,(Real)(1.0*d_showFactorSize.getValue()),0);
+            Vec3 vrot = v0 + q0.rotate(axis);
 
             vparams->drawTool()->drawCylinder(v0, vrot, cylinderSize,yellow );
 
         }
         if(springs[i].freeMovements[5] == 1)
         {
-            Vector3 axis(0,0,(Real)(1.0*d_showFactorSize.getValue()));
-            Vector3 vrot = v0 + q0.rotate(axis);
+            Vec3 axis(0,0,(Real)(1.0*d_showFactorSize.getValue()));
+            Vec3 vrot = v0 + q0.rotate(axis);
 
             vparams->drawTool()->drawCylinder(v0, vrot, cylinderSize,yellow );
         }
@@ -432,21 +439,21 @@ void JointSpringForceField<DataTypes>::draw(const core::visual::VisualParams* vp
         if (d_showLawfulTorsion.getValue())
         {
             Vector vtemp = p1[springs[i].m1].projectPoint(springs[i].lawfulTorsion);
-            v1 = Vector3(vtemp[0], vtemp[1], vtemp[2]);
+            v1 = Vec3(vtemp[0], vtemp[1], vtemp[2]);
 
             vparams->drawTool()->drawArrow(v0, v1, arrowSize, yellow );
         }
         if (d_showExtraTorsion.getValue())
         {
-            Vector vtemp =  p1[springs[i].m1].projectPoint(springs[i].torsion-springs[i].lawfulTorsion);
-            v1 = Vector3(vtemp[0], vtemp[1], vtemp[2]);
+            Vector vtemp =  p1[springs[i].m1].projectPoint(springs[i].torsion - springs[i].lawfulTorsion);
+            v1 = Vec3(vtemp[0], vtemp[1], vtemp[2]);
 
             vparams->drawTool()->drawArrow(v0, v1, arrowSize, yellow );
         }
     }
     vparams->drawTool()->drawLines(vertices,1, colors);
 
-    vparams->drawTool()->restoreLastState();
+
 }
 
 template <class DataTypes>
@@ -454,32 +461,23 @@ void JointSpringForceField<DataTypes>::computeBBox(const core::ExecParams*  para
 {
     SOFA_UNUSED(params);
 
-    const Real max_real = std::numeric_limits<Real>::max();
-    const Real min_real = std::numeric_limits<Real>::lowest(); //not min() !
-    Real maxBBox[3] = { min_real,min_real,min_real };
-    Real minBBox[3] = { max_real,max_real,max_real };
-
-    const VecCoord& p1 = this->mstate1->read(core::ConstVecCoordId::position())->getValue();
-    const VecCoord& p2 = this->mstate2->read(core::ConstVecCoordId::position())->getValue();
+    const VecCoord& p1 = this->mstate1->read(core::vec_id::read_access::position)->getValue();
+    const VecCoord& p2 = this->mstate2->read(core::vec_id::read_access::position)->getValue();
 
     const type::vector<Spring>& springs = d_springs.getValue();
+
+    type::BoundingBox bbox;
 
     for (sofa::Index i = 0, iend = sofa::Size(springs.size()); i<iend; ++i)
     {
         const Spring& s = springs[i];
+        const auto& c1 = p1[s.m1].getCenter();
+        const auto& c2 = p2[s.m2].getCenter();
 
-        Vector3 v0 = p1[s.m1].getCenter();
-        Vector3 v1 = p2[s.m2].getCenter();
-
-        for (sofa::Index c = 0; c<3; c++)
-        {
-            if (v0[c] > maxBBox[c]) maxBBox[c] = (Real)v0[c];
-            if (v0[c] < minBBox[c]) minBBox[c] = (Real)v0[c];
-            if (v1[c] > maxBBox[c]) maxBBox[c] = (Real)v1[c];
-            if (v1[c] < minBBox[c]) minBBox[c] = (Real)v1[c];
-        }
+        bbox.include(c1);
+        bbox.include(c2);
     }
-    this->f_bbox.setValue( sofa::type::TBoundingBox<Real>(minBBox, maxBBox));
+    this->f_bbox.setValue(bbox);
 }
 
 template <class DataTypes>
@@ -504,8 +502,8 @@ void JointSpringForceField<DataTypes>::addSpring(sofa::Index m1, sofa::Index m2,
 {
     Spring s(m1,m2,softKst,hardKst,softKsr,hardKsr, blocKsr, axmin, axmax, aymin, aymax, azmin, azmax, kd);
 
-    const VecCoord& x1= this->mstate1->read(core::ConstVecCoordId::position())->getValue();
-    const VecCoord& x2= this->mstate2->read(core::ConstVecCoordId::position())->getValue();
+    const VecCoord& x1= this->mstate1->read(core::vec_id::read_access::position)->getValue();
+    const VecCoord& x2= this->mstate2->read(core::vec_id::read_access::position)->getValue();
 
     s.initTrans = x2[m2].getCenter() - x1[m1].getCenter();
     s.initRot = x2[m2].getOrientation()*x1[m1].getOrientation().inverse();

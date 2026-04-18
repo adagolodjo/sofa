@@ -21,8 +21,8 @@
 ******************************************************************************/
 #define MergeROIs_CPP_
 
-#include "MergeROIs.h"
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/component/engine/select/MergeROIs.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/ObjectFactory.h>
 
 namespace sofa::component::engine::select
@@ -58,23 +58,25 @@ void MergeROIs::parseFields ( const std::map<std::string,std::string*>& str )
 
 void MergeROIs::doUpdate()
 {
-    size_t nb = d_nbROIs.getValue();
+    const size_t nb = d_nbROIs.getValue();
     f_indices.resize(nb);
     if(!nb) return;
 
-    helper::WriteOnlyAccessor< Data< type::vector<type::SVector<Index> > > > outputIndices = d_outputIndices;
+    helper::WriteOnlyAccessor< Data< type::vector<type::SVector<sofa::Index> > > > outputIndices = d_outputIndices;
     outputIndices.resize(nb);
 
     for(size_t j=0; j<nb;j++)
     {
-        helper::ReadAccessor< Data< type::vector<Index> > > indices = f_indices[j];
+        helper::ReadAccessor< Data< type::vector<sofa::Index> > > indices = f_indices[j];
         outputIndices[j].resize(indices.size());
         for(size_t i=0 ; i<indices.size() ; i++) outputIndices[j][i]=indices[i];
     }
 }
-int MergeROIsClass = core::RegisterObject("Merge a list of ROIs (vector<Indices>) into a single Data (vector<svector<Indices>>)")
-        .add< MergeROIs >(true)
-        ;
 
+void registerMergeROIs(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Merge a list of ROIs (vector<Indices>) into a single Data (vector<svector<Indices>>).")
+        .add< MergeROIs >());
+}
 
 } //namespace sofa::component::engine::select

@@ -19,19 +19,18 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_VOXELLOADER_H
-#define SOFA_CORE_VOXELLOADER_H
+#pragma once
 
 #include <sofa/core/loader/BaseLoader.h>
 
 namespace sofa
 {
-namespace helper { namespace io { class Image; }}
-
-namespace core
+namespace helper::io
 {
+    class Image;
+}
 
-namespace loader
+namespace core::loader
 {
 
 
@@ -54,10 +53,10 @@ public:
 
     void addHexahedron(type::vector< Hexahedron >* pHexahedra, const type::fixed_array<unsigned int,8> &p);
     void addHexahedron(type::vector< Hexahedron >* pHexahedra,
-            unsigned int p0, unsigned int p1, unsigned int p2, unsigned int p3,
-            unsigned int p4, unsigned int p5, unsigned int p6, unsigned int p7);
+                       unsigned int p0, unsigned int p1, unsigned int p2, unsigned int p3,
+                       unsigned int p4, unsigned int p5, unsigned int p6, unsigned int p7);
 
-    virtual type::Vector3 getVoxelSize () const = 0;
+    virtual type::Vec3 getVoxelSize () const = 0;
 
     virtual type::vector<unsigned int> getHexaIndicesInGrid() const=0;
 
@@ -69,14 +68,10 @@ public:
 
     virtual unsigned char * getSegmentID() = 0;
 
-    // fill the texture by 'image' only where there is the 'segmentation' of 'activeValue' and give the 3D texture sizes
+    // fill the texture by 'image' only where there is the 'segmentation' of 'd_activeValue' and give the 3D texture sizes
     virtual void createSegmentation3DTexture( unsigned char **textureData, int& width, int& height, int& depth) = 0;
 };
 
-}
-
-} // namespace component
+} // namespace core::loader
 
 } // namespace sofa
-
-#endif

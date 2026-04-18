@@ -23,7 +23,6 @@
 #include <sofa/component/collision/detection/intersection/RayDiscreteIntersection.h>
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/core/ObjectFactory.h>
-#include <sofa/helper/proximity.h>
 #include <algorithm>
 
 
@@ -32,17 +31,19 @@ namespace sofa::component::collision::detection::intersection
 
 
 template<class T>
-bool RayDiscreteIntersection::testIntersection(collision::geometry::Ray & ray1, collision::geometry::TSphere<T>& sph2)
+bool RayDiscreteIntersection::testIntersection(collision::geometry::Ray & ray1, collision::geometry::TSphere<T>& sph2, const core::collision::Intersection* currentIntersection)
 {
+    SOFA_UNUSED(currentIntersection);
+
     // Center of the sphere
-    const type::Vector3 sph2Pos(sph2.center());
+    const type::Vec3 sph2Pos(sph2.center());
     // Radius of the sphere
     const SReal radius1 = sph2.r();
 
-    const type::Vector3 ray1Origin(ray1.origin());
-    const type::Vector3 ray1Direction(ray1.direction());
+    const type::Vec3 ray1Origin(ray1.origin());
+    const type::Vec3 ray1Direction(ray1.direction());
     const SReal length2 = ray1.l();
-    const type::Vector3 tmp = sph2Pos - ray1Origin;
+    const type::Vec3 tmp = sph2Pos - ray1Origin;
     const SReal rayPos = tmp*ray1Direction;
     const SReal rayPosInside = std::max(std::min(rayPos,length2),(SReal)0.0);
     const SReal dist2 = tmp.norm2() - (rayPosInside*rayPosInside);
@@ -50,17 +51,19 @@ bool RayDiscreteIntersection::testIntersection(collision::geometry::Ray & ray1, 
 }
 
 template<class T>
-int RayDiscreteIntersection::computeIntersection(collision::geometry::Ray& ray1, collision::geometry::TSphere<T>& sph2, OutputVector* contacts)
+int RayDiscreteIntersection::computeIntersection(collision::geometry::Ray& ray1, collision::geometry::TSphere<T>& sph2, OutputVector* contacts, const core::collision::Intersection* currentIntersection)
 {
+    SOFA_UNUSED(currentIntersection);
+
     // Center of the sphere
-    const type::Vector3 sph2Pos(sph2.center());
+    const type::Vec3 sph2Pos(sph2.center());
     // Radius of the sphere
     const SReal radius1 = sph2.r();
 
-    const type::Vector3 ray1Origin(ray1.origin());
-    const type::Vector3 ray1Direction(ray1.direction());
+    const type::Vec3 ray1Origin(ray1.origin());
+    const type::Vec3 ray1Direction(ray1.direction());
     const SReal length2 = ray1.l();
-    const type::Vector3 tmp = sph2Pos - ray1Origin;
+    const type::Vec3 tmp = sph2Pos - ray1Origin;
     const SReal rayPos = tmp*ray1Direction;
     const SReal rayPosInside = std::max(std::min(rayPos,length2),(SReal)0.0);
     const SReal dist2 = tmp.norm2() - (rayPosInside*rayPosInside);

@@ -33,7 +33,7 @@ namespace sofa::component::solidmechanics::fem::hyperelastic::material
 {
 
 
-/** a Class that describe a generic hyperelastic material : exemple of Boyce and Arruda
+/** a Class that describe a generic hyperelastic material : example of Boyce and Arruda
 The material is described based on continuum mechanics and the description is independent
 to any discretization method like the finite element method. 
 A material is generically described by a strain energy function and its first and second derivatives.
@@ -44,6 +44,9 @@ the determinant of the deformation gradient J and the right Cauchy Green deforma
 
 template<class DataTypes>
 class BoyceAndArruda : public HyperelasticMaterial<DataTypes>{
+
+public:
+    static constexpr std::string_view Name = "ArrudaBoyce";
 
     typedef typename DataTypes::Coord::value_type Real;
     typedef type::Mat<3,3,Real> Matrix3;
@@ -109,18 +112,18 @@ class BoyceAndArruda : public HyperelasticMaterial<DataTypes>{
 		CC=_C;
 		CC[1]+=_C[1];CC[3]+=_C[3];CC[4]+=_C[4];
 		Matrix6 C_H_C;
-		C_H_C[0][0]=_C[0]*_C[0]; C_H_C[1][1]=_C[1]*_C[1]+_C[0]*_C[2]; C_H_C[2][2]=_C[2]*_C[2]; C_H_C[3][3]=_C[3]*_C[3]+_C[0]*_C[5]; C_H_C[4][4]=_C[4]*_C[4]+_C[2]*_C[5];
-		C_H_C[5][5]=_C[5]*_C[5];
-		C_H_C[1][0]=_C[0]*_C[1];C_H_C[0][1]=2*C_H_C[1][0]; 
-		C_H_C[2][0]=C_H_C[0][2]=_C[1]*_C[1]; C_H_C[5][0]=C_H_C[0][5]=_C[3]*_C[3];
-		C_H_C[3][0]=_C[0]*_C[3];C_H_C[0][3]=2*C_H_C[3][0]; C_H_C[4][0]=_C[1]*_C[3];C_H_C[0][4]=2*C_H_C[4][0];
-		C_H_C[1][2]=_C[2]*_C[1];C_H_C[2][1]=2*C_H_C[1][2]; C_H_C[1][5]=_C[3]*_C[4];C_H_C[5][1]=2*C_H_C[1][5];
-		C_H_C[3][1]=C_H_C[1][3]=_C[0]*_C[4]+_C[1]*_C[3]; C_H_C[1][4]=C_H_C[4][1]=_C[1]*_C[4]+_C[2]*_C[3];
-		C_H_C[3][2]=_C[4]*_C[1];C_H_C[2][3]=2*C_H_C[3][2]; C_H_C[4][2]=_C[4]*_C[2];C_H_C[2][4]=2*C_H_C[4][2];
-		C_H_C[2][5]=C_H_C[5][2]=_C[4]*_C[4];
-		C_H_C[3][5]=_C[3]*_C[5];C_H_C[5][3]=2*C_H_C[3][5];
-		C_H_C[4][3]=C_H_C[3][4]=_C[3]*_C[4]+_C[5]*_C[1];
-		C_H_C[4][5]=_C[4]*_C[5];C_H_C[5][4]=2*C_H_C[4][5];
+		C_H_C(0,0)=_C[0]*_C[0]; C_H_C(1,1)=_C[1]*_C[1]+_C[0]*_C[2]; C_H_C(2,2)=_C[2]*_C[2]; C_H_C(3,3)=_C[3]*_C[3]+_C[0]*_C[5]; C_H_C(4,4)=_C[4]*_C[4]+_C[2]*_C[5];
+		C_H_C(5,5)=_C[5]*_C[5];
+		C_H_C(1,0)=_C[0]*_C[1];C_H_C(0,1)=2*C_H_C(1,0); 
+		C_H_C(2,0)=C_H_C(0,2)=_C[1]*_C[1]; C_H_C(5,0)=C_H_C(0,5)=_C[3]*_C[3];
+		C_H_C(3,0)=_C[0]*_C[3];C_H_C(0,3)=2*C_H_C(3,0); C_H_C(4,0)=_C[1]*_C[3];C_H_C(0,4)=2*C_H_C(4,0);
+		C_H_C(1,2)=_C[2]*_C[1];C_H_C(2,1)=2*C_H_C(1,2); C_H_C(1,5)=_C[3]*_C[4];C_H_C(5,1)=2*C_H_C(1,5);
+		C_H_C(3,1)=C_H_C(1,3)=_C[0]*_C[4]+_C[1]*_C[3]; C_H_C(1,4)=C_H_C(4,1)=_C[1]*_C[4]+_C[2]*_C[3];
+		C_H_C(3,2)=_C[4]*_C[1];C_H_C(2,3)=2*C_H_C(3,2); C_H_C(4,2)=_C[4]*_C[2];C_H_C(2,4)=2*C_H_C(4,2);
+		C_H_C(2,5)=C_H_C(5,2)=_C[4]*_C[4];
+		C_H_C(3,5)=_C[3]*_C[5];C_H_C(5,3)=2*C_H_C(3,5);
+		C_H_C(4,3)=C_H_C(3,4)=_C[3]*_C[4]+_C[5]*_C[1];
+		C_H_C(4,5)=_C[4]*_C[5];C_H_C(5,4)=2*C_H_C(4,5);
 		Matrix6 trC_HC_;
 		trC_HC_[0]=_C[0]*CC;
 		trC_HC_[1]=_C[1]*CC;

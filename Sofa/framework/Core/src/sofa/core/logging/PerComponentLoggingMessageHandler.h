@@ -28,15 +28,11 @@
 #include <sofa/core/config.h>
 #include <sofa/helper/logging/MessageHandler.h>
 
-namespace sofa
-{
-namespace helper
-{
-namespace logging
+namespace sofa::helper::logging
 {
 
 /// I use a per-file namespace so that I can employ the 'using' keywords without
-/// fearing it will leack names into the global namespace.
+/// fearing it will leak names into the global namespace.
 /// When closing this namespace selected objects from this per-file namespace
 /// are then imported into their parent namespace for ease of use.
 namespace percomponentloggingmessagehandler
@@ -63,6 +59,7 @@ public:
 
     /// Inherited from MessageHandler
     void process(Message& m) override ;
+    std::string getName() const override { return "PerComponentLoggingMessageHandler"; }
 } ;
 
 ///
@@ -77,14 +74,11 @@ public:
     static PerComponentLoggingMessageHandler& getInstance() ;
 };
 
-} // loggingmessagehandler
+} // namespace percomponentloggingmessagehandler
 
 using percomponentloggingmessagehandler::PerComponentLoggingMessageHandler ;
 using percomponentloggingmessagehandler::MainPerComponentLoggingMessageHandler ;
-
-} // logging
-} // helper
-} // sofa
+} // sofa::helper::logging
 
 #endif // PERCOMPONENTLOGGINGMESSAGEHANDLER_H
 

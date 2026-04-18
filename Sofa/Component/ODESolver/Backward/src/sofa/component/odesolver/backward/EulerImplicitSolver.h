@@ -21,9 +21,14 @@
 ******************************************************************************/
 #pragma once
 #include <sofa/component/odesolver/backward/config.h>
+#include <sofa/core/behavior/LinearSolverAccessor.h>
 
 #include <sofa/core/behavior/OdeSolver.h>
 
+namespace sofa::simulation::common
+{
+class VectorOperations;
+}
 namespace sofa::component::odesolver::backward
 {
 
@@ -93,18 +98,23 @@ namespace sofa::component::odesolver::backward
  *   \f$ ( M + h/2 K ) v_{t+h} = f_{ext} \f$
  *
  */
-class SOFA_COMPONENT_ODESOLVER_BACKWARD_API EulerImplicitSolver : public sofa::core::behavior::OdeSolver
+class SOFA_COMPONENT_ODESOLVER_BACKWARD_API EulerImplicitSolver :
+    public sofa::core::behavior::OdeSolver,
+    public sofa::core::behavior::LinearSolverAccessor
 {
 public:
-    SOFA_CLASS(EulerImplicitSolver, sofa::core::behavior::OdeSolver);
+    SOFA_CLASS2(EulerImplicitSolver, sofa::core::behavior::OdeSolver, sofa::core::behavior::LinearSolverAccessor);
 
-    Data<SReal> f_rayleighStiffness; ///< Rayleigh damping coefficient related to stiffness, > 0
-    Data<SReal> f_rayleighMass; ///< Rayleigh damping coefficient related to mass, > 0
-    Data<SReal> f_velocityDamping; ///< Velocity decay coefficient (no decay if null)
-    Data<bool> f_firstOrder; ///< Use backward Euler scheme for first order ode system.
-    Data<bool> d_trapezoidalScheme; ///< Optional: use the trapezoidal scheme instead of the implicit Euler scheme and get second order accuracy in time
-    Data<bool> f_solveConstraint; ///< Apply ConstraintSolver (requires a ConstraintSolver in the same node as this solver, disabled by by default for now)
+    Data<SReal> d_rayleighStiffness; ///< Rayleigh damping coefficient related to stiffness, > 0
+    Data<SReal> d_rayleighMass; ///< Rayleigh damping coefficient related to mass, > 0
+    Data<SReal> d_velocityDamping; ///< Velocity decay coefficient (no decay if null)
+    Data<bool> d_firstOrder; ///< Use backward Euler scheme for first order ODE system, which means that only the first derivative of the DOFs (state) appears in the equation. Higher derivatives are absent
+    Data<bool> d_trapezoidalScheme; ///< Boolean to use the trapezoidal scheme instead of the implicit Euler scheme and get second order accuracy in time (false by default)
+    Data<bool> d_solveConstraint; ///< Apply ConstraintSolver (requires a ConstraintSolver in the same node as this solver, disabled by by default for now)
     Data<bool> d_threadSafeVisitor; ///< If true, do not use realloc and free visitors in fwdInteractionForceField.
+
+    Data<bool> d_computeResidual; ///< If true, the residual is computed at the end of the solving
+    Data<SReal> d_residual; ///< Residual norm at the end of the free-motion solving
 
 protected:
     EulerImplicitSolver();
@@ -119,15 +129,15 @@ public:
     ///
     /// This method is used to compute the compliance for contact corrections
     /// For Euler methods, it is typically dt.
-    double getVelocityIntegrationFactor() const override { return 1.0; }
+    SReal getVelocityIntegrationFactor() const override { return 1.0; }
 
     /// Given a displacement as computed by the linear system inversion, how much will it affect the position
     ///
     /// This method is used to compute the compliance for contact corrections
     /// For Euler methods, it is typically dt².
-    double getPositionIntegrationFactor() const override ;
+    SReal getPositionIntegrationFactor() const override ;
 
-    virtual double getPositionIntegrationFactor(double dt ) const { return dt; }
+    virtual SReal getPositionIntegrationFactor(SReal dt ) const { return dt; }
 
     /// Given an input derivative order (0 for position, 1 for velocity, 2 for acceleration),
     /// how much will it affect the output derivative of the given order.
@@ -144,21 +154,30 @@ public:
     /// v_{t+dt}     0    1      0    1
     /// a_{t+dt}     0    0      0    1/dt
     /// The last column is returned by the getSolutionIntegrationFactor method.
-    double getIntegrationFactor(int inputDerivative, int outputDerivative) const override ;
+    SReal getIntegrationFactor(int inputDerivative, int outputDerivative) const override ;
 
-    double getIntegrationFactor(int inputDerivative, int outputDerivative, double dt) const ;
+    SReal getIntegrationFactor(int inputDerivative, int outputDerivative, SReal dt) const ;
 
     /// Given a solution of the linear system,
     /// how much will it affect the output derivative of the given order.
-    double getSolutionIntegrationFactor(int outputDerivative) const override ;
+    SReal getSolutionIntegrationFactor(int outputDerivative) const override ;
 
-    double getSolutionIntegrationFactor(int outputDerivative, double dt) const ;
+    SReal getSolutionIntegrationFactor(int outputDerivative, SReal dt) const ;
 
 protected:
 
     /// the solution vector is stored for warm-start
     core::behavior::MultiVecDeriv x;
 
+    /// Right-hand side vector
+    core::behavior::MultiVecDeriv b;
+
+    /// Residual vector (optionally computed)
+    core::behavior::MultiVecDeriv m_residual;
+
+    void reallocSolutionVector(sofa::simulation::common::VectorOperations* vop);
+    void reallocRightHandSideVector(sofa::simulation::common::VectorOperations* vop);
+    void reallocResidualVector(sofa::simulation::common::VectorOperations* vop);
 };
 
 } // namespace sofa::component::odesolver::backward

@@ -24,13 +24,13 @@
 #include <SofaDistanceGrid/config.h>
 
 #include <sofa/core/collision/Intersection.h>
-#include <SofaBaseCollision/SphereModel.h>
-#include <SofaMeshCollision/PointModel.h>
-#include <SofaMeshCollision/LineModel.h>
-#include <SofaMeshCollision/TriangleModel.h>
-#include <SofaBaseCollision/CubeModel.h>
-#include <SofaUserInteraction/RayModel.h>
-#include <SofaBaseCollision/DiscreteIntersection.h>
+#include <sofa/component/collision/geometry/SphereCollisionModel.h>
+#include <sofa/component/collision/geometry/PointCollisionModel.h>
+#include <sofa/component/collision/geometry/LineCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
+#include <sofa/component/collision/geometry/CubeCollisionModel.h>
+#include <sofa/component/collision/geometry/RayCollisionModel.h>
+#include <sofa/component/collision/detection/intersection/DiscreteIntersection.h>
 
 #include "DistanceGridCollisionModel.h"
 
@@ -45,28 +45,24 @@ namespace collision
 class SOFA_SOFADISTANCEGRID_API RigidDistanceGridDiscreteIntersection : public core::collision::BaseIntersector
 {
 
-    typedef DiscreteIntersection::OutputVector OutputVector;
+    typedef detection::intersection::DiscreteIntersection::OutputVector OutputVector;
 
 public:
-    RigidDistanceGridDiscreteIntersection(DiscreteIntersection* object);
+    RigidDistanceGridDiscreteIntersection(detection::intersection::DiscreteIntersection* intersection);
 
-    bool testIntersection(RigidDistanceGridCollisionElement&, RigidDistanceGridCollisionElement&);
-    bool testIntersection(RigidDistanceGridCollisionElement&, Point&);
-    template<class T> bool testIntersection(RigidDistanceGridCollisionElement&, TSphere<T>&);
-    bool testIntersection(RigidDistanceGridCollisionElement&, Line&);
-    bool testIntersection(RigidDistanceGridCollisionElement&, Triangle&);
-    bool testIntersection(Ray&, RigidDistanceGridCollisionElement&);
+    bool testIntersection(RigidDistanceGridCollisionElement&, RigidDistanceGridCollisionElement&, const core::collision::Intersection* );
+    bool testIntersection(RigidDistanceGridCollisionElement&, geometry::Point&, const core::collision::Intersection* );
+    template<class T> bool testIntersection(RigidDistanceGridCollisionElement&, geometry::TSphere<T>&, const core::collision::Intersection* );
+    bool testIntersection(RigidDistanceGridCollisionElement&, geometry::Line&, const core::collision::Intersection* );
+    bool testIntersection(RigidDistanceGridCollisionElement&, geometry::Triangle&, const core::collision::Intersection* );
+    bool testIntersection(geometry::Ray&, RigidDistanceGridCollisionElement&, const core::collision::Intersection*);
 
-    int computeIntersection(RigidDistanceGridCollisionElement&, RigidDistanceGridCollisionElement&, OutputVector*);
-    int computeIntersection(RigidDistanceGridCollisionElement&, Point&, OutputVector*);
-    template<class T> int computeIntersection(RigidDistanceGridCollisionElement&, TSphere<T>&, OutputVector*);
-    int computeIntersection(RigidDistanceGridCollisionElement&, Line&, OutputVector*);
-    int computeIntersection(RigidDistanceGridCollisionElement&, Triangle&, OutputVector*);
-    int computeIntersection(Ray&, RigidDistanceGridCollisionElement&, OutputVector*);
-
-protected:
-
-    DiscreteIntersection* intersection;
+    int computeIntersection(RigidDistanceGridCollisionElement&, RigidDistanceGridCollisionElement&, OutputVector*, const core::collision::Intersection*);
+    int computeIntersection(RigidDistanceGridCollisionElement&, geometry::Point&, OutputVector*, const core::collision::Intersection*);
+    template<class T> int computeIntersection(RigidDistanceGridCollisionElement&, geometry::TSphere<T>&, OutputVector*, const core::collision::Intersection*);
+    int computeIntersection(RigidDistanceGridCollisionElement&, geometry::Line&, OutputVector*, const core::collision::Intersection*);
+    int computeIntersection(RigidDistanceGridCollisionElement&, geometry::Triangle&, OutputVector*, const core::collision::Intersection*);
+    int computeIntersection(geometry::Ray&, RigidDistanceGridCollisionElement&, OutputVector*, const core::collision::Intersection*);
 
 };
 

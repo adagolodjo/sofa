@@ -25,9 +25,9 @@
 
 #include <sofa/core/collision/Intersection.h>
 
-#include <sofa/component/collision/geometry/LineModel.h>
-#include <sofa/component/collision/geometry/TriangleModel.h>
-#include <sofa/component/collision/geometry/SphereModel.h>
+#include <sofa/component/collision/geometry/LineCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
+#include <sofa/component/collision/geometry/SphereCollisionModel.h>
 
 namespace sofa::component::collision::detection::intersection
 {
@@ -39,17 +39,12 @@ class SOFA_COMPONENT_COLLISION_DETECTION_INTERSECTION_API MeshDiscreteIntersecti
     typedef core::collision::BaseIntersector::OutputVector OutputVector;
 
 public:
-    MeshDiscreteIntersection(DiscreteIntersection* object, bool addSelf=true);
-
-    bool testIntersection(collision::geometry::Triangle&, collision::geometry::Line&);
-    template<class T> bool testIntersection(collision::geometry::TSphere<T>&, collision::geometry::Triangle&);
-
-    int computeIntersection(collision::geometry::Triangle& e1, collision::geometry::Line& e2, OutputVector* contacts);
-    template<class T> int computeIntersection(collision::geometry::TSphere<T>&, collision::geometry::Triangle&, OutputVector*);
-
-protected:
-    DiscreteIntersection* intersection;
-
+    MeshDiscreteIntersection(DiscreteIntersection* intersection, bool addSelf=true);
+    
+    template<class T> bool testIntersection(collision::geometry::TSphere<T>&, collision::geometry::Triangle&, const core::collision::Intersection* currentIntersection);
+    template<class T> int computeIntersection(collision::geometry::TSphere<T>&, collision::geometry::Triangle&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Triangle&, collision::geometry::Line&, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Triangle& e1, collision::geometry::Line& e2, OutputVector* contacts, const core::collision::Intersection* currentIntersection);
 };
 
 } // namespace sofa::component::collision::detection::intersection

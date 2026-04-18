@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_GENERATESPHERE_CPP
-#include "GenerateSphere.inl"
+#include <sofa/component/engine/generate/GenerateSphere.inl>
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/defaulttype/VecTypes.h>
 
@@ -28,14 +28,12 @@ namespace sofa::component::engine::generate
 {
 using namespace sofa::defaulttype;
 
-int GenerateSphereClass = core::RegisterObject("Generate a sphereical (Bezier) Tetrahedral and Triangular Mesh")
-        .add< GenerateSphere<Vec3Types> >()
- 
-        ;
-
+void registerGenerateSphere(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Engine generating a spherical (Bezier) tetrahedral and triangular mesh.")
+        .add< GenerateSphere<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_GENERATE_API GenerateSphere<Vec3Types>;
- 
-
 
 } //namespace sofa::component::engine::generate

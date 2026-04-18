@@ -23,7 +23,6 @@
 
 #include <sofa/core/MechanicalParams.h>
 #include <sofa/simulation/Node.h>
-#include <sofa/simulation/LocalStorage.h>
 #include <sofa/core/behavior/BaseMass.h>
 #include <sofa/core/behavior/ConstraintSolver.h>
 #include <sofa/core/behavior/BaseInteractionConstraint.h>
@@ -48,9 +47,9 @@ const std::string BaseMechanicalVisitor::fwdVisitorType = "fwd";
 const std::string BaseMechanicalVisitor::bwdVisitorType = "bwd";
 
 BaseMechanicalVisitor::BaseMechanicalVisitor(const sofa::core::ExecParams *params)
-        : Visitor(params), root(nullptr), rootData(nullptr)
+        : Visitor(params), root(nullptr)
 {
-    // mechanical visitors shouldn't be able to acess a sleeping node, only visual visitor should
+    // mechanical visitors shouldn't be able to access a sleeping node, only visual visitor should
     canAccessSleepingNode = false;
 }
 
@@ -137,20 +136,21 @@ void BaseMechanicalVisitor::processNodeBottomUp(simulation::Node *node, VisitorC
     {
         if (node->mechanicalMapping != nullptr)
         {
-            if (!stopAtMechanicalMapping(node, node->mechanicalMapping))
-            {
-                if (testTags(node->mechanicalState))
-                {
-                    runVisitorTask(this, ctx, &BaseMechanicalVisitor::bwdMappedMechanicalState, &*node->mechanicalState, bwdVisitorType);
-                    runVisitorTask(this, ctx, &BaseMechanicalVisitor::bwdMechanicalMapping, &*node->mechanicalMapping, bwdVisitorType);
-                }
-            }
+            runVisitorTask(this, ctx, &BaseMechanicalVisitor::bwdMappedMechanicalState, &*node->mechanicalState, bwdVisitorType);
         }
         else
         {
             runVisitorTask(this, ctx, &BaseMechanicalVisitor::bwdMechanicalState, &*node->mechanicalState, bwdVisitorType);
         }
+    }
 
+    if (node->mechanicalMapping != nullptr)
+    {
+        if (!stopAtMechanicalMapping(node, node->mechanicalMapping))
+        {
+            runVisitorTask(this, ctx, &BaseMechanicalVisitor::bwdMechanicalMapping,
+                           &*node->mechanicalMapping, bwdVisitorType);
+        }
     }
 
     for_each(this, ctx, node->solver, &BaseMechanicalVisitor::bwdOdeSolver, bwdVisitorType);
@@ -171,7 +171,6 @@ Visitor::Result BaseMechanicalVisitor::processNodeTopDown(simulation::Node* node
     VisitorContext ctx;
     ctx.root = root;
     ctx.node = node;
-    ctx.nodeData = rootData;
     return processNodeTopDown(node, &ctx);
 }
 
@@ -181,7 +180,6 @@ void BaseMechanicalVisitor::processNodeBottomUp(simulation::Node* node)
     VisitorContext ctx;
     ctx.root = root;
     ctx.node = node;
-    ctx.nodeData = rootData;
     processNodeBottomUp(node, &ctx);
 }
 
@@ -196,63 +194,6 @@ Visitor::Result BaseMechanicalVisitor::fwdInteractionConstraint(VisitorContext* 
 {
     return fwdConstraintSet(ctx->node, c);
 }
-
-
-Visitor::Result BaseMechanicalVisitor::processNodeTopDown(simulation::Node* node, LocalStorage* stack)
-{
-    if (root == nullptr)
-    {
-        root = node;
-    }
-
-    VisitorContext ctx;
-    ctx.root = root;
-    ctx.node = node;
-    ctx.nodeData = rootData;
-
-    const bool writeData = writeNodeData();
-    if (writeData)
-    {
-        // create temporary accumulation buffer for parallel reductions (dot products)
-        if (node != root)
-        {
-            SReal* parentData = stack->empty() ? rootData : (SReal*)stack->top();
-            ctx.nodeData = new SReal(0.0);
-            setNodeData(node, ctx.nodeData, parentData);
-            stack->push(ctx.nodeData);
-        }
-    }
-
-    return processNodeTopDown(node, &ctx);
-}
-
-
-void BaseMechanicalVisitor::processNodeBottomUp(simulation::Node* node, LocalStorage* stack)
-{
-    VisitorContext ctx;
-    ctx.root = root;
-    ctx.node = node;
-    ctx.nodeData = rootData;
-    SReal* parentData = rootData;
-
-    const bool writeData = writeNodeData();
-
-    if (writeData)
-    {
-        // use temporary accumulation buffer for parallel reductions (dot products)
-        if (node != root)
-        {
-            ctx.nodeData = (SReal*)stack->pop();
-            parentData = stack->empty() ? rootData : (SReal*)stack->top();
-        }
-    }
-
-    processNodeBottomUp(node, &ctx);
-
-    if (writeData && parentData != ctx.nodeData)
-        addNodeData(node, parentData, ctx.nodeData);
-}
-
 
 #ifdef SOFA_DUMP_VISITOR_INFO
 
@@ -284,7 +225,7 @@ void BaseMechanicalVisitor::printWriteVectors(core::behavior::BaseMechanicalStat
 }
 
 
-void BaseMechanicalVisitor::printReadVectors(simulation::Node* node, core::objectmodel::BaseObject* obj)
+void BaseMechanicalVisitor::printReadVectors(simulation::Node* node, core::objectmodel::BaseComponent* obj)
 {
     using sofa::core::behavior::BaseInteractionForceField;
     using sofa::core::behavior::BaseInteractionProjectiveConstraintSet;
@@ -331,7 +272,7 @@ void BaseMechanicalVisitor::printReadVectors(simulation::Node* node, core::objec
 }
 
 
-void BaseMechanicalVisitor::printWriteVectors(simulation::Node* node, core::objectmodel::BaseObject* obj)
+void BaseMechanicalVisitor::printWriteVectors(simulation::Node* node, core::objectmodel::BaseComponent* obj)
 {
     using sofa::core::behavior::BaseInteractionForceField;
     using sofa::core::behavior::BaseInteractionProjectiveConstraintSet;
@@ -382,7 +323,7 @@ void BaseMechanicalVisitor::printWriteVectors(simulation::Node* node, core::obje
 }
 
 
-Visitor::ctime_t BaseMechanicalVisitor::begin(simulation::Node* node, core::objectmodel::BaseObject* obj, const std::string &info)
+Visitor::ctime_t BaseMechanicalVisitor::begin(simulation::Node* node, core::objectmodel::BaseComponent* obj, const std::string &info)
 {
     ctime_t t=Visitor::begin(node, obj, info);
     printReadVectors(node, obj);
@@ -390,7 +331,7 @@ Visitor::ctime_t BaseMechanicalVisitor::begin(simulation::Node* node, core::obje
 }
 
 
-void BaseMechanicalVisitor::end(simulation::Node* node, core::objectmodel::BaseObject* obj, ctime_t t0)
+void BaseMechanicalVisitor::end(simulation::Node* node, core::objectmodel::BaseComponent* obj, ctime_t t0)
 {
     printWriteVectors(node, obj);
     Visitor::end(node, obj, t0);
@@ -407,25 +348,6 @@ void BaseMechanicalVisitor::end(simulation::Node* node, core::objectmodel::BaseO
 //    return dynamic_cast<const sofa::core::ConstraintParams*>(params);
 //}
 
-
-/// Return true if this visitor need to read the node-specific data if given
-bool BaseMechanicalVisitor::readNodeData() const
-{ return false; }
-
-/// Return true if this visitor need to write to the node-specific data if given
-bool BaseMechanicalVisitor::writeNodeData() const
-{ return false; }
-
-void BaseMechanicalVisitor::setNodeData(simulation::Node* /*node*/, SReal* nodeData, const SReal* parentData)
-{
-    *nodeData = (parentData == nullptr) ? 0.0 : *parentData;
-}
-
-void BaseMechanicalVisitor::addNodeData(simulation::Node* /*node*/, SReal* parentData, const SReal* nodeData)
-{
-    if (parentData)
-        *parentData += *nodeData;
-}
 
 /// Return a class name for this visitor
 /// Only used for debugging / profiling purposes

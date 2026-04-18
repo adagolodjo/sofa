@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_GENERATEGRID_CPP
-#include "GenerateGrid.inl"
+#include <sofa/component/engine/generate/GenerateGrid.inl>
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/defaulttype/VecTypes.h>
 
@@ -28,16 +28,14 @@ namespace sofa::component::engine::generate
 {
 using namespace sofa::defaulttype;
 
-int GenerateGridClass = core::RegisterObject("Generate a Grid Tetrahedral or Hexahedral Mesh")
+void registerGenerateGrid(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Engine generating a grid tetrahedral or hexahedral mesh.")
         .add< GenerateGrid<Vec3Types> >()
-        .add< GenerateGrid<Vec2Types> >()
- 
-        ;
-
+        .add< GenerateGrid<Vec2Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_GENERATE_API GenerateGrid<Vec3Types>;
 template class SOFA_COMPONENT_ENGINE_GENERATE_API GenerateGrid<Vec2Types>;
- 
-
 
 } //namespace sofa::component::engine::generate

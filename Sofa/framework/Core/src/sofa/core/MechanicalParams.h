@@ -19,18 +19,13 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_MECHANICALPARAMS_H
-#define SOFA_CORE_MECHANICALPARAMS_H
+#pragma once
 
 #include <sofa/core/ExecParams.h>
 #include <sofa/core/MultiVecId.h>
 #include <sofa/core/objectmodel/Data.h>
-#include <sofa/core/objectmodel/Link.h>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 /// Class gathering parameters use by mechanical components methods, and transmitted by mechanical visitors
@@ -70,9 +65,8 @@ public:
 
     /// @}
 
-
     /// Symmetric matrix flag, for solvers specialized on symmetric matrices
-    bool symmetricMatrix() const { return m_symmetricMatrix; }
+    bool supportOnlySymmetricMatrix() const { return m_supportOnlySymmetricMatrix; }
 
     /// Should the kinematic and potential energies be computed ?
     bool energy() const { return m_energy; }
@@ -109,35 +103,6 @@ public:
 
     /// @}
 
-    /// @name Access to vectors from a given SingleLink to a state container (i.e. State or MechanicalState)
-    /// @{
-
-    /// Read access to current position vector
-    template<class Owner, class S, unsigned int flags>
-    const Data<typename S::VecCoord>* readX(const SingleLink<Owner,S,flags>& state) const
-    {   return m_x[state.get()].read();    }
-
-    /// Read access to current velocity vector
-    template<class Owner, class S, unsigned int flags>
-    const Data<typename S::VecDeriv>* readV(const SingleLink<Owner,S,flags>& state) const
-    {   return m_v[state.get()].read();    }
-
-    /// Read access to current force vector
-    template<class Owner, class S, unsigned int flags>
-    const Data<typename S::VecDeriv>* readF(const SingleLink<Owner,S,flags>& state) const
-    {   return m_f[state.get()].read();    }
-
-    /// Read access to current dx vector (for implicit schemes)
-    template<class Owner, class S, unsigned int flags>
-    const Data<typename S::VecDeriv>* readDx(const SingleLink<Owner,S,flags>& state) const
-    {   return m_dx[state.get()].read();    }
-
-    /// Read access to current df vector (for implicit schemes)
-    template<class Owner, class S, unsigned int flags>
-    const Data<typename S::VecDeriv>* readDf(const SingleLink<Owner,S,flags>& state) const
-    {   return m_df[state.get()].read();    }
-
-    /// @}
 
     /// @name Setup methods
     /// Called by the OdeSolver from which the mechanical computations originate.
@@ -160,11 +125,11 @@ public:
     /// Set Stiffness matrix contributions factor (for implicit schemes)
     MechanicalParams& setKFactor(SReal v) { m_kFactor = v; return *this; }
 
-    /// Set the symmetric matrix flag (for implicit schemes), for solvers specialized on symmetric matrices
-    MechanicalParams& setSymmetricMatrix(bool b) { m_symmetricMatrix = b; return *this; }
+    /// Set the flag (for implicit schemes) specifying if solvers are only specialized for symmetric matrices
+    MechanicalParams& setSupportOnlySymmetricMatrix(bool b) { m_supportOnlySymmetricMatrix = b; return *this; }
 
 #ifndef NDEBUG
-    /// Checks wether or nor kFactor is used in ForceFields. Temporary here for compatiblity reasons
+    /// Checks wether or nor kFactor is used in ForceFields. Temporary here for compatibility reasons
     void setKFactorUsed(bool b) const { m_kFactorUsed = b; }
     bool getKFactorUsed() const { return m_kFactorUsed; }
 protected:
@@ -275,7 +240,7 @@ protected:
     SReal m_kFactor;
 
     /// True if a symmetric matrix is assumed in the left-hand term of the dynamics equations, for solvers specialized on symmetric matrices
-    bool m_symmetricMatrix;
+    bool m_supportOnlySymmetricMatrix;
 
     /// @name Experimental compliance API
     /// @{
@@ -288,14 +253,6 @@ public:
     void setImplicitPosition( SReal i ) { m_implicitPosition = i; }
     const SReal& implicitPosition() const { return m_implicitPosition; }
     /// @}
-
-
-
-
 };
 
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core

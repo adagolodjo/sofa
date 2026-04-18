@@ -20,23 +20,26 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #include <sofa/component/topology/utility/init.h>
+#include <sofa/core/ObjectFactory.h>
+#include <sofa/helper/system/PluginManager.h>
 
 namespace sofa::component::topology::utility
 {
-    
+
+extern void registerTopologicalChangeProcessor(sofa::core::ObjectFactory* factory);
+extern void registerTopologyBoundingTrasher(sofa::core::ObjectFactory* factory);
+extern void registerTopologyChecker(sofa::core::ObjectFactory* factory);
+
 extern "C" {
     SOFA_EXPORT_DYNAMIC_LIBRARY void initExternalModule();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleName();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleVersion();
+    SOFA_EXPORT_DYNAMIC_LIBRARY void registerObjects(sofa::core::ObjectFactory* factory);
 }
 
 void initExternalModule()
 {
-    static bool first = true;
-    if (first)
-    {
-        first = false;
-    }
+    init();
 }
 
 const char* getModuleName()
@@ -49,9 +52,23 @@ const char* getModuleVersion()
     return MODULE_VERSION;
 }
 
+void registerObjects(sofa::core::ObjectFactory* factory)
+{
+    registerTopologicalChangeProcessor(factory);
+    registerTopologyBoundingTrasher(factory);
+    registerTopologyChecker(factory);
+}
+
 void init()
 {
-    initExternalModule();
+    static bool first = true;
+    if (first)
+    {
+        // make sure that this plugin is registered into the PluginManager
+        sofa::helper::system::PluginManager::getInstance().registerPlugin(MODULE_NAME);
+
+        first = false;
+    }
 }
 
 } // namespace sofa::component::topology::utility

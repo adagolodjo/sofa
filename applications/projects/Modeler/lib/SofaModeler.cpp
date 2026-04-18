@@ -28,10 +28,10 @@
 #include <sofa/helper/system/SetDirectory.h>
 #include <sofa/simulation/XMLPrintVisitor.h>
 
-#include <SofaGui/initSofaGui.h>
-#include <sofa/gui/GUIManager.h>
-#include <sofa/gui/BaseGUI.h>
-#include <sofa/gui/qt/FileManagement.h>
+#include <sofa/gui/init.h>
+#include <sofa/gui/common/GUIManager.h>
+#include <sofa/gui/common/BaseGUI.h>
+#include <sofa/qt/FileManagement.h>
 #include <sofa/helper/system/PluginManager.h>
 #include <sofa/helper/Utils.h>
 #include <sofa/helper/cast.h>
@@ -231,7 +231,7 @@ SofaModeler::SofaModeler():recentlyOpenedFilesManager(Utils::getSofaPathPrefix()
     std::vector< QString > filter;
     const QString path(examplePath.c_str());
     filter.push_back("*.scn"); filter.push_back("*.xml");
-    sofa::gui::qt::getFilesInDirectory(path, exampleQString, true, filter);
+    sofa::qt::getFilesInDirectory(path, exampleQString, true, filter);
 
 
     //----------------------------------------------------------------------
@@ -473,7 +473,7 @@ void SofaModeler::updateViewerList()
     sofa::gui::initSofaGui();
 
     //Set the different available GUI
-    std::vector<std::string> listGUI = sofa::gui::GUIManager::ListSupportedGUI();
+    std::vector<std::string> listGUI = sofa::gui::common::GUIManager::ListSupportedGUI();
 
     //Insert default GUI
     {
@@ -725,7 +725,7 @@ void SofaModeler::fileSaveAs()
     std::string path;
     if (graph->getFilename().empty()) path=examplePath.c_str();
     else path=sofa::helper::system::SetDirectory::GetParentDir(graph->getFilename().c_str());
-    QString s = sofa::gui::qt::getSaveFileName ( this, QString(path.c_str()), "Scenes (*.scn *.xml)", "save file dialog", "Choose where the scene will be saved" );
+    QString s = sofa::qt::getSaveFileName ( this, QString(path.c_str()), "Scenes (*.scn *.xml)", "save file dialog", "Choose where the scene will be saved" );
     if ( s.length() >0 )
     {
 
@@ -759,7 +759,7 @@ void SofaModeler::fileReload()
 
 void SofaModeler::exportSofaClasses()
 {
-    QString filename = sofa::gui::qt::getSaveFileName(this, QString(binPath.c_str()), "Sofa Classes (*.xml)", "export classes dialog", "Choose where the Sofa classes will be exported");
+    QString filename = sofa::qt::getSaveFileName(this, QString(binPath.c_str()), "Sofa Classes (*.xml)", "export classes dialog", "Choose where the Sofa classes will be exported");
     if(filename.isEmpty())
         return;
 
@@ -1085,7 +1085,7 @@ void SofaModeler::runInSofa(	const std::string &sceneFilename, Node* root)
 {
     if (!root) return;
     // Init the scene
-    sofa::gui::GUIManager::Init("Modeler");
+    sofa::gui::common::GUIManager::Init("Modeler");
 
     //Saving the scene in a temporary file ==> doesn't modify the current Node of the simulation
     std::string path;
@@ -1111,7 +1111,7 @@ void SofaModeler::runInSofa(	const std::string &sceneFilename, Node* root)
             {
                 viewerName = listActionGUI[i]->text().toStdString();
                 if (viewerName == "default")
-                    viewerName = sofa::gui::GUIManager::GetValidGUIName();
+                    viewerName = sofa::gui::common::GUIManager::GetValidGUIName();
 
                 if (viewerName == "qt") //default viewer: no extension
                 {
@@ -1187,7 +1187,7 @@ void SofaModeler::runInSofa(	const std::string &sceneFilename, Node* root)
         }
     }
 
-    //retrive plugins
+    //retrieve plugins
     typedef sofa::helper::system::PluginManager::PluginMap PluginMap;
     PluginMap& pluginMap = PluginManager::getInstance().getPluginMap();
     PluginManager::PluginIterator it;

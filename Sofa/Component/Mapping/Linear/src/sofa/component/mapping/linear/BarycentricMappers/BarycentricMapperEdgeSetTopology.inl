@@ -32,15 +32,14 @@ BarycentricMapperEdgeSetTopology<In,Out>::BarycentricMapperEdgeSetTopology(sofa:
 {}
 
 template <class In, class Out>
-typename BarycentricMapperEdgeSetTopology<In, Out>::Index BarycentricMapperEdgeSetTopology<In,Out>::addPointInLine ( const Index edgeIndex, const SReal* baryCoords )
+auto BarycentricMapperEdgeSetTopology<In,Out>::addPointInLine ( const Index edgeIndex, const SReal* baryCoords ) -> Index
 {
-    type::vector<MappingData>& vectorData = *(d_map.beginEdit());
-    vectorData.resize ( d_map.getValue().size() +1 );
-    d_map.endEdit();
-    MappingData& data = *vectorData.rbegin();
+    auto vectorData = sofa::helper::getWriteAccessor(d_map);
+    MappingData data;
     data.in_index = edgeIndex;
-    data.baryCoords[0] = ( Real ) baryCoords[0];
-    return Size(d_map.getValue().size()-1);
+    data.baryCoords[0] = static_cast<Real>(baryCoords[0]);
+    vectorData->emplace_back(data);
+    return static_cast<Index>(vectorData.size() - 1u);
 }
 
 template <class In, class Out>
@@ -56,26 +55,19 @@ typename BarycentricMapperEdgeSetTopology<In, Out>::Index BarycentricMapperEdgeS
 }
 
 template <class In, class Out>
-type::vector<Edge> BarycentricMapperEdgeSetTopology<In,Out>::getElements()
+auto BarycentricMapperEdgeSetTopology<In,Out>::getElements() -> type::vector<Edge>
 {
     return this->m_fromTopology->getEdges();
 }
 
 template <class In, class Out>
-type::vector<SReal> BarycentricMapperEdgeSetTopology<In,Out>::getBaryCoef(const Real* f)
+auto BarycentricMapperEdgeSetTopology<In,Out>::getBarycentricCoefficients(const std::array<Real, MappingData::NumberOfCoordinates>& barycentricCoordinates) -> std::array<Real, Edge::NumberOfNodes>
 {
-    return getBaryCoef(f[0]);
+    return {1-barycentricCoordinates[0], barycentricCoordinates[0]};
 }
 
 template <class In, class Out>
-type::vector<SReal> BarycentricMapperEdgeSetTopology<In,Out>::getBaryCoef(const Real fx)
-{
-    type::vector<SReal> edgeCoef{1-fx,fx};
-    return edgeCoef;
-}
-
-template <class In, class Out>
-void BarycentricMapperEdgeSetTopology<In,Out>::computeBase(Mat3x3d& base, const typename In::VecCoord& in, const Edge& element)
+void BarycentricMapperEdgeSetTopology<In,Out>::computeBase(Mat3x3& base, const typename In::VecCoord& in, const Edge& element)
 {
     //Not implemented for Edge
     SOFA_UNUSED(base);
@@ -84,13 +76,13 @@ void BarycentricMapperEdgeSetTopology<In,Out>::computeBase(Mat3x3d& base, const 
 }
 
 template <class In, class Out>
-void BarycentricMapperEdgeSetTopology<In,Out>::computeCenter(Vector3& center, const typename In::VecCoord& in, const Edge& element)
+void BarycentricMapperEdgeSetTopology<In,Out>::computeCenter(Vec3& center, const typename In::VecCoord& in, const Edge& element)
 {
     center = (in[element[0]]+in[element[1]])*0.5;
 }
 
 template <class In, class Out>
-void BarycentricMapperEdgeSetTopology<In,Out>::computeDistance(SReal& d, const Vector3& v)
+void BarycentricMapperEdgeSetTopology<In,Out>::computeDistance(SReal& d, const Vec3& v)
 {
     //Not implemented for Edge
     SOFA_UNUSED(d);

@@ -19,7 +19,7 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 using sofa::core::objectmodel::BaseObject ;
 
 #include <sofa/testing/BaseTest.h>
@@ -35,6 +35,7 @@ public:
     bool read(const std::string&)override {return true;}
     void printValue(std::ostream&) const override {return;}
     std::string getValueString() const override  {return "";}
+    std::string getDefaultValueString() const override { return ""; }
     std::string getValueTypeString() const override {return "";}
     const sofa::defaulttype::AbstractTypeInfo* getValueTypeInfo() const override {return nullptr;}
     const void* getValueVoidPtr() const {return nullptr;}
@@ -49,10 +50,10 @@ public:
     void doEndEditVoidPtr() override { }
 };
 
-class MyObject : public BaseObject
+class MyObject : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(MyObject, BaseObject);
+    SOFA_CLASS(MyObject, sofa::core::objectmodel::BaseComponent);
     MyData myData;
     MyObject() :
         myData()

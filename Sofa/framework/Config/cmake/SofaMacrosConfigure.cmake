@@ -93,19 +93,41 @@ endmacro()
 
 macro(sofa_add_generic directory name type)
     set(optionArgs)
-    set(oneValueArgs DEFAULT_VALUE WHEN_TO_SHOW VALUE_IF_HIDDEN)
+    set(oneValueArgs DEFAULT_VALUE WHEN_TO_SHOW VALUE_IF_HIDDEN BINARY_DIR)
     set(multiValueArgs)
     cmake_parse_arguments("ARG" "${optionArgs}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/${directory}" AND IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/${directory}")
+    if(   EXISTS "${CMAKE_CURRENT_LIST_DIR}/${directory}" AND IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/${directory}"
+       OR EXISTS "${directory}" AND IS_DIRECTORY "${directory}")
         string(TOUPPER ${type}_${name} option)
+        string(REPLACE "." "_" option ${option})
         string(TOLOWER ${type} type_lower)
 
-        # optional parameter to activate/desactivate the option
+        # optional parameter to activate/deactivate the option
         #  e.g.  sofa_add_application( path/MYAPP MYAPP APPLICATION ON)
         set(active OFF)
-        if(ARG_DEFAULT_VALUE)
+        if(${ARG_DEFAULT_VALUE})
             set(active ON)
+        endif()
+
+        # https://cmake.org/cmake/help/latest/policy/CMP0127.html
+        if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.22)
+            cmake_policy(SET CMP0127 NEW)
+	    endif()
+
+        # Hide/show sub-options depending on this option
+        set(${name}_OPTION "${option}" CACHE INTERNAL "${name} option string")
+        set(${name}_ENABLED "${${option}}" CACHE INTERNAL "${name} option value")
+        get_cmake_property(suboptions CACHE_VARIABLES)
+        list(FILTER suboptions INCLUDE REGEX "${${name}_OPTION}_.*") # keep only sub-options
+        if(${name}_ENABLED)
+            foreach(suboption ${suboptions})
+                mark_as_advanced(CLEAR FORCE ${suboption})
+            endforeach()
+        else()
+            foreach(suboption ${suboptions})
+                mark_as_advanced(FORCE ${suboption})
+            endforeach()
         endif()
 
         if(NOT "${ARG_WHEN_TO_SHOW}" STREQUAL "" AND NOT "${ARG_VALUE_IF_HIDDEN}" STREQUAL "")
@@ -113,9 +135,10 @@ macro(sofa_add_generic directory name type)
         else()
             option(${option} "Build the ${name} ${type_lower}." ${active})
         endif()
+
         if(${option})
-            message("Adding ${type_lower} ${name}")
-            add_subdirectory(${directory})
+            message(STATUS "Adding ${type_lower} ${name}")
+            add_subdirectory(${directory} "${ARG_BINARY_DIR}")
         endif()
 
         if(TARGET ${name})
@@ -125,55 +148,123 @@ macro(sofa_add_generic directory name type)
                 set(target ${aliased_target})
             endif()
 
-            set_target_properties(${target} PROPERTIES FOLDER ${type}s) # IDE folder
+            set(ide_foldername "${type}s")
+            if(${type} MATCHES "library")
+                set(ide_foldername "libraries")
+            endif()
+            
+            set_target_properties(${target} PROPERTIES FOLDER ${ide_foldername}) # IDE folder
             set_target_properties(${target} PROPERTIES DEBUG_POSTFIX "_d")
+
+            if("${type_lower}" STREQUAL "module" OR "${type_lower}" STREQUAL "plugin")
+                # Add current target in the internal list only if not present already
+                get_property(_allTargets GLOBAL PROPERTY __GlobalTargetList__)
+                get_property(_allTargetNames GLOBAL PROPERTY __GlobalTargetNameList__)
+                if(NOT ${name} IN_LIST _allTargets)
+                    set_property(GLOBAL APPEND PROPERTY __GlobalTargetList__ ${target})
+                endif()
+                if(NOT ${option} IN_LIST _allTargetNames)
+                    set_property(GLOBAL APPEND PROPERTY __GlobalTargetNameList__ ${option})
+                endif()
+            endif()
         endif()
     else()
-        message("The ${type_lower} ${name} (${CMAKE_CURRENT_LIST_DIR}/${directory}) does not exist and will be ignored.")
+        message("ERROR while adding ${type_lower} ${name}: neither ${CMAKE_CURRENT_LIST_DIR}/${directory} nor ${directory} exist. It will thus be ignored.")
     endif()
 endmacro()
 
-macro(sofa_add_collection directory name)
-    sofa_add_generic(${directory} ${name} "Collection" DEFAULT_VALUE "${ARGV2}" ${ARGN})
-endmacro()
 
-macro(sofa_add_plugin directory plugin_name)
-    sofa_add_generic(${directory} ${plugin_name} "Plugin" DEFAULT_VALUE "${ARGV2}" ${ARGN})
-    if(TARGET ${plugin_name})
-        # Add current target in the internal list only if not present already
-        get_property(_allTargets GLOBAL PROPERTY __GlobalTargetList__)
-        get_property(_allTargetNames GLOBAL PROPERTY __GlobalTargetNameList__)
-        if(NOT ${plugin_name} IN_LIST _allTargets)
-            set_property(GLOBAL APPEND PROPERTY __GlobalTargetList__ ${target})
+macro(sofa_fetch_dependency name)
+
+    set(oneValueArgs GIT_TAG GIT_REPOSITORY FETCH_ENABLED )
+    set(multiValueArgs "")
+    set(options DONT_BUILD)
+    cmake_parse_arguments("ARG" "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
+
+    # Setup fetch directory
+    set(fetched_dir "${CMAKE_BINARY_DIR}/external_directories/fetched/${name}" )
+    set(build_directory "${CMAKE_BINARY_DIR}/external_directories/fetched/${name}-build")
+
+    # Create option
+    string(REPLACE "\." "_"  fixed_name ${name})
+    string(TOUPPER ${fixed_name} upper_name)
+    set(${upper_name}_GIT_REPOSITORY "${ARG_GIT_REPOSITORY}" CACHE STRING "Repository address" )
+    set(${upper_name}_GIT_TAG "${ARG_GIT_TAG}" CACHE STRING "Branch or commit SHA to checkout" )
+    set(${upper_name}_LOCAL_DIRECTORY "" CACHE STRING "Absolute path to a local folder containing the cloned repository")
+
+    set(${fixed_name}_SOURCE_DIR "${fetched_dir}" CACHE STRING "" FORCE )
+
+    if( "${${upper_name}_LOCAL_DIRECTORY}" STREQUAL "" AND NOT FETCHCONTENT_FULLY_DISCONNECTED AND NOT FETCHCONTENT_UPDATES_DISCONNECTED AND NOT "${ARG_FETCH_ENABLED}" STREQUAL "OFF")
+        # Fetch
+        message("Fetching dependency ${name} in ${fetched_dir}")
+        message(STATUS "Checkout reference ${${upper_name}_GIT_TAG} from repository ${${upper_name}_GIT_REPOSITORY} ")
+
+        #Generate temporary folder to store project that will fetch the sources
+        if(NOT EXISTS ${fetched_dir}-temp)
+            file(MAKE_DIRECTORY "${fetched_dir}-temp/")
         endif()
-        string(TOUPPER "PLUGIN_${plugin_name}" option)
-        if(NOT ${option} IN_LIST _allTargetNames)
-            set_property(GLOBAL APPEND PROPERTY __GlobalTargetNameList__ ${option})
+
+        set(GIT_SHALLOW_VALUE TRUE)
+        # GIT_SHALLOW does work if GIT_TAG is a commit SHA hash
+        __is_git_tag_commit_hash(${upper_name}_GIT_TAG IS_GIT_TAG_COMMIT_HASH)
+        if(IS_GIT_TAG_COMMIT_HASH)
+            set(GIT_SHALLOW_VALUE FALSE)
         endif()
+
+        file(WRITE ${fetched_dir}-temp/CMakeLists.txt "
+        cmake_minimum_required(VERSION 3.22)
+        include(ExternalProject)
+        ExternalProject_Add(
+            ${name}
+            GIT_REPOSITORY ${${upper_name}_GIT_REPOSITORY}
+            GIT_TAG ${${upper_name}_GIT_TAG}
+            SOURCE_DIR ${fetched_dir}
+            BINARY_DIR \"\"
+            CONFIGURE_COMMAND \"\"
+            BUILD_COMMAND \"\"
+            INSTALL_COMMAND \"\"
+            TEST_COMMAND \"\"
+            GIT_CONFIG \"remote.origin.fetch=+refs/pull/*:refs/remotes/origin/pr/*\"
+            GIT_SHALLOW ${GIT_SHALLOW_VALUE}
+            )"
+        )
+
+        execute_process(COMMAND "${CMAKE_COMMAND}" -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} -G "${CMAKE_GENERATOR}" .
+                WORKING_DIRECTORY "${fetched_dir}-temp"
+                RESULT_VARIABLE generate_exitcode
+                OUTPUT_VARIABLE generate_logs ERROR_VARIABLE generate_logs)
+        file(APPEND "${fetched_dir}-temp/logs.txt" "${generate_logs}")
+        execute_process(COMMAND "${CMAKE_COMMAND}" --build .
+                WORKING_DIRECTORY "${fetched_dir}-temp"
+                RESULT_VARIABLE build_exitcode
+                OUTPUT_VARIABLE build_logs ERROR_VARIABLE build_logs)
+        file(APPEND "${fetched_dir}-temp/logs.txt" "${build_logs}")
+
+        if(NOT generate_exitcode EQUAL 0 OR NOT build_exitcode EQUAL 0)
+            message(SEND_ERROR "Failed to fetch external repository ${name}." "\nSee logs in ${fetched_dir}-temp/logs.txt")
+        endif()
+    elseif (NOT ${upper_name}_LOCAL_DIRECTORY STREQUAL "")
+        if(EXISTS ${${upper_name}_LOCAL_DIRECTORY})
+            message("${name}: Using local directory ${${upper_name}_LOCAL_DIRECTORY}.")
+            set(fetched_dir "${${upper_name}_LOCAL_DIRECTORY}")
+        else ()
+            message(SEND_ERROR "${name}: Specified directory ${${upper_name}_LOCAL_DIRECTORY} doesn't exist." "\nPlease provide a directory containing the fetched project, or use option ${fetch_enabled} to automatically fetch it.")
+        endif ()
+    endif()
+
+
+    # Add
+    if(NOT ARG_DONT_BUILD AND  EXISTS "${fetched_dir}/.git" AND IS_DIRECTORY "${fetched_dir}/.git")
+        set(${fixed_name}_BUILD_DIR "${build_directory}" CACHE STRING "" FORCE)
+        add_subdirectory("${fetched_dir}" "${build_directory}")
+        message(STATUS "Adding subproject ${name} from sources at ${${fixed_name}_SOURCE_DIR}")
+    elseif(NOT ARG_DONT_BUILD AND NOT ${upper_name}_LOCAL_DIRECTORY STREQUAL "")
+        message(SEND_ERROR "Directory ${${upper_name}_LOCAL_DIRECTORY} given in ${upper_name}_LOCAL_DIRECTORY doesn't seem to be a right github repository.")
+    elseif (NOT ARG_DONT_BUILD AND FETCHCONTENT_FULLY_DISCONNECTED OR FETCHCONTENT_UPDATES_DISCONNECTED)
+        message(SEND_ERROR "FETCHCONTENT_FULLY_DISCONNECTED or FETCHCONTENT_UPDATES_DISCONNECTED is ON but the dependency hasn't been fetched correctly before. Please reconnect fetching mechanism or provide a local directory by setting ${upper_name}_LOCAL_DIRECTORY.")
     endif()
 endmacro()
 
-macro(sofa_add_plugin_experimental directory plugin_name)
-    sofa_add_plugin(${ARGV})
-    if(TARGET ${plugin_name})
-        message("-- ${plugin_name} is an experimental feature, use it at your own risk.")
-    endif()
-endmacro()
-
-macro(sofa_add_module directory module_name)
-    sofa_add_generic(${directory} ${module_name} "Module" DEFAULT_VALUE "${ARGV2}" ${ARGN})
-endmacro()
-
-macro(sofa_add_module_experimental directory module_name)
-    sofa_add_module(${ARGV})
-    if(TARGET ${module_name})
-        message("-- ${module_name} is an experimental feature, use it at your own risk.")
-    endif()
-endmacro()
-
-macro(sofa_add_application directory app_name)
-    sofa_add_generic(${directory} ${app_name} "Application" DEFAULT_VALUE "${ARGV2}" ${ARGN})
-endmacro()
 
 
 ### External projects management
@@ -188,100 +279,130 @@ endmacro()
 # FETCH_ONLY = do not "add_subdirectory" the fetched repository
 # See plugins/SofaHighOrder for example
 #
-function(sofa_add_generic_external directory name type)
+function(sofa_add_generic_external name type)
     set(optionArgs FETCH_ONLY)
-    set(oneValueArgs DEFAULT_VALUE WHEN_TO_SHOW VALUE_IF_HIDDEN)
+    set(oneValueArgs DEFAULT_VALUE WHEN_TO_SHOW VALUE_IF_HIDDEN GIT_REF GIT_REPOSITORY)
     set(multiValueArgs)
     cmake_parse_arguments("ARG" "${optionArgs}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-
-    # Make directory absolute
-    if(NOT IS_ABSOLUTE "${directory}")
-        set(directory "${CMAKE_CURRENT_LIST_DIR}/${directory}")
-    endif()
-    if(NOT EXISTS "${directory}")
-        message("${directory} does not exist and will be ignored.")
-        return()
-    endif()
 
     string(TOLOWER ${type} type_lower)
 
     # Default value for fetch activation and for plugin activation (if adding a plugin)
     set(active OFF)
-    if(ARG_DEFAULT_VALUE)
+    if(${ARG_DEFAULT_VALUE})
         set(active ON)
     endif()
 
     # Create option
-    string(TOUPPER ${PROJECT_NAME}_FETCH_${name} fetch_enabled)
+    string(REPLACE "\." "_"  fixed_name ${name})
+    string(TOUPPER ${fixed_name} upper_name)
+    string(TOUPPER ${PROJECT_NAME}_FETCH_${fixed_name} fetch_enabled)
+
     if(NOT "${ARG_WHEN_TO_SHOW}" STREQUAL "" AND NOT "${ARG_VALUE_IF_HIDDEN}" STREQUAL "")
         cmake_dependent_option(${fetch_enabled} "Fetch/update ${name} repository." ${active} "${ARG_WHEN_TO_SHOW}" ${ARG_VALUE_IF_HIDDEN})
     else()
         option(${fetch_enabled} "Fetch/update ${name} repository." ${active})
     endif()
 
+    sofa_fetch_dependency("${name}"
+            GIT_TAG "${ARG_GIT_REF}"
+            GIT_REPOSITORY "${ARG_GIT_REPOSITORY}"
+            FETCH_ENABLED "${${fetch_enabled}}"
+            DONT_BUILD
+    )
+
     # Setup fetch directory
-    set(fetched_dir "${CMAKE_BINARY_DIR}/external_directories/fetched/${name}" )
-
-    # Fetch
-    if(${fetch_enabled})
-        message("Fetching ${type_lower} ${name}")
-
-        if(NOT EXISTS ${fetched_dir})
-            file(MAKE_DIRECTORY "${fetched_dir}/")
-        endif()
-
-        # Download and unpack at configure time
-        configure_file(${directory}/ExternalProjectConfig.cmake.in ${fetched_dir}/CMakeLists.txt)
-        # Copy ExternalProjectConfig.cmake.in in build dir for post-pull recovery in src dir
-        file(COPY ${directory}/ExternalProjectConfig.cmake.in DESTINATION ${fetched_dir})
-
-        # Execute commands to fetch content
-        message("  Pulling ...")
-        file(WRITE "${fetched_dir}/logs.txt" "") # Empty log file
-        execute_process(COMMAND "${CMAKE_COMMAND}" -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} -G "${CMAKE_GENERATOR}" .
-            WORKING_DIRECTORY "${fetched_dir}"
-            RESULT_VARIABLE generate_exitcode
-            OUTPUT_VARIABLE generate_logs ERROR_VARIABLE generate_logs)
-        file(APPEND "${fetched_dir}/logs.txt" "${generate_logs}")
-        execute_process(COMMAND "${CMAKE_COMMAND}" --build .
-            WORKING_DIRECTORY "${fetched_dir}"
-            RESULT_VARIABLE build_exitcode
-            OUTPUT_VARIABLE build_logs ERROR_VARIABLE build_logs)
-        file(APPEND "${fetched_dir}/logs.txt" "${build_logs}")
-
-        if(generate_exitcode EQUAL 0 AND build_exitcode EQUAL 0 AND EXISTS "${directory}/.git")
-            message("  Sucess.")
-            # Add .gitignore for Sofa
-            file(WRITE "${directory}/.gitignore" "*")
-            # Recover ExternalProjectConfig.cmake.in from build dir (erased by pull)
-            file(COPY ${fetched_dir}/ExternalProjectConfig.cmake.in DESTINATION ${directory})
-            # Disable fetching for next configure
-            set(${fetch_enabled} OFF CACHE BOOL "Fetch/update ${name} repository." FORCE)
-            message("  ${fetch_enabled} is now OFF. Set it back to ON to trigger a new fetch.")
-        else()
-            message(SEND_ERROR "Failed to add external repository ${name}."
-                               "\nSee logs in ${fetched_dir}/logs.txt")
-        endif()
-    endif()
+    if(NOT "${${upper_name}_LOCAL_DIRECTORY}" STREQUAL "")
+        set(fetched_dir "${${upper_name}_LOCAL_DIRECTORY}" )
+    else ()
+        set(fetched_dir "${CMAKE_BINARY_DIR}/external_directories/fetched/${name}" )
+    endif ()
+    set(directory "${CMAKE_CURRENT_LIST_DIR}/${name}")
+    file(RELATIVE_PATH relative_path "${CMAKE_SOURCE_DIR}" "${directory}")
 
     # Add
-    if(EXISTS "${directory}/.git" AND IS_DIRECTORY "${directory}/.git")
-        configure_file(${directory}/ExternalProjectConfig.cmake.in ${fetched_dir}/CMakeLists.txt)
-        if(NOT ARG_FETCH_ONLY AND "${type}" STREQUAL "External subdirectory")
-            add_subdirectory("${directory}")
-        elseif(NOT ARG_FETCH_ONLY AND "${type}" STREQUAL "External plugin")
-            sofa_add_plugin("${name}" "${name}" ${active})
+    if(EXISTS "${fetched_dir}/.git" AND IS_DIRECTORY "${fetched_dir}/.git")
+        if(NOT ARG_FETCH_ONLY AND "${type}" MATCHES ".*directory.*")
+            add_subdirectory("${fetched_dir}" "${CMAKE_BINARY_DIR}/${relative_path}")
+        elseif(NOT ARG_FETCH_ONLY AND "${type}" MATCHES ".*plugin.*")
+            sofa_add_generic("${fetched_dir}" "${name}" plugin DEFAULT_VALUE ${active} BINARY_DIR "${CMAKE_BINARY_DIR}/${relative_path}")
         endif()
     endif()
 endfunction()
 
-function(sofa_add_subdirectory_external directory name)
-    sofa_add_generic_external(${directory} ${name} "External subdirectory" DEFAULT_VALUE "${ARGV2}" ${ARGN})
-endfunction()
 
-function(sofa_add_plugin_external directory name)
-    sofa_add_generic_external(${directory} ${name} "External plugin" DEFAULT_VALUE "${ARGV2}" ${ARGN})
-endfunction()
+macro(sofa_add_subdirectory type directory name)
+    set(optionArgs EXPERIMENTAL)
+    set(multiValueArgs)
+    cmake_parse_arguments("ARG" "${optionArgs}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    set(valid_types "application" "project" "plugin" "module" "library" "collection" "directory")
+
+    string(TOLOWER "${type}" type_lower)
+    if(NOT "${type}" IN_LIST valid_types)
+        message(SEND_ERROR "Type \"${type}\" is invalid. Valid types are: ${valid_types}.")
+    endif()
+
+    set(default_value OFF)
+    set(input_value ${ARGV3})
+    if(${input_value})
+        set(default_value ON)
+    endif()
+
+    sofa_add_generic(${directory} ${name} ${type_lower} DEFAULT_VALUE ${default_value} ${ARGN})
+
+    if(ARG_EXPERIMENTAL)
+        if(TARGET ${name})
+            message(STATUS "${name} is an experimental feature, use it at your own risk.")
+        endif()
+    endif()
+endmacro()
+
+macro(sofa_add_external type name)
+    set(optionArgs EXPERIMENTAL)
+    set(oneValueArgs GIT_REF GIT_REPOSITORY)
+    set(multiValueArgs)
+    cmake_parse_arguments("ARG" "${optionArgs}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    set(valid_types "application" "project" "plugin" "module" "library" "collection" "directory")
+
+    string(TOLOWER "${type}" type_lower)
+    if(NOT "${type}" IN_LIST valid_types)
+        message(SEND_ERROR "Type \"${type}\" is invalid. Valid types are: ${valid_types}.")
+    endif()
+
+    set(default_value OFF)
+    set(input_value ${ARGV6})
+    if(${input_value})
+        set(default_value ON)
+    endif()
+
+    sofa_add_generic_external(${directory} ${name} "External ${type_lower}" GIT_REF ${ARG_GIT_REF} GIT_REPOSITORY ${ARG_GIT_REPOSITORY}  DEFAULT_VALUE ${default_value}  ${ARGN})
+
+endmacro()
+
+macro(sofa_add_subdirectory_modules output_targets)
+    set(optionArgs)
+    set(oneValueArgs)
+    set(multiValueArgs DIRECTORIES)
+    cmake_parse_arguments("ARG" "${optionArgs}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    set(${output_targets})
+    set(missing_targets)
+    foreach(dir ${ARG_DIRECTORIES})
+        set(subdir_name "${PROJECT_NAME}.${dir}")
+        sofa_add_generic(${dir} ${subdir_name} module DEFAULT_VALUE ON)
+        if(TARGET ${subdir_name})
+            list(APPEND ${output_targets} ${subdir_name})
+        else()
+            list(APPEND missing_targets ${subdir_name})
+        endif()
+    endforeach()
+    if(missing_targets)
+        message("${PROJECT_NAME}: package and library will not be created because some dependencies are missing or disabled: ${missing_targets}")
+        return()
+    endif()
+endmacro()
 
 
 # sofa_set_01
@@ -297,13 +418,6 @@ macro(sofa_set_01 name)
     set(oneValueArgs VALUE)
     set(multiValueArgs)
     cmake_parse_arguments("ARG" "${optionArgs}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-    # Required arguments
-    foreach(arg ARG_VALUE)
-        if("${${arg}}" STREQUAL "")
-            string(SUBSTRING "${arg}" 4 -1 arg_name)
-            message(SEND_ERROR "Missing parameter ${arg_name}.")
-        endif()
-    endforeach()
     if(ARG_VALUE)
         if(ARG_BOTH_SCOPES OR NOT ARG_PARENT_SCOPE)
             set(${name} 1)
@@ -361,7 +475,7 @@ macro(sofa_find_package name)
         set(all_components_found TRUE)
         foreach(component ${ARG_COMPONENTS} ${ARG_OPTIONAL_COMPONENTS})
             string(TOUPPER ${component} component_upper)
-            if(TARGET ${name}::${component})
+            if(TARGET "${name}::${component}")
                 sofa_set_01(${project_upper}_HAVE_${name_upper}_${component_upper} VALUE TRUE ${scopes})
             else()
                 set(all_components_found FALSE)
@@ -399,3 +513,15 @@ macro(sofa_set_targets_release_only)
             )
     endforeach()
 endmacro()
+
+
+function(sofa_treat_warnings_as_errors TARGET)
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+        set_property(TARGET ${TARGET} PROPERTY COMPILE_WARNING_AS_ERROR ON)
+    else()
+        target_compile_options(${TARGET} PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/WX>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror>
+        )
+    endif()
+endfunction()

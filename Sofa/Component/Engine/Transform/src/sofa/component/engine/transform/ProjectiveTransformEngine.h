@@ -26,7 +26,7 @@
 
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 
 #include <sofa/type/Quat.h>
 #include <sofa/defaulttype/VecTypes.h>
@@ -62,24 +62,14 @@ public:
 
     void doUpdate() override;
 
-    virtual std::string getTemplateName() const override
-    {
-        return templateName(this);
-    }
-
-    static std::string templateName(const ProjectiveTransformEngine<DataTypes>* = nullptr)
-    {
-        return DataTypes::Name();
-    }
-
 protected:
-    Data<VecCoord> f_inputX;   ///< input position
-    Data<VecCoord> f_outputX;  ///< output position: Z=focal_distance
-    Data<ProjMat> proj_mat;        ///< 3x4 projection matrix
-    Data<Real> focal_distance; ///< focal distance i.e. distance between the optical center and the image plane
+    Data<VecCoord> f_inputX; ///< input array of 3d points
+    Data<VecCoord> f_outputX; ///< output array of projected 3d points
+    Data<ProjMat> proj_mat; ///< projection matrix
+    Data<Real> focal_distance; ///< focal distance 
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_PROJECTIVETRANSFORMENGINE_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_PROJECTIVETRANSFORMENGINE_CPP)
 
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API ProjectiveTransformEngine<defaulttype::Vec3Types>;
 

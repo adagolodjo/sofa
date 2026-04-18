@@ -24,10 +24,8 @@
 
 #include <sofa/simulation/Visitor.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 /// propagating position and velocity through non-mechanical mappings
@@ -35,7 +33,7 @@ namespace simulation
 class SOFA_SIMULATION_CORE_API UpdateMappingVisitor : public Visitor
 {
 public:
-    UpdateMappingVisitor(const sofa::core::ExecParams* params) : Visitor(params) {}
+    UpdateMappingVisitor(const sofa::core::ExecParams* eparams) : Visitor(eparams) {}
     void processMapping(simulation::Node* node, core::BaseMapping* obj);
     void processMechanicalMapping(simulation::Node*, core::BaseMapping* obj);
 
@@ -50,8 +48,7 @@ public:
     bool isThreadSafe() const override { return true; }
 };
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

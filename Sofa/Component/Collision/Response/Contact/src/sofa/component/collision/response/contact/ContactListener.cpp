@@ -36,7 +36,11 @@ namespace sofa::component::collision::response::contact
 using namespace sofa::core;
 using namespace sofa::core::collision;
 
-int ContactListenerClass = core::RegisterObject("ContactListener .. ").add< ContactListener >();
+void registerContactListener(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Utility component to retrieve information about contacts.")
+        .add< ContactListener >());
+}
 
 ContactListener::ContactListener(  CollisionModel* collModel1 , CollisionModel* collModel2 )
     :  m_NarrowPhase(nullptr)
@@ -146,9 +150,9 @@ type::vector<double> ContactListener::getDistances() const
     return distances;
 }
 
-std::vector<std::tuple<unsigned int, sofa::type::Vector3, unsigned int, sofa::type::Vector3>> ContactListener::getContactPoints() const
+std::vector<std::tuple<unsigned int, sofa::type::Vec3, unsigned int, sofa::type::Vec3>> ContactListener::getContactPoints() const
 {
-    std::vector<std::tuple<unsigned int, sofa::type::Vector3, unsigned int, sofa::type::Vector3>> contactPoints;
+    std::vector<std::tuple<unsigned int, sofa::type::Vec3, unsigned int, sofa::type::Vec3>> contactPoints;
     const sofa::Size numberOfContacts = getNumberOfContacts();
     if (0 < numberOfContacts){ // can be 0
         contactPoints.reserve(numberOfContacts);

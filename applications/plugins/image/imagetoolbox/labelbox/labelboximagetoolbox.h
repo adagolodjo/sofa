@@ -4,7 +4,7 @@
 #define LABELBOXIMAGETOOLBOX_H
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/objectmodel/DataFileName.h>
 #include <sofa/helper/system/FileRepository.h>
 
@@ -12,7 +12,7 @@
 #include "../labelimagetoolbox.h"
 
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 
 
@@ -55,9 +55,9 @@ public:
         loadFile();
     }
     
-    sofa::gui::qt::LabelImageToolBoxAction* createTBAction(QWidget*parent=nullptr) override
+    sofa::qt::LabelImageToolBoxAction* createTBAction(QWidget*parent=nullptr) override
     {
-        return new sofa::gui::qt::LabelBoxImageToolBoxAction(this,parent);
+        return new sofa::qt::LabelBoxImageToolBoxAction(this,parent);
     }
 
 

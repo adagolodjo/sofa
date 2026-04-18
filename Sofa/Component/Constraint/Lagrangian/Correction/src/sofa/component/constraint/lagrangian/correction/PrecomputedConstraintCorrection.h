@@ -58,13 +58,14 @@ public:
     typedef typename Coord::value_type Real;
     typedef sofa::type::MatNoInit<3, 3, Real> Transformation;
 
-    Data<bool> m_rotations;
-    Data<bool> m_restRotations;
+    Data<bool> d_rotations;
+    Data<bool> d_restRotations;
 
-    Data<bool> recompute; ///< if true, always recompute the compliance
-	Data<double> debugViewFrameScale; ///< Scale on computed node's frame
-	sofa::core::objectmodel::DataFileName f_fileCompliance; ///< Precomputed compliance matrix data file
-	Data<std::string> fileDir; ///< If not empty, the compliance will be saved in this repertory
+    Data<bool> d_recompute; ///< if true, always recompute the compliance
+    Data<SReal> d_regularizationTerm; ///< add regularization*Id to W when solving for constraints
+    Data<SReal> d_debugViewFrameScale; ///< Scale on computed node's frame
+    sofa::core::objectmodel::DataFileName d_fileCompliance; ///< Precomputed compliance matrix data file
+    Data<std::string> d_fileDir; ///< If not empty, the compliance will be saved in this repertory
     
 protected:
     PrecomputedConstraintCorrection(sofa::core::behavior::MechanicalState<DataTypes> *mm = nullptr);
@@ -103,13 +104,13 @@ public:
     /// @name Unbuilt constraint system during resolution
     /// @{
 
-    void resetForUnbuiltResolution(double * f, std::list<unsigned int>& /*renumbering*/) override;
+    void resetForUnbuiltResolution(SReal* f, std::list<unsigned int>& /*renumbering*/) override;
 
     bool hasConstraintNumber(int index) override;  // virtual ???
 
-    void addConstraintDisplacement(double *d, int begin,int end) override;
+    void addConstraintDisplacement(SReal* d, int begin,int end) override;
 
-    void setConstraintDForce(double *df, int begin, int end, bool update) override;
+    void setConstraintDForce(SReal* df, int begin, int end, bool update) override;
 
     void getBlockDiagonalCompliance(linearalgebra::BaseMatrix* W, int begin, int end) override;
 
@@ -150,7 +151,7 @@ public:
     type::vector<unsigned int> localIndex_to_id; //inverse table that gives the id of a constraint given its local index
     std::list<unsigned int> active_local_force; // table of local index of the non-null forces;
     linearalgebra::FullMatrix< Real > localW;
-    double* constraint_force;
+    SReal* constraint_force;
 
     // NEW METHOD FOR UNBUILT
     // new :  for non building the constraint system during solving process //
@@ -215,7 +216,7 @@ void PrecomputedConstraintCorrection<defaulttype::Vec1Types>::draw(const core::v
 
 
 
-#if  !defined(SOFA_COMPONENT_CONSTRAINTSET_PRECOMPUTEDCONSTRAINTCORRECTION_CPP)
+#if !defined(SOFA_COMPONENT_CONSTRAINTSET_PRECOMPUTEDCONSTRAINTCORRECTION_CPP)
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API PrecomputedConstraintCorrection<defaulttype::Vec3Types>;
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API PrecomputedConstraintCorrection<defaulttype::Vec1Types>;
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API PrecomputedConstraintCorrection<defaulttype::Rigid3Types>;

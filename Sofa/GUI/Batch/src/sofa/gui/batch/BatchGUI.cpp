@@ -3,23 +3,23 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "BatchGUI.h"
+#include <sofa/gui/batch/BatchGUI.h>
 
 #include <sofa/helper/AdvancedTimer.h>
 #include <sofa/helper/system/thread/CTime.h>
@@ -28,12 +28,15 @@
 #include <sofa/simulation/Node.h>
 #include <sofa/helper/system/SetDirectory.h>
 #include <sofa/gui/common/ArgumentParser.h>
+#include <sofa/type/hardening.h>
 
 #include <cxxopts.hpp>
 
 #include <fstream>
 #include <string>
 #include <iomanip>
+#include <sofa/gui/batch/ProgressBar.h>
+
 
 namespace sofa::gui::batch
 {
@@ -67,22 +70,28 @@ int BatchGUI::mainLoop()
         }
 
         AdvancedTimer::begin("Animate");
-        sofa::simulation::getSimulation()->animate(groot.get());
+        sofa::simulation::node::animate(groot.get());
         msg_info("BatchGUI") << "Processing." << AdvancedTimer::end("Animate", groot->getTime(), groot->getDt()) << msgendl;
-        sofa::simulation::Visitor::ctime_t rtfreq = sofa::helper::system::thread::CTime::getRefTicksPerSec();
-        sofa::simulation::Visitor::ctime_t tfreq = sofa::helper::system::thread::CTime::getTicksPerSec();
+        const sofa::simulation::Visitor::ctime_t rtfreq = sofa::helper::system::thread::CTime::getRefTicksPerSec();
+        const sofa::simulation::Visitor::ctime_t tfreq = sofa::helper::system::thread::CTime::getTicksPerSec();
         sofa::simulation::Visitor::ctime_t rt = sofa::helper::system::thread::CTime::getRefTime();
         sofa::simulation::Visitor::ctime_t t = sofa::helper::system::thread::CTime::getFastTime();
           
-        signed int i = 1; //one simulatin step is animated above  
-       
+        signed int i = 1; //one simulation step is animated above
+
+        std::unique_ptr<ProgressBar> progressBar;
+        if (!hideProgressBar)
+        {
+            progressBar = std::make_unique<ProgressBar>(nbIter);
+        }
+
         while (i <= nbIter || nbIter == -1)
         {
             if (i != nbIter)
             {
                 AdvancedTimer::begin("Animate");
 
-                sofa::simulation::getSimulation()->animate(groot.get());
+                sofa::simulation::node::animate(groot.get());
 
                 const std::string timerOutputStr = AdvancedTimer::end("Animate", groot->getTime(), groot->getDt());
                 if (canExportJson(timerOutputStr, "Animate"))
@@ -105,9 +114,13 @@ int BatchGUI::mainLoop()
                 }
             }
 
+            if (progressBar)
+            {
+                progressBar->tick();
+            }
+
             i++;
         }
-        
     }
     return 0;
 }
@@ -138,7 +151,7 @@ void BatchGUI::resetScene()
     if ( root )
     {
         root->setTime(0.);
-        simulation::getSimulation()->reset ( root );
+        sofa::simulation::node::reset(root);
 
         sofa::simulation::UpdateSimulationContextVisitor(sofa::core::execparams::defaultInstance()).execute(root);
     }
@@ -186,7 +199,11 @@ int BatchGUI::RegisterGUIParameters(ArgumentParser* argumentParser)
         "(only batch) Number of iterations of the simulation",
         BatchGUI::OnNbIterChange
     );
-    //Parses the string and passes it to setNumIterations as argument
+    argumentParser->addArgument(
+        cxxopts::value<bool>(hideProgressBar)->default_value("false"),
+        "hideProgressBar",
+        "if defined, hides the progress bar"
+    );
     return 0;
 }
 
@@ -195,7 +212,7 @@ void BatchGUI::OnNbIterChange(const ArgumentParser* argumentParser, const std::s
     SOFA_UNUSED(argumentParser);
 
     nbIterInp = strValue;
-    size_t inpLen = nbIterInp.length();
+    const size_t inpLen = nbIterInp.length();
 
     if (nbIterInp == "infinite")
     {
@@ -203,7 +220,11 @@ void BatchGUI::OnNbIterChange(const ArgumentParser* argumentParser, const std::s
     }
     else if (inpLen)
     {
-        nbIter = std::stoi(nbIterInp);
+        if(!sofa::type::hardening::safeStrToInt(nbIterInp, nbIter))
+        {
+            msg_warning("BatchGUI") << "Invalid number of iterations: '" << nbIterInp << "'. Using default.";
+            nbIter = DEFAULT_NUMBER_OF_ITERATIONS;
+        }
     }
     else
     {

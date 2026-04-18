@@ -25,7 +25,7 @@
 #include <image/config.h>
 #include "ImageTypes.h"
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/type/Vec.h>
 #include <sofa/helper/rmath.h>
 #include <sofa/helper/OptionsGroup.h>
@@ -72,6 +72,12 @@ struct TransferFunctionSpecialization<defaulttype::Image<Ti>,defaulttype::Image<
         typename TransferFunctionT::imCoord dim=in->getDimensions();
         out->setDimensions(dim);
         cimg_library::CImgList<To>& img = out->getCImgList();
+
+        if (p.empty()) //no parameters provided to the filter: the image is just copied as it is
+        {
+            img.assign(in->getCImgList());
+            return;
+        }
 
         switch(This.filter.getValue().getSelectedId())
         {
@@ -128,17 +134,13 @@ public:
     Data< OutImageTypes > outputImage;
 
     TransferFunction()    :   Inherited()
-      , filter ( initData ( &filter,"filter","Filter" ) )
+      , filter ( initData ( &filter, helper::OptionsGroup{"0 - Piecewise Linear ( i1, o1, i2, o2 ...)"}, "filter","Filter" ) )
       , param ( initData ( &param,"param","Parameters" ) )
       , inputImage(initData(&inputImage,InImageTypes(),"inputImage",""))
       , outputImage(initData(&outputImage,OutImageTypes(),"outputImage",""))
     {
         inputImage.setReadOnly(true);
         outputImage.setReadOnly(true);
-        helper::OptionsGroup filterOptions(1	,"0 - Piecewise Linear ( i1, o1, i2, o2 ...)"
-                                           );
-        filterOptions.setSelectedItem(LINEAR);
-        filter.setValue(filterOptions);
     }
 
     ~TransferFunction() override {}
@@ -162,6 +164,7 @@ protected:
 
     inline To Linear_TransferFunction(const Ti& vi, const iomap & mp) const
     {
+        assert(!mp.empty());
         To vo=mp.begin()->second;
         iomapit mit;
         for (iomapit it=mp.begin(); it!=mp.end(); it++)

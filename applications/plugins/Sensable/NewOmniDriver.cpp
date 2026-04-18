@@ -123,7 +123,7 @@ HDCallbackCode HDCALLBACK stateCallback(void * userData)
 
     //vector<NewOmniDriver*> autreOmniDriver = static_cast<vector<NewOmniDriver*>>(userData);
     //NewOmniData* data = static_cast<NewOmniData*>(userData);
-    //FIXME : Apparenlty, this callback is run before the mechanical state initialisation. I've found no way to know whether the mechcanical state is initialized or not, so i wait ...
+    //FIXME : Apparently, this callback is run before the mechanical state initialisation. I've found no way to know whether the mechcanical state is initialized or not, so i wait ...
 
     RigidTypes::VecCoord positionDevs;
     RigidTypes::VecDeriv forceDevs;
@@ -394,7 +394,7 @@ int NewOmniDriver::initDevice()
 
 //constructeur
 NewOmniDriver::NewOmniDriver()
-    : forceScale(initData(&forceScale, 1.0, "forceScale","Default forceScale applied to the force feedback. "))
+    : forceScale(initData(&forceScale, 1.0, "forceScale","Default scaling factor applied to the force feedback"))
     , scale(initData(&scale, 100.0, "scale","Default scale applied to the Phantom Coordinates. "))
     , positionBase(initData(&positionBase, Vec3d(0,0,0), "positionBase","Position of the interface base in the scene world coordinates"))
     , orientationBase(initData(&orientationBase, Quat(0,0,0,1), "orientationBase","Orientation of the interface base in the scene world coordinates"))
@@ -648,7 +648,7 @@ void NewOmniDriver::bwdInit()
         }
         else
         {
-          sofa::helper::WriteAccessor<sofa::core::objectmodel::Data<VecCoord> > xfree = *DOFs->write(this->setRestShape.getValue() ? sofa::core::VecCoordId::restPosition() : sofa::core::VecCoordId::freePosition());
+          sofa::helper::WriteAccessor<sofa::core::objectmodel::Data<VecCoord> > xfree = *DOFs->write(this->setRestShape.getValue() ? sofa::core::vec_id::write_access::restPosition : sofa::core::vec_id::write_access::freePosition);
           if (xfree.size() == 0)
             xfree.resize(1);
           autreOmniDriver[this->deviceIndex.getValue()]->DOFs = DOFs;
@@ -990,8 +990,8 @@ void NewOmniDriver::onAnimateBeginEvent()
 
         if(DOFs!=NULL)
         {
-            sofa::helper::WriteAccessor<sofa::core::objectmodel::Data<VecCoord> > x = *DOFs->write(this->setRestShape.getValue() ? sofa::core::VecCoordId::restPosition() : sofa::core::VecCoordId::position());
-            sofa::helper::WriteAccessor<sofa::core::objectmodel::Data<VecCoord> > xfree = *DOFs->write(this->setRestShape.getValue() ? sofa::core::VecCoordId::restPosition() : sofa::core::VecCoordId::freePosition());
+            sofa::helper::WriteAccessor<sofa::core::objectmodel::Data<VecCoord> > x = *DOFs->write(this->setRestShape.getValue() ? sofa::core::vec_id::write_access::restPosition : sofa::core::vec_id::write_access::position);
+            sofa::helper::WriteAccessor<sofa::core::objectmodel::Data<VecCoord> > xfree = *DOFs->write(this->setRestShape.getValue() ? sofa::core::vec_id::write_access::restPosition : sofa::core::vec_id::write_access::freePosition);
             unsigned int index = 0;
 
             x    [index].getCenter()=world_H_virtualTool.getOrigin();

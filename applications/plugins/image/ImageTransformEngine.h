@@ -25,7 +25,7 @@
 #include <image/config.h>
 #include "ImageTypes.h"
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/type/Quat.h>
 
 
@@ -60,16 +60,16 @@ public:
     Data< TransformType > inputTransform;
     Data< TransformType > outputTransform;
 
-    Data<type::Vector3> translation; ///< translation
-    Data<type::Vector3> rotation; ///< rotation
-    Data<Real> scale; ///< scale
+    Data<type::Vec3> translation; ///< translation vector 
+    Data<type::Vec3> rotation; ///< rotation vector 
+    Data<Real> scale; ///< scale factor
     Data<bool> inverse; ///< true to apply inverse transformation
 
     ImageTransformEngine()    :   Inherited()
       , inputTransform(initData(&inputTransform,TransformType(),"inputTransform",""))
       , outputTransform(initData(&outputTransform,TransformType(),"outputTransform",""))
-      , translation(initData(&translation, type::Vector3(0,0,0),"translation", "translation vector ") )
-      , rotation(initData(&rotation, type::Vector3(0,0,0), "rotation", "rotation vector ") )
+      , translation(initData(&translation, type::Vec3(0,0,0),"translation", "translation vector ") )
+      , rotation(initData(&rotation, type::Vec3(0,0,0), "rotation", "rotation vector ") )
       , scale(initData(&scale, (Real)1.0,"scale", "scale factor") )
       , inverse(initData(&inverse, false, "inverse", "true to apply inverse transformation"))
     {

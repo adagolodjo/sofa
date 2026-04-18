@@ -23,10 +23,9 @@
 #include <sofa/component/engine/analyze/config.h>
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/defaulttype/RigidTypes.h>
-
 
 namespace sofa::component::engine::analyze
 {
@@ -61,15 +60,15 @@ public:
     void doUpdate() override;
 
     //Input
-    Data<VecCoord> f_points_1; ///< Points belonging to the first point cloud
-    Data<VecCoord> f_points_2; ///< Points belonging to the second point cloud
+    Data<VecCoord> d_points_1; ///< Points belonging to the first point cloud
+    Data<VecCoord> d_points_2; ///< Points belonging to the second point cloud
 
     //Output
-    Data<Real> d12; ///< Distance from point cloud 1 to 2
-    Data<Real> d21; ///< Distance from point cloud 2 to 1
-    Data<Real> max; ///< Symmetrical Hausdorff distance
+    Data<Real> d_d12; ///< Distance from point cloud 1 to 2
+    Data<Real> d_d21; ///< Distance from point cloud 2 to 1
+    Data<Real> d_max; ///< Symmetrical Hausdorff distance
 
-    Data<bool> f_update; ///< Recompute every time step
+    Data<bool> d_update; ///< Recompute every time step
 
 protected:
 
@@ -79,7 +78,7 @@ protected:
 
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_HAUSDORFFDISTANCE_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_HAUSDORFFDISTANCE_CPP)
 extern template class SOFA_COMPONENT_ENGINE_ANALYZE_API HausdorffDistance<defaulttype::Vec1Types>;
 extern template class SOFA_COMPONENT_ENGINE_ANALYZE_API HausdorffDistance<defaulttype::Vec2Types>;
 extern template class SOFA_COMPONENT_ENGINE_ANALYZE_API HausdorffDistance<defaulttype::Vec3Types>;

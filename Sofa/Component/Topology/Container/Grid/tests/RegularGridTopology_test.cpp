@@ -26,7 +26,7 @@ using sofa::testing::BaseTest;
 #include <sofa/component/topology/container/grid/RegularGridTopology.h>
 
 using sofa::core::objectmodel::New;
-using sofa::type::Vector3;
+using sofa::type::Vec3;
 using namespace sofa::component::topology::container::grid;
 using namespace sofa::testing;
 
@@ -43,21 +43,21 @@ struct RegularGridTopology_test : public BaseTest,
 bool RegularGridTopology_test::regularGridCreation()
 {
     // Creating a good Grid in 3D
-    RegularGridTopology::SPtr regGrid3 = New<RegularGridTopology>(5, 5, 5);
+    const RegularGridTopology::SPtr regGrid3 = New<RegularGridTopology>(5, 5, 5);
     EXPECT_NE(regGrid3, nullptr);
-    EXPECT_EQ(regGrid3->d_p0.getValue(), Vector3(0.0f, 0.0f, 0.0f));
+    EXPECT_EQ(regGrid3->d_p0.getValue(), Vec3(0.0_sreal, 0.0_sreal, 0.0_sreal));
     EXPECT_EQ(regGrid3->d_cellWidth.getValue(), 0.0);
 
     // Creating a good Grid in 2D
-    RegularGridTopology::SPtr regGrid2 = New<RegularGridTopology>(5, 5, 1);
+    const RegularGridTopology::SPtr regGrid2 = New<RegularGridTopology>(5, 5, 1);
     EXPECT_NE(regGrid2, nullptr);
-    EXPECT_EQ(regGrid2->d_p0.getValue(), Vector3(0.0f, 0.0f, 0.0f));
+    EXPECT_EQ(regGrid2->d_p0.getValue(), Vec3(0.0_sreal, 0.0_sreal, 0.0_sreal));
     EXPECT_EQ(regGrid2->d_cellWidth.getValue(), 0.0);
 
     // Creating a good Grid in 3D
-    RegularGridTopology::SPtr regGrid1 = New<RegularGridTopology>(5, 1, 1);
+    const RegularGridTopology::SPtr regGrid1 = New<RegularGridTopology>(5, 1, 1);
     EXPECT_NE(regGrid1, nullptr);
-    EXPECT_EQ(regGrid1->d_p0.getValue(), Vector3(0.0f, 0.0f, 0.0f));
+    EXPECT_EQ(regGrid1->d_p0.getValue(), Vec3(0.0_sreal, 0.0_sreal, 0.0_sreal));
     EXPECT_EQ(regGrid1->d_cellWidth.getValue(), 0.0);
 
     return true;
@@ -70,7 +70,7 @@ bool RegularGridTopology_test::regularGridSize(const std::vector<int>& p, bool f
     int nz = p[2];
 
     /// Creating a good Grid in 3D
-    RegularGridTopology::SPtr regGrid = New<RegularGridTopology>(nx, ny, nz);
+    const RegularGridTopology::SPtr regGrid = New<RegularGridTopology>(nx, ny, nz);
     regGrid->d_computeTriangleList.setValue(fromTriangleList);
     regGrid->init();
 
@@ -86,22 +86,22 @@ bool RegularGridTopology_test::regularGridSize(const std::vector<int>& p, bool f
     int nbHexa = (nx - 1) * (ny - 1) * (nz - 1);
     int nbQuads = (nx - 1) * (ny - 1) * nz + (nx - 1) * ny * (nz - 1) + nx * (ny - 1) * (nz - 1);
 
-    /// Dimmension invariant assumption
+    /// Dimension invariant assumption
     EXPECT_EQ(regGrid->getNbPoints(), nx * ny * nz);
     if (fromTriangleList)
     {
-        int nbEgdes = (nx - 1) * ny * nz + nx * (ny - 1) * nz + nx * ny * (nz - 1) + nbQuads;
+        const int nbEgdes = (nx - 1) * ny * nz + nx * (ny - 1) * nz + nx * ny * (nz - 1) + nbQuads;
         EXPECT_EQ(regGrid->getNbEdges(), nbEgdes);
     }
     else
     {
-        int nbEgdes = (nx - 1) * ny * nz + nx * (ny - 1) * nz + nx * ny * (nz - 1);
+        const int nbEgdes = (nx - 1) * ny * nz + nx * (ny - 1) * nz + nx * ny * (nz - 1);
         EXPECT_EQ(regGrid->getNbEdges(), nbEgdes);
     }
 
-    /// Compute the dimmension.
-    int d = (p[0] == 1) + (p[1] == 1) + (p[2] == 1); /// Check if there is reduced dimmension
-    int e = (p[0] <= 0) + (p[1] <= 0) + (p[2] <= 0); /// Check if there is an error
+    /// Compute the dimension.
+    const int d = (p[0] == 1) + (p[1] == 1) + (p[2] == 1); /// Check if there is reduced dimension
+    const int e = (p[0] <= 0) + (p[1] <= 0) + (p[2] <= 0); /// Check if there is an error
     if (e == 0)
     {
         if (d == 0)
@@ -134,12 +134,12 @@ bool RegularGridTopology_test::regularGridPosition()
     int nx = 8;
     int ny = 8;
     int nz = 5;
-    RegularGridTopology::SPtr regGrid = New<RegularGridTopology>(nx, ny, nz);
+    const RegularGridTopology::SPtr regGrid = New<RegularGridTopology>(nx, ny, nz);
     regGrid->init();
 
     // Check first circle with
-    sofa::type::Vector3 p0 = regGrid->getPoint(0);
-    sofa::type::Vector3 p1 = regGrid->getPoint(nx - 1);
+    sofa::type::Vec3 p0 = regGrid->getPoint(0);
+    sofa::type::Vec3 p1 = regGrid->getPoint(nx - 1);
     // Check first point
     EXPECT_LE(p0[0], 0.0001);
     EXPECT_EQ(p0[0], p0[1]);
@@ -152,13 +152,13 @@ bool RegularGridTopology_test::regularGridPosition()
     EXPECT_EQ(p0[2], 0);
 
     // check last point of first level
-    sofa::type::Vector3 p1Last = regGrid->getPoint(nx * ny - 1);
+    sofa::type::Vec3 p1Last = regGrid->getPoint(nx * ny - 1);
     EXPECT_LE(p1Last[0], 0.0001);
     EXPECT_EQ(p1[0], p1Last[0]);
     EXPECT_EQ(p1[1], -p1Last[1]);
 
     // Check first point of last level of the regular
-    sofa::type::Vector3 p0Last = regGrid->getPoint(nx * ny * (nz - 1));
+    sofa::type::Vec3 p0Last = regGrid->getPoint(nx * ny * (nz - 1));
     EXPECT_EQ(p0Last[0], p0[0]);
     EXPECT_EQ(p0Last[1], p0[1]);
 
@@ -167,14 +167,14 @@ bool RegularGridTopology_test::regularGridPosition()
 
 bool RegularGridTopology_test::regularGridFindPoint()
 {
-    using Dimension = RegularGridTopology::Vec3i;
-    using BoundingBox = RegularGridTopology::BoundingBox;
-    using Coordinates = sofa::type::Vector3;
+    using Dimension = sofa::type::Vec3i;
+    using BoundingBox = sofa::type::BoundingBox;
+    using Coordinates = sofa::type::Vec3;
     using Epsilon = float;
 
     // 3D grid with 3x3x3=27 cells, each of dimension 1x1x1,  starting at {1,1,1}
     // and ending at {4,4,4}
-    auto grid = New<RegularGridTopology>(
+    const auto grid = New<RegularGridTopology>(
                     Dimension{ 4, 4, 4 },
                     BoundingBox( Coordinates{ 1., 1., 1. } /*min*/, Coordinates{ 4, 4, 4 } /*max*/ )
                 );
@@ -211,11 +211,11 @@ TEST_F(RegularGridTopology_test, regularGridFindPoint)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
-/// Test on various dimmensions
+/// Test on various dimensions
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 std::vector<std::vector<int>> dimvalues = {
-    /// The first three values are for the dimmension of the grid.
+    /// The first three values are for the dimension of the grid.
     /// The fourth is to encode if we need to catch a Warning message
     /// The fith is to indicate that the component should be initialized with
     /// the default values of

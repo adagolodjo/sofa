@@ -1,7 +1,7 @@
 #ifndef IMAGETOOLBOXBASICACTIONWIDGET_H
 #define IMAGETOOLBOXBASICACTIONWIDGET_H
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 #include <QAction>
 #include <QMessageBox>
@@ -10,8 +10,6 @@
 #include "imagetoolboxcentralwidget.h"
 
 namespace sofa
-{
-namespace gui
 {
 namespace qt
 {
@@ -82,7 +80,6 @@ public slots:
 
 };
 
-}
 }
 }
 

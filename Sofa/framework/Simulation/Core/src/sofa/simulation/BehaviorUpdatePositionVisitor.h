@@ -27,10 +27,8 @@
 #include <sofa/core/BehaviorModel.h>
 #include <sofa/simulation/fwd.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 /** Update the position of a new simulation step
@@ -40,7 +38,7 @@ class SOFA_SIMULATION_CORE_API BehaviorUpdatePositionVisitor : public Visitor
 {
 
 public:
-    BehaviorUpdatePositionVisitor(const core::ExecParams* params, SReal _dt): Visitor(params),dt(_dt) {}
+    BehaviorUpdatePositionVisitor(const core::ExecParams* eparams, SReal _dt): Visitor(eparams),dt(_dt) {}
     void processBehaviorModel(simulation::Node* node, core::BehaviorModel* b);
     Result processNodeTopDown(simulation::Node* node) override;
 
@@ -58,8 +56,7 @@ protected:
     SReal dt;
 };
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

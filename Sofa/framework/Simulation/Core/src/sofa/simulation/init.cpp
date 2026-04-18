@@ -19,16 +19,22 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "init.h"
+#include <sofa/simulation/init.h>
 
 #include <sofa/core/init.h>
 #include <sofa/helper/init.h>
 
-namespace sofa
+#include <sofa/simulation/task/MainTaskSchedulerRegistry.h>
+
+#include <sofa/core/ObjectFactory.h>
+
+namespace sofa::simulation
 {
 
-namespace simulation
-{
+extern void registerRequiredPlugin(sofa::core::ObjectFactory* factory);
+extern void registerDefaultVisualManagerLoop(sofa::core::ObjectFactory* factory);
+extern void registerDefaultAnimationLoop(sofa::core::ObjectFactory* factory);
+extern void registerTaskSchedulerSettings(sofa::core::ObjectFactory* factory);
 
 namespace core
 {
@@ -36,12 +42,19 @@ namespace core
 static bool s_initialized = false;
 static bool s_cleanedUp = false;
 
+
 SOFA_SIMULATION_CORE_API void init()
 {
     if (!s_initialized)
     {
         sofa::core::init();
         s_initialized = true;
+
+        auto* factory = sofa::core::ObjectFactory::getInstance();
+        registerRequiredPlugin(factory);
+        registerDefaultVisualManagerLoop(factory);
+        registerDefaultAnimationLoop(factory);
+        registerTaskSchedulerSettings(factory);
     }
 }
 
@@ -54,6 +67,7 @@ SOFA_SIMULATION_CORE_API void cleanup()
 {
     if (!s_cleanedUp)
     {
+        sofa::simulation::MainTaskSchedulerRegistry::clear();
         sofa::core::cleanup();
         s_cleanedUp = true;
     }
@@ -77,6 +91,8 @@ static const struct CleanupCheck
 
 } // namespace core
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
+
+
+

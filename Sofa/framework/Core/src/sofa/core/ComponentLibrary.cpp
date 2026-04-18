@@ -20,13 +20,10 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 
-#include "ComponentLibrary.h"
-#include "CategoryLibrary.h"
+#include <sofa/core/ComponentLibrary.h>
+#include <sofa/core/CategoryLibrary.h>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 std::string caseInsensitive(const std::string &text)
@@ -79,6 +76,8 @@ ComponentLibrary::ComponentLibrary( const std::string &componentN, const std::st
         description += std::string("<li><b>Authors: </b>")+entry->authors +std::string("</li>");
     if (!entry->license.empty())
         description += std::string("<li><b>License: </b>") + entry->license + std::string("</li>");
+    if (!entry->documentationURL.empty())
+        description += std::string("<li><b>Documentation: </b>") + entry->documentationURL + std::string("</li>");
 
     if (possiblePaths.size() != 0)
     {
@@ -108,5 +107,4 @@ void ComponentLibrary::endConstruction()
 {
 }
 
-}
 }

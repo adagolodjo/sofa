@@ -26,12 +26,12 @@
 
 #include <sofa/component/solidmechanics/fem/hyperelastic/material/HyperelasticMaterial.h>
 #include <sofa/core/behavior/ForceField.h>
-#include <sofa/type/Vec.h>
 #include <sofa/type/Mat.h>
 #include <sofa/type/MatSym.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/core/topology/TopologyData.h>
-#include <map>
+#include <sofa/helper/OptionsGroup.h>
+
 
 namespace sofa::component::solidmechanics::fem::hyperelastic
 {
@@ -47,7 +47,7 @@ using namespace sofa::core::topology;
 template<class DataTypes>
 class TetrahedronHyperelasticityFEMForceField : public core::behavior::ForceField<DataTypes>
 {
-  public:
+public:
     SOFA_CLASS(SOFA_TEMPLATE(TetrahedronHyperelasticityFEMForceField, DataTypes), SOFA_TEMPLATE(core::behavior::ForceField, DataTypes));
 
     typedef core::behavior::ForceField<DataTypes> Inherited;
@@ -82,20 +82,10 @@ class TetrahedronHyperelasticityFEMForceField : public core::behavior::ForceFiel
     typedef sofa::core::topology::BaseMeshTopology::TrianglesInTetrahedron TrianglesInTetrahedron;
 
 
-public :
-	
     material::MaterialParameters<DataTypes> globalParameters;
 
-	
-	class MatrixList
-	{
-	public:
-		Matrix3 data[6];
-	};
-
-
     /// data structure stored for each tetrahedron
-	class TetrahedronRestInformation : public material::StrainInformation<DataTypes>
+    class TetrahedronRestInformation : public material::StrainInformation<DataTypes>
     {
     public:
         /// shape vector at the rest configuration
@@ -119,9 +109,9 @@ public :
         /// Input stream
         inline friend std::istream& operator>> ( std::istream& in, TetrahedronRestInformation& /*eri*/ ) { return in; }
 
-        TetrahedronRestInformation() {}
+        TetrahedronRestInformation() = default;
     };
-	
+
     /// data structure stored for each edge
     class EdgeInformation
     {
@@ -134,18 +124,20 @@ public :
         /// Input stream
         inline friend std::istream& operator>> (std::istream& in, EdgeInformation& /*eri*/ ) { return in; }
 
-        EdgeInformation() {}
+        EdgeInformation() = default;
     };
 
  protected :
+
     core::topology::BaseMeshTopology* m_topology;
-    VecCoord  m_initialPoints;	/// the intial positions of the points
+    VecCoord m_initialPoints;	/// the initial positions of the points
     bool m_updateMatrix;
 
+public:
     Data<bool> d_stiffnessMatrixRegularizationWeight; ///< Regularization of the Stiffness Matrix (between true or false)
-    Data<std::string> d_materialName; ///< the name of the material
+    Data<sofa::helper::OptionsGroup> d_materialName; ///< the name of the material to be used. Possible options are: 'ArrudaBoyce', 'Costa', 'MooneyRivlin', 'NeoHookean', 'Ogden', 'StVenantKirchhoff', 'VerondaWestman', 'StableNeoHookean'
     Data<SetParameterArray> d_parameterSet; ///< The global parameters specifying the material
-    Data<SetAnisotropyDirectionArray> d_anisotropySet; ///< The global directions of anisotropy of the material
+    Data<SetAnisotropyDirectionArray> d_anisotropySet; ///< The global directions of anisotropy of the material: vector containing anisotropic directions. The vector size is 0 if the material is isotropic, 1 if it is transversely isotropic and 2 for orthotropic materials
 
     TetrahedronData<sofa::type::vector<TetrahedronRestInformation> > m_tetrahedronInfo; ///< Internal tetrahedron data
     EdgeData<sofa::type::vector<EdgeInformation> > m_edgeInfo; ///< Internal edge data
@@ -153,38 +145,35 @@ public :
     /// Link to be set to the topology container in the component graph.
     SingleLink<TetrahedronHyperelasticityFEMForceField<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
 
-public:
+    void setMaterialName(std::string materialName);
 
-    void setMaterialName(const std::string name) {
-        d_materialName.setValue(name);
-    }
-    void setparameter(const SetParameterArray param) {
-        d_parameterSet.setValue(param);
-    }
-    void setdirection(const SetAnisotropyDirectionArray direction) {
-        d_anisotropySet.setValue(direction);
-    }
+    void setparameter(const SetParameterArray& param);
 
-    /** Method to initialize @sa TetrahedronRestInformation when a new Tetrahedron is created.
-    * Will be set as creation callback in the TetrahedronData @sa m_tetrahedronInfo
-    */
+    void setdirection(const SetAnisotropyDirectionArray& direction);
+
+    /**
+     * Method to initialize @sa TetrahedronRestInformation when a new Tetrahedron is created.
+     * Will be set as creation callback in the TetrahedronData @sa m_tetrahedronInfo
+     */
     void createTetrahedronRestInformation(Index, TetrahedronRestInformation& t, const Tetrahedron&,
         const sofa::type::vector<Index>&, const sofa::type::vector<SReal>&);
 
 protected:
-   TetrahedronHyperelasticityFEMForceField();
-   
-   virtual   ~TetrahedronHyperelasticityFEMForceField();
-public:
+    TetrahedronHyperelasticityFEMForceField();
 
-  //  virtual void parse(core::objectmodel::BaseObjectDescription* arg);
+    ~TetrahedronHyperelasticityFEMForceField() override;
+
+public:
 
     void init() override;
     
     void addForce(const core::MechanicalParams* mparams /* PARAMS FIRST */, DataVecDeriv& d_f, const DataVecCoord& d_x, const DataVecDeriv& d_v) override;
     void addDForce(const core::MechanicalParams* mparams /* PARAMS FIRST */, DataVecDeriv& d_df, const DataVecDeriv& d_dx) override;
     SReal getPotentialEnergy(const core::MechanicalParams*, const DataVecCoord&) const override;
+    using Inherit1::addKToMatrix;
     void addKToMatrix(sofa::linearalgebra::BaseMatrix *mat, SReal k, unsigned int &offset) override;
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix) override;
+    void buildDampingMatrix(core::behavior::DampingMatrix* /*matrix*/) final;
 
     void draw(const core::visual::VisualParams* vparams) override;
 
@@ -193,22 +182,21 @@ public:
     Mat<3,3, SReal> getPhi( int tetrahedronIndex);
 
 
-  protected:
+protected:
 
     /// the array that describes the complete material energy and its derivatives
 
-    material::HyperelasticMaterial<DataTypes> *m_myMaterial;
+    std::unique_ptr<material::HyperelasticMaterial<DataTypes> > m_myMaterial;
 
     void testDerivatives();
 
     void updateTangentMatrix();
+
+    void instantiateMaterial();
 };
 
-#if  !defined(SOFA_COMPONENT_FORCEFIELD_TETRAHEDRONHYPERELASTICITYFEMFORCEFIELD_CPP)
-
+#if !defined(SOFA_COMPONENT_FORCEFIELD_TETRAHEDRONHYPERELASTICITYFEMFORCEFIELD_CPP)
 extern template class SOFA_COMPONENT_SOLIDMECHANICS_FEM_HYPERELASTIC_API TetrahedronHyperelasticityFEMForceField<defaulttype::Vec3Types>;
-
-
 #endif //  !defined(SOFA_COMPONENT_FORCEFIELD_TETRAHEDRONHYPERELASTICITYFEMFORCEFIELD_CPP)
 
 } // namespace sofa::component::solidmechanics::fem::hyperelastic

@@ -31,23 +31,30 @@ using sofa::testing::BaseSimulationTest;
 #include<sofa/core/objectmodel/BaseObject.h>
 using sofa::core::objectmodel::BaseObject ;
 
-#include <SofaSimulationGraph/DAGSimulation.h>
-using sofa::simulation::Simulation ;
+#include <sofa/simulation/graph/DAGSimulation.h>
 using sofa::simulation::graph::DAGSimulation ;
 
 #include <sofa/simulation/Node.h>
 using sofa::simulation::Node ;
 
-#include <SofaSimulationCommon/SceneLoaderXML.h>
+#include <sofa/simulation/common/SceneLoaderXML.h>
 using sofa::simulation::SceneLoaderXML ;
 using sofa::core::execparams::defaultInstance; 
 
 #include <sofa/helper/system/FileSystem.h>
 using sofa::helper::system::FileSystem ;
 
-#include <filesystem>
+#include <sofa/helper/system/FileRepository.h>
+using sofa::helper::system::FileRepository;
+
+#include <sofa/simulation/events/SimulationInitDoneEvent.h>
+using sofa::simulation::SimulationInitDoneEvent;
+
+#include <sofa/simulation/PropagateEventVisitor.h>
+using sofa::simulation::PropagateEventVisitor;
+
 namespace{
-std::string tempdir = std::filesystem::temp_directory_path().string() ;
+const std::string tempdir = FileRepository().getTempPath() ;
 
 
 class VisualModelOBJExporter_test : public BaseSimulationTest {
@@ -55,18 +62,26 @@ public:
     /// remove the file created...
     std::vector<std::string> dataPath ;
 
-    void SetUp() override
+    void doSetUp() override
     {
-        sofa::simulation::setSimulation(new DAGSimulation());
     }
 
-    void TearDown() override
+    void doTearDown() override
     {
-        for(auto& pathToRemove : dataPath)
+        for (const auto& pathToRemove : dataPath)
         {
-            if(FileSystem::exists(pathToRemove))
-               FileSystem::removeAll(pathToRemove) ;
-       }
+            if (FileSystem::exists(pathToRemove))
+            {
+                if (FileSystem::isDirectory(pathToRemove))
+                {
+                    FileSystem::removeAll(pathToRemove);
+                }
+                else
+                {
+                    FileSystem::removeFile(pathToRemove);
+                }
+            }
+        }
     }
 
     void checkBasicBehavior(const std::string& filename, std::vector<std::string> pathes){
@@ -78,17 +93,20 @@ public:
                 "<?xml version='1.0'?> \n"
                 "<Node 	name='Root' gravity='0 0 0' time='0' animate='0'   >       \n"
                 "   <DefaultAnimationLoop/>                                        \n"
-                "   <VisualModelOBJExporter name='exporter1' printLog='true' filename='"<< filename << "' exportAtBegin='true' /> \n"
+                "   <VisualModelOBJExporter name='exporter1' printLog='false' filename='"<< filename << "' exportAtBegin='true' /> \n"
                 "</Node>                                                           \n" ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("testscene",
-                                                          scene1.str().c_str(),
-                                                          scene1.str().size()) ;
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory ("testscene", scene1.str().c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
 
-        sofa::simulation::getSimulation()->animate(root.get(), 0.5);
+        // SimulationInitDoneEvent is used to trigger exportAtBegin
+        SimulationInitDoneEvent endInit;
+        PropagateEventVisitor pe{sofa::core::execparams::defaultInstance(), &endInit};
+        root->execute(pe);
+
+        sofa::simulation::node::animate(root.get(), 0.5);
 
         for(auto& pathToCheck : pathes)
         {
@@ -106,19 +124,17 @@ public:
                 "<?xml version='1.0'?> \n"
                 "<Node 	name='Root' gravity='0 0 0' time='0' animate='0'   >       \n"
                 "   <DefaultAnimationLoop/>                                        \n"
-                "   <VisualModelOBJExporter name='exporterA' printLog='true' filename='"<< filename << "' exportEveryNumberOfSteps='5' /> \n"
+                "   <VisualModelOBJExporter name='exporterA' printLog='false' filename='"<< filename << "' exportEveryNumberOfSteps='5' /> \n"
                 "</Node>                                                           \n" ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("testscene",
-                                                          scene1.str().c_str(),
-                                                          scene1.str().size()) ;
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory ("testscene", scene1.str().c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
 
         for(unsigned int i=0;i<numstep;i++)
         {
-            sofa::simulation::getSimulation()->animate(root.get(), 0.5);
+            sofa::simulation::node::animate(root.get(), 0.5);
         }
 
         for(auto& pathToCheck : pathes)

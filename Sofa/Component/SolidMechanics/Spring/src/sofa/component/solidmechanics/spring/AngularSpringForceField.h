@@ -39,12 +39,6 @@ template< class T > class MechanicalState;
 namespace sofa::component::solidmechanics::spring
 {
 
-/**
-* @brief This class describes a simple elastic springs ForceField between DOFs positions and rest positions.
-*
-* Springs are applied to given degrees of freedom between their current positions and their rest shape positions.
-* An external MechanicalState reference can also be passed to the ForceField as rest shape position.
-*/
 template<class DataTypes>
 class AngularSpringForceField : public core::behavior::ForceField<DataTypes>
 {
@@ -64,11 +58,11 @@ public:
     typedef core::objectmodel::Data<VecCoord> DataVecCoord;
     typedef core::objectmodel::Data<VecDeriv> DataVecDeriv;
 
-    Data< type::vector< sofa::Index > > indices; ///< index of nodes controlled by the angular springs
-    Data< VecReal > angularStiffness; ///< angular stiffness for the controlled nodes
-    Data<VecReal> angularLimit; ///< angular limit (max; min) values where the force applies
-    Data< bool > drawSpring; ///< draw Spring
-    Data< type::RGBAColor > springColor; ///< spring color
+    Data< type::vector< sofa::Index > > d_indices; ///< index of nodes controlled by the angular springs
+    Data< VecReal > d_angularStiffness; ///< angular stiffness for the controlled nodes
+    Data<VecReal> d_angularLimit; ///< angular limit (max; min) values where the force applies
+    Data< bool > d_drawSpring; ///< draw Spring
+    Data< type::RGBAColor > d_springColor; ///< spring color
 
     linearalgebra::EigenBaseSparseMatrix<typename DataTypes::Real> matS;
 
@@ -90,6 +84,8 @@ public:
 
     /// Brings ForceField contribution to the global system stiffness matrix.
     void addKToMatrix(const core::MechanicalParams* mparams, const sofa::core::behavior::MultiMatrixAccessor* matrix ) override;
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix) override;
+    void buildDampingMatrix(core::behavior::DampingMatrix* /*matrix*/) final;
     void draw(const core::visual::VisualParams* vparams) override;
 
 protected :
@@ -98,7 +94,7 @@ protected :
     VecReal k;
 };
 
-#if  !defined(SOFA_COMPONENT_FORCEFIELD_AngularSpringForceField_CPP)
+#if !defined(SOFA_COMPONENT_FORCEFIELD_AngularSpringForceField_CPP)
 extern template class SOFA_COMPONENT_SOLIDMECHANICS_SPRING_API AngularSpringForceField<sofa::defaulttype::Rigid3Types>;
 #endif
 

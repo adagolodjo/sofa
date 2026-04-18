@@ -27,29 +27,24 @@ using std::string ;
 #include <sofa/testing/BaseTest.h>
 #include <sofa/testing/TestMessageHandler.h>
 
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 using sofa::simulation::graph::DAGSimulation ;
-
-#include <sofa/simulation/Simulation.h>
-using sofa::simulation::Simulation ;
 
 #include <sofa/simulation/Node.h>
 using sofa::simulation::Node ;
 
-#include <SofaSimulationCommon/SceneLoaderXML.h>
+#include <sofa/simulation/common/SceneLoaderXML.h>
 using sofa::simulation::SceneLoaderXML ;
 
-#include <SofaBaseUtils/messageHandlerComponent.h>
-using sofa::component::logging::MessageHandlerComponent ;
+#include <sofa/component/sceneutility/MessageHandlerComponent.h>
+using sofa::component::sceneutility::MessageHandlerComponent ;
 
 using sofa::helper::logging::MessageDispatcher ;
 
-#include <SofaSimulationGraph/SimpleApi.h>
+#include <sofa/simpleapi/SimpleApi.h>
 
 bool perTestInit()
 {
-    sofa::simpleapi::importPlugin("Sofa.Component.SceneUtility");
-
     /// THE TESTS HERE ARE NOT INHERITING FROM SOFA TEST SO WE NEED TO MANUALLY INSTALL THE HANDLER
     /// DO NO REMOVE
     MessageDispatcher::addHandler( sofa::testing::MainGtestMessageHandler::getInstance() );
@@ -61,7 +56,8 @@ bool inited = perTestInit() ;
 
 TEST(MessageHandlerComponent, simpleInit)
 {
-    string scene =
+    const auto plugins = sofa::testing::makeScopedPlugin({Sofa.Component.SceneUtility});
+    const string scene =
         "<?xml version='1.0'?>                                               "
         "<Node 	name='Root' gravity='0 0 0' time='0' animate='0'   >         "
         "   <Node>  "
@@ -69,11 +65,7 @@ TEST(MessageHandlerComponent, simpleInit)
         "   </Node> "
         "</Node>                                                             " ;
 
-    sofa::simulation::setSimulation(new DAGSimulation());
-
-    Node::SPtr root = SceneLoaderXML::loadFromMemory ( "test1",
-                                                       scene.c_str(),
-                                                       scene.size() ) ;
+    const Node::SPtr root = SceneLoaderXML::loadFromMemory("test1", scene.c_str());
     EXPECT_TRUE(root!=nullptr) ;
 
     MessageHandlerComponent* component = nullptr;
@@ -85,15 +77,14 @@ TEST(MessageHandlerComponent, simpleInit)
 
 TEST(MessageHandlerComponent, missingHandler)
 {
-    string scene =
+    const auto plugins = sofa::testing::makeScopedPlugin({Sofa.Component.SceneUtility});
+    const string scene =
         "<?xml version='1.0'?>                                               "
         "<Node 	name='Root' gravity='0 0 0' time='0' animate='0'   >         "
         "       <MessageHandlerComponent/>                   "
         "</Node>                                                             " ;
 
-    Node::SPtr root = SceneLoaderXML::loadFromMemory ( "test1",
-                                                       scene.c_str(),
-                                                       scene.size() ) ;
+    const Node::SPtr root = SceneLoaderXML::loadFromMemory("test1", scene.c_str());
 
     MessageHandlerComponent* component = nullptr;
     root->getTreeObject(component) ;
@@ -103,15 +94,14 @@ TEST(MessageHandlerComponent, missingHandler)
 
 TEST(MessageHandlerComponent, invalidHandler)
 {
-    string scene =
+    const auto plugins = sofa::testing::makeScopedPlugin({Sofa.Component.SceneUtility});
+    const string scene =
         "<?xml version='1.0'?>                                               "
         "<Node 	name='Root' gravity='0 0 0' time='0' animate='0'   >         "
         "       <MessageHandlerComponent handler='thisisinvalid'/>           "
         "</Node>                                                             " ;
 
-    Node::SPtr root = SceneLoaderXML::loadFromMemory ( "test1",
-                                                       scene.c_str(),
-                                                       scene.size() ) ;
+    const Node::SPtr root = SceneLoaderXML::loadFromMemory("test1", scene.c_str());
 
     MessageHandlerComponent* component = nullptr;
     root->getTreeObject(component) ;
@@ -121,15 +111,14 @@ TEST(MessageHandlerComponent, invalidHandler)
 
 TEST(MessageHandlerComponent, clangHandler)
 {
-    string scene =
+    const auto plugins = sofa::testing::makeScopedPlugin({Sofa.Component.SceneUtility});
+    const string scene =
         "<?xml version='1.0'?>                                               "
         "<Node 	name='Root' gravity='0 0 0' time='0' animate='0'   >         "
         "       <MessageHandlerComponent handler='clang'/>                   "
         "</Node>                                                             " ;
 
-    Node::SPtr root = SceneLoaderXML::loadFromMemory ( "test1",
-                                                       scene.c_str(),
-                                                       scene.size() ) ;
+    const Node::SPtr root = SceneLoaderXML::loadFromMemory("test1", scene.c_str());
 
     MessageHandlerComponent* component = nullptr;
     root->getTreeObject(component) ;

@@ -45,22 +45,12 @@ class SOFA_SIMULATION_CORE_API BaseMechanicalVisitor : public Visitor
 
 protected:
     simulation::Node* root; ///< root node from which the visitor was executed
-    SReal* rootData; ///< data for root node
 
     virtual Result processNodeTopDown(simulation::Node* node, VisitorContext* ctx);
     virtual void processNodeBottomUp(simulation::Node* node, VisitorContext* ctx);
 
 public:
     BaseMechanicalVisitor(const sofa::core::ExecParams* params);
-
-    /// Return true if this visitor need to read the node-specific data if given
-    virtual bool readNodeData() const;
-
-    /// Return true if this visitor need to write to the node-specific data if given
-    virtual bool writeNodeData() const;
-
-    virtual void setNodeData(simulation::Node* /*node*/, SReal* nodeData, const SReal* parentData);
-    virtual void addNodeData(simulation::Node* /*node*/, SReal* parentData, const SReal* nodeData);
 
     /// Return a class name for this visitor
     /// Only used for debugging / profiling purposes
@@ -76,10 +66,6 @@ public:
 
     /// This method calls the fwd* methods during the forward traversal. You typically do not overload it.
     Result processNodeTopDown(simulation::Node* node) override;
-
-    /// Parallel version of processNodeTopDown.
-    /// This method calls the fwd* methods during the forward traversal. You typically do not overload it.
-    Result processNodeTopDown(simulation::Node* node, LocalStorage* stack) override;
 
     /// Process the OdeSolver
     virtual Result fwdOdeSolver(simulation::Node* /*node*/, sofa::core::behavior::OdeSolver* /*solver*/);
@@ -167,10 +153,6 @@ public:
     /// This method calls the bwd* methods during the backward traversal. You typically do not overload it.
     void processNodeBottomUp(simulation::Node* node) override;
 
-    /// Parallel version of processNodeBottomUp.
-    /// This method calls the bwd* methods during the backward traversal. You typically do not overload it.
-    void processNodeBottomUp(simulation::Node* /*node*/, LocalStorage* stack) override;
-
     /// Process the BaseMechanicalState when it is not mapped from parent level
     virtual void bwdMechanicalState(simulation::Node* /*node*/,sofa::core::behavior::BaseMechanicalState* /*mm*/);
 
@@ -222,17 +204,17 @@ public:
     virtual bool stopAtMechanicalMapping(simulation::Node* /*node*/, sofa::core::BaseMapping* map);
 
 #ifdef SOFA_DUMP_VISITOR_INFO
-    ctime_t begin(simulation::Node* node, sofa::core::objectmodel::BaseObject* obj, const std::string &info=std::string("type")) override;
-    void end(simulation::Node* node, sofa::core::objectmodel::BaseObject* obj, ctime_t t0) override;
+    ctime_t begin(simulation::Node* node, sofa::core::objectmodel::BaseComponent* obj, const std::string &info=std::string("type")) override;
+    void end(simulation::Node* node, sofa::core::objectmodel::BaseComponent* obj, ctime_t t0) override;
 
     virtual void setReadWriteVectors() {}
     virtual void addReadVector(core::ConstMultiVecId id) {  readVector.push_back(id);  }
     virtual void addWriteVector(core::MultiVecId id) {  writeVector.push_back(id);  }
     virtual void addReadWriteVector(core::MultiVecId id) {  readVector.push_back(core::ConstMultiVecId(id)); writeVector.push_back(id);  }
     void printReadVectors(core::behavior::BaseMechanicalState* mm);
-    void printReadVectors(simulation::Node* node, sofa::core::objectmodel::BaseObject* obj);
+    void printReadVectors(simulation::Node* node, sofa::core::objectmodel::BaseComponent* obj);
     void printWriteVectors(core::behavior::BaseMechanicalState* mm);
-    void printWriteVectors(simulation::Node* node, sofa::core::objectmodel::BaseObject* obj);
+    void printWriteVectors(simulation::Node* node, sofa::core::objectmodel::BaseComponent* obj);
 protected:
     sofa::type::vector< sofa::core::ConstMultiVecId > readVector;
     sofa::type::vector< sofa::core::MultiVecId > writeVector;

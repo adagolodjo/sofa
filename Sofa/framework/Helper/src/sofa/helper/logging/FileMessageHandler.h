@@ -26,16 +26,11 @@
 #ifndef FILEMESSAGEHANDLER_H
 #define FILEMESSAGEHANDLER_H
 
-#include "MessageHandler.h"
+#include <sofa/helper/logging/MessageHandler.h>
 #include <fstream>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 class MessageFormatter;
@@ -51,6 +46,7 @@ public:
 
     ~FileMessageHandler() override;
     void process(Message& m) override ;
+    std::string getName() const override { return "FileMessageHandler"; }
 
     bool isValid(); // is output file ok ?
 
@@ -59,9 +55,6 @@ private:
     MessageFormatter    *m_formatter;
 };
 
-
-} // logging
-} // helper
-} // sofa
+}
 
 #endif // FILEMESSAGEHANDLER_H

@@ -20,18 +20,16 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
+#include <sofa/component/mass/RigidMassType.h>
+#include <sofa/component/mass/VecMassType.h>
 #include <sofa/component/mass/config.h>
-
-#include <sofa/defaulttype/VecTypes.h>
 #include <sofa/core/behavior/Mass.h>
 #include <sofa/core/behavior/MechanicalState.h>
-#include <sofa/linearalgebra/BaseVector.h>
+#include <sofa/core/behavior/TopologyAccessor.h>
 #include <sofa/core/objectmodel/DataFileName.h>
-#include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/core/topology/TopologySubsetIndices.h>
-
-#include <sofa/component/mass/VecMassType.h>
-#include <sofa/component/mass/RigidMassType.h>
+#include <sofa/defaulttype/VecTypes.h>
+#include <sofa/linearalgebra/BaseVector.h>
 
 #include <type_traits>
 
@@ -39,8 +37,7 @@ namespace sofa::component::mass
 {
 
 template <class DataTypes>
-
-class UniformMass : public core::behavior::Mass<DataTypes>
+class UniformMass : public core::behavior::Mass<DataTypes>, public virtual core::behavior::TopologyAccessor
 {
 public:
     SOFA_CLASS(SOFA_TEMPLATE(UniformMass,DataTypes),
@@ -64,20 +61,23 @@ public:
     Data<SReal> d_totalMass;    ///< if >0 : total mass of this body
     sofa::core::objectmodel::DataFileName d_filenameMass; ///< a .rigid file to automatically load the inertia matrix and other parameters
 
-    Data<bool>  d_showCenterOfGravity; ///< to display the center of gravity of the system
-    Data<float> d_showAxisSize;        ///< to display the center of gravity of the system
+    Data<bool>  d_showCenterOfGravity; ///< display the center of gravity of the system
+    Data<float> d_showAxisSize; ///< factor length of the axis displayed (only used for rigids)
 
     Data<bool>  d_computeMappingInertia; ///< to be used if the mass is placed under a mapping
     Data<bool>  d_showInitialCenterOfGravity; ///< display the initial center of gravity of the system
 
-    Data<bool>  d_showX0; ///< to display the rest positions
+    Data<bool>  d_showX0; ///< display the rest positions
 
     /// optional range of local DOF indices. Any computation involving only
     /// indices outside of this range are discarded (useful for parallelization
-    /// using mesh partitionning)
+    /// using mesh partitioning)
     Data< type::Vec<2,int> > d_localRange;
     DataSetIndex     d_indices; ///< optional local DOF indices. Any computation involving only indices outside of this list are discarded
     Data<bool> d_preserveTotalMass; ///< Prevent totalMass from decreasing when removing particles.
+
+    bool m_isTotalMassUsed; ///< Boolean specifying whether the data totalMass has been initially given (else vertexMass vector is being used)
+
 
     ////////////////////////// Inherited attributes ////////////////////////////
     /// https://gcc.gnu.org/onlinedocs/gcc/Name-lookup.html
@@ -85,18 +85,15 @@ public:
     /// otherwise any access to the base::attribute would require
     /// the "this->" approach.
     using core::behavior::ForceField<DataTypes>::mstate ;
-    using core::objectmodel::BaseObject::getContext;
+    using core::objectmodel::BaseComponent::getContext;
     ////////////////////////////////////////////////////////////////////////////
-
-    /// Link to be set to the topology container in the component graph.
-    SingleLink <UniformMass<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
 
 protected:
     UniformMass();
 
     ~UniformMass();
 
-    /// @internal fonction called in the constructor that can be specialized
+    /// @internal function called in the constructor that can be specialized
     void constructor_message() ;
 
 public:
@@ -116,10 +113,8 @@ public:
 
     void loadRigidMass(const std::string& filename);
 
-    void reinit() override;
     void init() override;
     void initDefaultImpl() ;
-    void doUpdateInternal() override;
 
     /// @name Check and standard initialization functions from mass information
     /// @{
@@ -127,23 +122,33 @@ public:
     virtual void initFromVertexMass();
 
     virtual bool checkTotalMass();
-    virtual void checkTotalMassInit();
     virtual void initFromTotalMass();
     /// @}
 
+    /// Functions updating data
+    sofa::core::objectmodel::ComponentState updateFromTotalMass();
+    sofa::core::objectmodel::ComponentState updateFromVertexMass();
+
+    using Inherited::addMDx;
     void addMDx(const core::MechanicalParams* mparams, DataVecDeriv& f, const DataVecDeriv& dx, SReal factor) override;
+    using Inherited::accFromF;
     void accFromF(const core::MechanicalParams* mparams, DataVecDeriv& a, const DataVecDeriv& f) override;
     void addForce(const core::MechanicalParams* mparams, DataVecDeriv& f, const DataVecCoord& x, const DataVecDeriv& v) override;
 
+    using Inherited::getKineticEnergy;
     SReal getKineticEnergy(const core::MechanicalParams* mparams, const DataVecDeriv& d_v) const override;  ///< vMv/2 using dof->getV() override
     SReal getPotentialEnergy(const core::MechanicalParams* mparams, const DataVecCoord& x) const override;   ///< Mgx potential in a uniform gravity field, null at origin
-    type::Vector6 getMomentum(const core::MechanicalParams* mparams, const DataVecCoord& x, const DataVecDeriv& v) const override;  ///< (Mv,cross(x,Mv)+Iw) override
+    type::Vec6 getMomentum(const core::MechanicalParams* mparams, const DataVecCoord& x, const DataVecDeriv& v) const override;  ///< (Mv,cross(x,Mv)+Iw) override
 
     void addMDxToVector(linearalgebra::BaseVector *resVect, const VecDeriv *dx, SReal mFact, unsigned int& offset);
 
     void addGravityToV(const core::MechanicalParams* mparams, DataVecDeriv& d_v) override;
 
-    void addMToMatrix(const core::MechanicalParams *mparams, const sofa::core::behavior::MultiMatrixAccessor* matrix) override; /// Add Mass contribution to global Matrix assembling
+    using Inherited::addMToMatrix;
+    void addMToMatrix(sofa::linearalgebra::BaseMatrix * mat, SReal mFact, unsigned int &offset) override; /// Add Mass contribution to global Matrix assembling
+    void buildMassMatrix(sofa::core::behavior::MassMatrixAccumulator* matrices) override;
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* /* matrix */) override {}
+    void buildDampingMatrix(core::behavior::DampingMatrix* /* matrices */) override {}
 
     SReal getElementMass(sofa::Index index) const override;
     void getElementMass(sofa::Index index, linearalgebra::BaseMatrix *m) const override;
@@ -155,17 +160,7 @@ public:
     void parse(sofa::core::objectmodel::BaseObjectDescription* arg) override
     {
         Inherited::parse(arg);
-
-        if (arg->getAttribute("template"))
-        {
-            auto splitTemplates = sofa::helper::split(std::string(arg->getAttribute("template")), ',');
-            if (splitTemplates.size() > 1)
-            {
-                msg_warning() << "MassType is not required anymore and the template is deprecated, please delete it from your scene." << msgendl
-                    << "As your mass is templated on " << DataTypes::Name() << ", MassType has been defined as " << sofa::helper::NameDecoder::getTypeName<MassType>() << " .";
-                msg_warning() << "If you want to set the template, you must write now \"template='" << DataTypes::Name() << "'\" .";
-            }
-        }
+        parseMassTemplate<MassType>(arg, this);
     }
 
 private:
@@ -187,11 +182,11 @@ private:
 
 
     template<class T>
-    type::Vector6 getMomentumRigid3DImpl(const core::MechanicalParams* mparams,
+    type::Vec6 getMomentumRigid3DImpl(const core::MechanicalParams* mparams,
                                                 const DataVecCoord& x,
                                                 const DataVecDeriv& v) const;  ///< (Mv,cross(x,Mv)+Iw)
     template<class T>
-    type::Vector6 getMomentumVec3DImpl(const core::MechanicalParams* mparams,
+    type::Vec6 getMomentumVec3DImpl(const core::MechanicalParams* mparams,
                                               const DataVecCoord& x,
                                               const DataVecDeriv& v) const;  ///< (Mv,cross(x,Mv)+Iw)
 

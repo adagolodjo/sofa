@@ -25,7 +25,7 @@
 
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 
 #include <sofa/type/Quat.h>
 #include <sofa/defaulttype/VecTypes.h>
@@ -59,16 +59,16 @@ public:
 protected:
     void doUpdate() override;
 
-    Data<VecCoord> f_inputX; ///< input position
-    Data<VecCoord> f_outputX; ///< ouput position
-    Data<type::Vector3> translation; ///< translation
-    Data<type::Vector3> rotation; ///< rotation
-    Data<type::Quat<SReal>> quaternion; ///< quaternion rotation
-    Data<type::Vector3> scale; ///< scale
+    Data<VecCoord> f_inputX; ///< input array of 3d points
+    Data<VecCoord> f_outputX; ///< output array of 3d points
+    Data<type::Vec3> translation; ///< translation vector (x,y,z)
+    Data<type::Vec3> rotation; ///< rotation vector (x,y,z)
+    Data<type::Quat<SReal>> quaternion; ///< rotation quaternion (qx,qy,qz,qw)
+    Data<type::Vec3> scale; ///< scale factor
     Data<bool> inverse; ///< true to apply inverse transformation
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_TRANSFORMENGINE_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_TRANSFORMENGINE_CPP)
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API TransformEngine<defaulttype::Vec1Types>;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API TransformEngine<defaulttype::Vec2Types>;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API TransformEngine<defaulttype::Vec3Types>;

@@ -23,7 +23,7 @@
 #include <sofa/component/engine/generate/config.h>
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/type/Vec.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
@@ -106,7 +106,7 @@ public:
     void doUpdate() override;
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_MeshClosingEngine_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_MeshClosingEngine_CPP)
 extern template class SOFA_COMPONENT_ENGINE_GENERATE_API MeshClosingEngine<defaulttype::Vec3Types>;
  
 #endif

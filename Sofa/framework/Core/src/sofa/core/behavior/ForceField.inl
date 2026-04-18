@@ -25,6 +25,7 @@
 #include <sofa/core/behavior/MultiMatrixAccessor.h>
 #include <sofa/core/MechanicalParams.h>
 #include <iostream>
+#include <sofa/core/behavior/BaseLocalForceFieldMatrix.h>
 
 namespace sofa::core::behavior
 {
@@ -32,7 +33,7 @@ namespace sofa::core::behavior
 
 template<class DataTypes>
 ForceField<DataTypes>::ForceField(MechanicalState<DataTypes> *mm)
-    : BaseForceField(), SingleStateAccessor<DataTypes>(mm)
+    : SingleStateAccessor<DataTypes>(mm), BaseForceField()
 {
 }
 
@@ -42,9 +43,10 @@ ForceField<DataTypes>::~ForceField() = default;
 template<class DataTypes>
 void ForceField<DataTypes>::addForce(const MechanicalParams* mparams, MultiVecDerivId fId )
 {
-    if (mparams && this->mstate)
+    auto mstate = this->mstate.get();
+    if (mparams && mstate)
     {
-        addForce(mparams, *fId[this->mstate.get()].write() , *mparams->readX(this->mstate), *mparams->readV(this->mstate));
+        addForce(mparams, *fId[mstate].write() , *mparams->readX(mstate), *mparams->readV(mstate));
     }
 }
 
@@ -55,41 +57,30 @@ void ForceField<DataTypes>::addDForce(const MechanicalParams* mparams, MultiVecD
     {
 
 #ifndef NDEBUG
-            mparams->setKFactorUsed(false);
+        mparams->setKFactorUsed(false);
 #endif
 
         addDForce(mparams, *dfId[this->mstate.get()].write(), *mparams->readDx(this->mstate.get()));
 
 #ifndef NDEBUG
         if (!mparams->getKFactorUsed())
-            msg_warning()  << getClassName() << " (in ForceField<DataTypes>::addDForce): please use mparams->kFactor() in addDForce";
+        {
+            static bool displayOnce = false;
+            if (!displayOnce)
+            {
+                msg_warning() << getClassName() << " (in ForceField<DataTypes>::addDForce): please use mparams->kFactor() in addDForce";
+                displayOnce = true;
+            }
+        }
 #endif
     }
 }
-
-
-template<class DataTypes>
-void ForceField<DataTypes>::addClambda(const MechanicalParams* mparams, MultiVecDerivId resId, MultiVecDerivId lambdaId, SReal cFactor )
-{
-    if (mparams && this->mstate)
-    {
-        addClambda(mparams, *resId[this->mstate.get()].write(), *lambdaId[this->mstate.get()].read(), cFactor);
-    }
-}
-
-template<class DataTypes>
-void ForceField<DataTypes>::addClambda(const MechanicalParams* /*mparams*/, DataVecDeriv& /*df*/, const DataVecDeriv& /*lambda*/, SReal /*cFactor*/ )
-{
-    msg_error()<<"function 'addClambda' is not implemented";
-}
-
-
 
 template<class DataTypes>
 SReal ForceField<DataTypes>::getPotentialEnergy(const MechanicalParams* mparams) const
 {
     if (this->mstate)
-        return getPotentialEnergy(mparams, *mparams->readX(this->mstate));
+        return getPotentialEnergy(mparams, *mparams->readX(this->mstate.get()));
     return 0;
 }
 

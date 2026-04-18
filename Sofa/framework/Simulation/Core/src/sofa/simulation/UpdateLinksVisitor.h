@@ -24,18 +24,16 @@
 
 #include <sofa/simulation/Visitor.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 class SOFA_SIMULATION_CORE_API UpdateLinksVisitor : public Visitor
 {
 public:
-    UpdateLinksVisitor(const core::ExecParams* params) : Visitor(params) {}
+    UpdateLinksVisitor(const core::ExecParams* eparams) : Visitor(eparams) {}
 
-    void processObject(core::objectmodel::BaseObject* obj);
+    void processObject(core::objectmodel::BaseComponent* obj);
 
     Result processNodeTopDown(simulation::Node* node) override;
     void processNodeBottomUp(simulation::Node* node) override;
@@ -45,8 +43,7 @@ public:
     const char* getClassName() const override { return "UpdateLinksVisitor"; }
 };
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

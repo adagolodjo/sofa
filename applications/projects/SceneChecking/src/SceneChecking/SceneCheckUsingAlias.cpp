@@ -24,10 +24,13 @@
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/core/objectmodel/BaseObjectDescription.h>
 #include <sofa/helper/ComponentChange.h>
+#include <sofa/simulation/SceneCheckMainRegistry.h>
 
 
 namespace sofa::_scenechecking_
 {
+
+const bool SceneCheckUsingAliasRegistered = sofa::simulation::SceneCheckMainRegistry::addToRegistry(SceneCheckUsingAlias::newSPtr());
 
 using sofa::core::objectmodel::Base;
 using sofa::core::objectmodel::BaseObjectDescription;
@@ -38,7 +41,7 @@ SceneCheckUsingAlias::SceneCheckUsingAlias()
 {
     /// Add a callback to be n
     ObjectFactory::getInstance()->setCallback([this](Base* o, BaseObjectDescription *arg) {
-        std::string typeNameInScene = arg->getAttribute("type", "");
+        const std::string typeNameInScene = arg->getAttribute("type", "");
         if ( typeNameInScene != o->getClassName() )
         {
             this->m_componentsCreatedUsingAlias[o->getClassName()].push_back(typeNameInScene);
@@ -79,16 +82,16 @@ void SceneCheckUsingAlias::doPrintSummary()
 
         for(std::string &unique_alias : unique_aliases)
         {
-            unsigned int count = std::count(i.second.begin(), i.second.end(), unique_alias);
+            const unsigned int count = std::count(i.second.begin(), i.second.end(), unique_alias);
 
             using sofa::helper::lifecycle::ComponentChange;
-            using sofa::helper::lifecycle::uncreatableComponents;
+            using sofa::helper::lifecycle::renamedComponents;
 
             usingAliasesWarning << "  - " << i.first << ": " << count << " created with alias \"" <<  unique_alias << "\"";
-            auto searchAlias = uncreatableComponents.find(unique_alias);
-            if( searchAlias != uncreatableComponents.end() )
+            auto searchAlias = renamedComponents.find(unique_alias);
+            if( searchAlias != renamedComponents.end() )
             {
-                usingAliasesWarning << " This alias will be REMOVED at the SOFA release " << searchAlias->second.getVersion() << ", please update your scenes.";
+                usingAliasesWarning << " " << searchAlias->second.getMessage();
             }
 
             if(unique_alias != unique_aliases.back()) usingAliasesWarning << msgendl;
@@ -96,7 +99,7 @@ void SceneCheckUsingAlias::doPrintSummary()
 
         if(i.first != m_componentsCreatedUsingAlias.rbegin()->first) usingAliasesWarning << msgendl;
     }
-    msg_warning(this->getName()) << usingAliasesWarning.str();
+    scnchecking_warning(this->getName()) << usingAliasesWarning.str();
 
     m_componentsCreatedUsingAlias.clear();
 }

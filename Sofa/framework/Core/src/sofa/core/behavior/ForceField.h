@@ -42,7 +42,7 @@ namespace sofa::core::behavior
  *  ( df, given a displacement dx ).
  */
 template<class TDataTypes>
-class ForceField : public BaseForceField, public SingleStateAccessor<TDataTypes>
+class ForceField : public BaseForceField, public virtual SingleStateAccessor<TDataTypes>
 {
 public:
     SOFA_CLASS2(SOFA_TEMPLATE(ForceField, TDataTypes), BaseForceField, SOFA_TEMPLATE(SingleStateAccessor, TDataTypes));
@@ -109,14 +109,6 @@ public:
     /// @param dx Input vector used to compute \f$ df = kFactor K dx + bFactor B dx \f$
     virtual void addDForce(const MechanicalParams* mparams, DataVecDeriv& df, const DataVecDeriv& dx ) = 0;
 
-    /// Compute the product of the Compliance matrix C
-    /// with the Lagrange multipliers lambda
-    /// \f$ res += cFactor * C * lambda \f$
-    /// used by the graph-scattered (unassembled API when the ForceField is handled as a constraint)
-    void addClambda(const MechanicalParams* mparams, MultiVecDerivId resId, MultiVecDerivId lambdaId, SReal cFactor ) override;
-
-    virtual void addClambda(const MechanicalParams* mparams, DataVecDeriv& df, const DataVecDeriv& lambda, SReal cFactor );
-
     /// Get the potential energy associated to this ForceField.
     ///
     /// Used to estimate the total energy of the system by some
@@ -174,7 +166,7 @@ public:
                     {
                         const unsigned COLUMN = offset + S*nodeIndex[n2] +j; // j-th column associated with node n2 in BaseMatrix
                         const unsigned column = S*n2+j;                      // j-th column associated with node n2 in the element matrix
-                        bm->add( ROW,COLUMN, em[row][column]* scale );
+                        bm->add( ROW,COLUMN, em(row, column)* scale );
                     }
                 }
             }
@@ -189,28 +181,43 @@ public:
     template<class T>
     static bool canCreate(T*& obj, objectmodel::BaseContext* context, objectmodel::BaseObjectDescription* arg)
     {
-        const std::string attributeName {"mstate"};
-        std::string mstateLink = arg->getAttribute(attributeName,"");
-        if (mstateLink.empty())
+        if (context)
         {
-            if (dynamic_cast<MechanicalState<DataTypes>*>(context->getMechanicalState()) == nullptr)
+            if (arg)
             {
-                arg->logError("Since the attribute '" + attributeName + "' has not been specified, a mechanical state "
-                    "with the datatype '" + DataTypes::Name() + "' has been searched in the current context, but not found.");
-                return false;
+                static const std::string attributeName {"mstate"};
+                const std::string mstateLink = arg->getAttribute(attributeName,"");
+                if (mstateLink.empty())
+                {
+                    if (dynamic_cast<MechanicalState<DataTypes>*>(context->getMechanicalState()) == nullptr)
+                    {
+                        arg->logError("Since the attribute '" + attributeName + "' has not been specified, a mechanical state "
+                            "with the datatype '" + DataTypes::Name() + "' has been searched in the current context, but not found.");
+                        return false;
+                    }
+                }
+                else
+                {
+                    MechanicalState<DataTypes>* mstate = nullptr;
+                    context->findLinkDest(mstate, mstateLink, nullptr);
+                    if (!mstate)
+                    {
+                        arg->logError("Data attribute '" + attributeName + "' does not point to a valid mechanical state of datatype '" + std::string(DataTypes::Name()) + "'.");
+                        return false;
+                    }
+                }
             }
-        }
-        else
-        {
-            MechanicalState<DataTypes>* mstate = nullptr;
-            context->findLinkDest(mstate, mstateLink, nullptr);
-            if (!mstate)
+            else
             {
-                arg->logError("Data attribute '" + attributeName + "' does not point to a valid mechanical state of datatype '" + std::string(DataTypes::Name()) + "'.");
-                return false;
+                if (dynamic_cast<MechanicalState<DataTypes>*>(context->getMechanicalState()) == nullptr)
+                {
+                    return false;
+                }
             }
+
+            return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
         }
-        return BaseObject::canCreate(obj, context, arg);
+        return false;
     }
 
     template<class T>
@@ -223,7 +230,7 @@ public:
 
 };
 
-#if  !defined(SOFA_CORE_BEHAVIOR_FORCEFIELD_CPP)
+#if !defined(SOFA_CORE_BEHAVIOR_FORCEFIELD_CPP)
 extern template class SOFA_CORE_API ForceField<defaulttype::Vec3Types>;
 extern template class SOFA_CORE_API ForceField<defaulttype::Vec2Types>;
 extern template class SOFA_CORE_API ForceField<defaulttype::Vec1Types>;

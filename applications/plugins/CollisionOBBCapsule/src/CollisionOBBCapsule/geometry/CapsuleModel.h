@@ -46,7 +46,7 @@ public:
     typedef TDataTypes DataTypes;
     typedef typename DataTypes::Real   Real;
     typedef typename DataTypes::Deriv Deriv;
-    typedef typename DataTypes::Coord Coord;
+    typedef typename DataTypes::CPos Coord;
     typedef typename DataTypes::VecCoord VecCoord;
 
     typedef CapsuleCollisionModel<DataTypes> ParentModel;
@@ -69,7 +69,7 @@ public:
 
     Real radius() const;
 
-    Coord v()const;
+    Deriv v()const;
 
     bool shareSameVertex(const TCapsule<TDataTypes> & other)const;
 };
@@ -103,21 +103,23 @@ protected:
 
     CapsuleCollisionModel();
     CapsuleCollisionModel(core::behavior::MechanicalState<TDataTypes>* mstate );
+
+    ~CapsuleCollisionModel() override;
+
+    void drawCollisionModel(const core::visual::VisualParams* vparams) override;
+
 public:
     void init() override;
 
     // -- CollisionModel interface
 
-    void resize(Size size) override;
+    void resize(sofa::Size size) override;
 
     void computeBoundingTree(int maxDepth=0) override;
 
     //virtual void computeContinuousBoundingTree(SReal dt, int maxDepth=0);
 
     void draw(const core::visual::VisualParams* vparams, Index index) override;
-
-    void draw(const core::visual::VisualParams* vparams) override;
-
 
     core::behavior::MechanicalState<DataTypes>* getMechanicalState() { return _mstate; }
 
@@ -142,7 +144,7 @@ public:
 
     Real height(Index index)const;
 
-    inline Size nbCap()const;
+    inline sofa::Size nbCap()const;
 
     Real defaultRadius()const;
 
@@ -153,14 +155,17 @@ public:
     template<class T>
     static bool canCreate(T*& obj, core::objectmodel::BaseContext* context, core::objectmodel::BaseObjectDescription* arg)
     {
-        if (dynamic_cast<core::behavior::MechanicalState<TDataTypes>*>(context->getMechanicalState()) == nullptr && context->getMechanicalState() != nullptr)
+        if (context)
         {
-            arg->logError(std::string("No mechanical state with the datatype '") + DataTypes::Name() +
-                          "' found in the context node.");
-            return false;
+            if (dynamic_cast<core::behavior::MechanicalState<TDataTypes>*>(context->getMechanicalState()) == nullptr && context->getMechanicalState() != nullptr)
+            {
+                arg->logError(std::string("No mechanical state with the datatype '") + DataTypes::Name() +
+                              "' found in the context node.");
+                return false;
+            }
         }
 
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
     sofa::core::topology::BaseMeshTopology* getCollisionTopology() override

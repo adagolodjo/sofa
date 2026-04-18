@@ -30,13 +30,8 @@
 #include <string>
 #include <sofa/helper/narrow_cast.h>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace io
+namespace sofa::helper::io
 {
 
 using namespace sofa::type;
@@ -66,7 +61,16 @@ void MeshGmsh::init (std::string filename)
         // NB: .msh file header line for version >= 2 can be "$MeshFormat", "$MeshFormat\r", "$MeshFormat \r"
         std::string version;
         std::getline(file, version); // Getting the version line (e.g. 4.1 0 8)
-        gmshFormat = std::stoul(version.substr( 0, version.find(" ")) ); // Retrieving the mesh format, keeping only the integer part
+        try
+        {
+            gmshFormat = std::stoul(version.substr( 0, version.find(" ")) ); // Retrieving the mesh format, keeping only the integer part
+        }
+        catch (const std::exception&)
+        {
+            msg_error("MeshGmsh") << "Invalid mesh format version in file header: '" << version << "'. Closing File";
+            file.close();
+            return;
+        }
         std::getline(file, cmd);
 
         if (cmd.length() < 14 || cmd.substr(0, 14) != std::string("$EndMeshFormat")) // it should end with "$EndMeshFormat" or "$EndMeshFormat\r"
@@ -115,7 +119,7 @@ void MeshGmsh::addInGroup(type::vector< sofa::type::PrimitiveGroup>& group, int 
     }
 
     std::stringstream ss;
-    std::string s;
+    const std::string s;
     ss << tag;
 
     group.push_back(sofa::type::PrimitiveGroup(tag, 1, s, s, -1));
@@ -134,11 +138,6 @@ void MeshGmsh::normalizeGroup(type::vector< sofa::type::PrimitiveGroup>& group)
 bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
 {
     int npoints = 0;
-    int nlines = 0;
-    int ntris = 0;
-    int nquads = 0;
-    int ntetrahedra = 0;
-    int ncubes = 0;
 
     std::string cmd;
 
@@ -153,7 +152,7 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
             int index = i;
             double x, y, z;
             file >> index >> x >> y >> z;
-            m_vertices.push_back(sofa::type::Vector3(x, y, z));
+            m_vertices.push_back(sofa::type::Vec3(x, y, z));
             if ((int)pmap.size() <= index) pmap.resize(index + 1);
             pmap[index] = i; // In case of hole or swit
         }
@@ -257,27 +256,22 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
             case 1: // Line
                 addInGroup(m_edgesGroups, tag, m_edges.size());
                 m_edges.push_back(Edge(nodes[0], nodes[1]));
-                ++nlines;
                 break;
             case 2: // Triangle
                 addInGroup(m_trianglesGroups, tag, m_triangles.size());
                 m_triangles.push_back(Triangle(nodes[0], nodes[1], nodes[2]));
-                ++ntris;
                 break;
             case 3: // Quad
                 addInGroup(m_quadsGroups, tag, m_quads.size());
                 m_quads.push_back(Quad(nodes[0], nodes[1], nodes[2], nodes[3]));
-                ++nquads;
                 break;
             case 4: // Tetra
                 addInGroup(m_tetrahedraGroups, tag, m_tetrahedra.size());
                 m_tetrahedra.push_back(Tetrahedron(nodes[0], nodes[1], nodes[2], nodes[3]));
-                ++ntetrahedra;
                 break;
             case 5: // Hexa
                 addInGroup(m_hexahedraGroups, tag, m_hexahedra.size());
                 m_hexahedra.push_back(Hexahedron(nodes[0], nodes[1], nodes[2], nodes[3], nodes[4], nodes[5], nodes[6], nodes[7]));
-                ++ncubes;
                 break;
             case 8: // quadratic edge
                 addInGroup(m_edgesGroups, tag, m_edges.size());
@@ -290,7 +284,6 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                     hoep[3] = 1;
                     m_highOrderEdgePositions.push_back(hoep);
                 }
-                ++nlines;
                 break;
             case 9: // quadratic triangle
                 addInGroup(m_trianglesGroups, tag, m_triangles.size());
@@ -303,7 +296,7 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                         auto v1 = std::max(nodes[edgesInQuadraticTriangle[j][0]],
                             nodes[edgesInQuadraticTriangle[j][1]]);
                         Edge e(v0, v1);
-                        if (edgeSet.find(e) == edgeSet.end()) {
+                        if (!edgeSet.contains(e)) {
                             edgeSet.insert(e);
                             m_edges.push_back(Edge(v0, v1));
                             hoep[0] = nodes[j + 3];
@@ -314,7 +307,6 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                         }
                     }
                 }
-                ++ntris;
                 break;
             case 11: // quadratic tetrahedron
                 addInGroup(m_tetrahedraGroups, tag, m_tetrahedra.size());
@@ -327,7 +319,7 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                         auto v1 = std::max(nodes[edgesInQuadraticTetrahedron[j][0]],
                             nodes[edgesInQuadraticTetrahedron[j][1]]);
                         Edge e(v0, v1);
-                        if (edgeSet.find(e) == edgeSet.end()) {
+                        if (!edgeSet.contains(e)) {
                             edgeSet.insert(e);
                             m_edges.push_back(Edge(v0, v1));
                             hoep[0] = nodes[j + 4];
@@ -338,7 +330,6 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                         }
                     }
                 }
-                ++ntetrahedra;
                 break;
             default:
                 //if the type is not handled, skip rest of the line
@@ -362,8 +353,6 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
         unsigned int nbEntityBlocks, nbNodes, minNodeTag, maxNodeTag;
         nodesHeader >> nbEntityBlocks >> nbNodes >> minNodeTag >> maxNodeTag;
 
-        unsigned int nodeCount = 0;
-
         for (unsigned int entityIndex = 0; entityIndex < nbEntityBlocks; entityIndex++) // looping over the entity blocks
         {
             std::getline(file, cmd); // Reading the entity line
@@ -379,8 +368,7 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                 std::istringstream coordinates(cmd);
                 double x, y, z;
                 coordinates >> x >> y >> z;
-                m_vertices.push_back(sofa::type::Vector3(x, y, z));
-                nodeCount++;
+                m_vertices.push_back(sofa::type::Vec3(x, y, z));
             }
         }
 
@@ -478,27 +466,22 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                 case 1: // Line
                     addInGroup(m_edgesGroups, elementTag, m_edges.size());
                     m_edges.push_back(Edge(nodes[0], nodes[1]));
-                    ++nlines;
                     break;
                 case 2: // Triangle
                     addInGroup(m_trianglesGroups, elementTag, m_triangles.size());
                     m_triangles.push_back(Triangle(nodes[0], nodes[1], nodes[2]));
-                    ++ntris;
                     break;
                 case 3: // Quadrangle
                     addInGroup(m_quadsGroups, elementTag, m_quads.size());
                     m_quads.push_back(Quad(nodes[0], nodes[1], nodes[2], nodes[3]));
-                    ++nquads;
                     break;
                 case 4: // Tetrahedron
                     addInGroup(m_tetrahedraGroups, elementTag, m_tetrahedra.size());
                     m_tetrahedra.push_back(Tetrahedron(nodes[0], nodes[1], nodes[2], nodes[3]));
-                    ++ntetrahedra;
                     break;
                 case 5: // Hexahedron
                     addInGroup(m_hexahedraGroups, elementTag, m_hexahedra.size());
                     m_hexahedra.push_back(Hexahedron(nodes[0], nodes[1], nodes[2], nodes[3], nodes[4], nodes[5], nodes[6], nodes[7]));
-                    ++ncubes;
                     break;
                 case 8: // Second order line
                     addInGroup(m_edgesGroups, elementTag, m_edges.size());
@@ -511,7 +494,6 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                         hoep[3] = 1;
                         m_highOrderEdgePositions.push_back(hoep);
                     }
-                    ++nlines;
                     break;
                 case 9: // Second order triangle
                     addInGroup(m_trianglesGroups, elementTag, m_triangles.size());
@@ -525,7 +507,7 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                             auto v1 = std::max(nodes[edgesInQuadraticTriangle[j][0]],
                                 nodes[edgesInQuadraticTriangle[j][1]]);
                             Edge e(v0, v1);
-                            if (edgeSet.find(e) == edgeSet.end())
+                            if (!edgeSet.contains(e))
                             {
                                 edgeSet.insert(e);
                                 m_edges.push_back(Edge(v0, v1));
@@ -537,7 +519,6 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                             }
                         }
                     }
-                    ++ntris;
                     break;
                 case 11: // Second order tetrahedron
                     addInGroup(m_tetrahedraGroups, elementTag, m_tetrahedra.size());
@@ -551,7 +532,7 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                             auto v1 = std::max(nodes[edgesInQuadraticTetrahedron[j][0]],
                                 nodes[edgesInQuadraticTetrahedron[j][1]]);
                             Edge e(v0, v1);
-                            if (edgeSet.find(e) == edgeSet.end())
+                            if (!edgeSet.contains(e))
                             {
                                 edgeSet.insert(e);
                                 m_edges.push_back(Edge(v0, v1));
@@ -563,7 +544,6 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
                             }
                         }
                     }
-                    ++ntetrahedra;
                     break;
                 // default: if the type is not handled, nothing to be done
                 }
@@ -586,8 +566,8 @@ bool MeshGmsh::readGmsh(std::ifstream &file, const unsigned int gmshFormat)
     return true;
 }
 
-} // namespace io
+} // namespace sofa::helper::io
 
-} // namespace helper
 
-} // namespace sofa
+
+

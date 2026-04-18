@@ -23,10 +23,8 @@
 #include <sofa/simulation/Node.h>
 #include <sofa/core/BaseMapping.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 
@@ -54,8 +52,8 @@ void XMLPrintVisitor::processObject(T obj)
     for (int i=0; i<level; i++)
         m_out << "\t";
 
-    std::string classname = obj->getClassName();
-    std::string templatename = obj->getTemplateName();
+    const std::string classname = obj->getClassName();
+    const std::string templatename = obj->getTemplateName();
 
     m_out << "<" << xmlencode(classname);
     if (!templatename.empty())
@@ -66,7 +64,7 @@ void XMLPrintVisitor::processObject(T obj)
     m_out << "/>" << std::endl;
 }
 
-void XMLPrintVisitor::processBaseObject(core::objectmodel::BaseObject* obj)
+void XMLPrintVisitor::processBaseObject(core::objectmodel::BaseComponent* obj)
 {
     processObject(obj);
 }
@@ -102,7 +100,7 @@ Visitor::Result XMLPrintVisitor::processNodeTopDown(simulation::Node* node)
     // BUGFIX(Jeremie A.): filter objects to output interactions classes after the children nodes to resolve dependencies at creation time
     for (simulation::Node::ObjectIterator it = node->object.begin(); it != node->object.end(); ++it)
     {
-        sofa::core::objectmodel::BaseObject* obj = it->get();
+        sofa::core::objectmodel::BaseComponent* obj = it->get();
         if (    obj->toBaseInteractionForceField() == nullptr
             &&  obj->toBaseInteractionConstraint() == nullptr
             &&  obj->toBaseInteractionProjectiveConstraintSet() == nullptr
@@ -117,7 +115,7 @@ void XMLPrintVisitor::processNodeBottomUp(simulation::Node* node)
 {
     for (simulation::Node::ObjectIterator it = node->object.begin(); it != node->object.end(); ++it)
     {
-        sofa::core::objectmodel::BaseObject* obj = it->get();
+        sofa::core::objectmodel::BaseComponent* obj = it->get();
         if (    obj->toBaseInteractionForceField() != nullptr
             ||  obj->toBaseInteractionConstraint() != nullptr
             ||  obj->toBaseInteractionProjectiveConstraintSet() != nullptr
@@ -139,7 +137,7 @@ bool XMLPrintVisitor::treeTraversal(TreeTraversalRepetition& repeat)
 	return true;
 }
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
+
 

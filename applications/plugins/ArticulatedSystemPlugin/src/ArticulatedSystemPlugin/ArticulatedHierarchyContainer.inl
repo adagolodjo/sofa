@@ -28,11 +28,11 @@
 #include <sofa/helper/system/FileRepository.h>
 #include <sofa/simulation/Node.h>
 
-namespace sofa::component::container
+namespace articulatedsystemplugin
 {
 
 Articulation::Articulation():
-    axis(initData(&axis, type::Vector3(1,0,0), "axis", "Set the rotation axis for the articulation")),
+    axis(initData(&axis, type::Vec3(1,0,0), "axis", "Set the rotation axis for the articulation")),
     rotation(initData(&rotation, (bool) false, "rotation", "Rotation")),
     translation(initData(&translation, (bool) false, "translation", "Translation")),
     articulationIndex(initData(&articulationIndex, (int) 0, "articulationIndex", "Articulation index"))
@@ -53,7 +53,7 @@ ArticulationCenter::ArticulationCenter():
 ArticulationCenter* ArticulatedHierarchyContainer::getArticulationCenterAsChild(int index)
 {
     type::vector<ArticulationCenter*>::const_iterator ac = articulationCenters.begin();
-    type::vector<ArticulationCenter*>::const_iterator acEnd = articulationCenters.end();
+    const type::vector<ArticulationCenter*>::const_iterator acEnd = articulationCenters.end();
     for (; ac != acEnd; ac++)
     {
         if ((*ac)->childIndex.getValue() == index)
@@ -96,7 +96,7 @@ ArticulatedHierarchyContainer::ArticulatedHierarchyContainer():
 
 void ArticulatedHierarchyContainer::buildCenterArticulationsTree(sofa::helper::io::bvh::BVHJoint* bvhjoint, int id_buf, const char* name, simulation::Node* node)
 {
-    std::vector<sofa::helper::io::bvh::BVHJoint*> jointChildren = bvhjoint->getChildren();
+    const std::vector<sofa::helper::io::bvh::BVHJoint*> jointChildren = bvhjoint->getChildren();
     if (jointChildren.size()==0)
         return;
 
@@ -104,21 +104,21 @@ void ArticulatedHierarchyContainer::buildCenterArticulationsTree(sofa::helper::i
     str.append("/");
     str.append(bvhjoint->getName());
 
-    simulation::Node::SPtr nodeOfArticulationCenters =node->createChild(str);
+    const simulation::Node::SPtr nodeOfArticulationCenters =node->createChild(str);
 
-    ArticulationCenter::SPtr ac = sofa::core::objectmodel::New<ArticulationCenter>();
+    const ArticulationCenter::SPtr ac = sofa::core::objectmodel::New<ArticulationCenter>();
     nodeOfArticulationCenters->addObject(ac);
     articulationCenters.push_back(ac.get());
 
-    ac->posOnParent.setValue(type::Vector3(bvhjoint->getOffset()->x,bvhjoint->getOffset()->y,bvhjoint->getOffset()->z)); //
-    ac->posOnChild.setValue(type::Vector3(0,0,0));
+    ac->posOnParent.setValue(type::Vec3(bvhjoint->getOffset()->x,bvhjoint->getOffset()->y,bvhjoint->getOffset()->z)); //
+    ac->posOnChild.setValue(type::Vec3(0,0,0));
     ac->parentIndex.setValue(id_buf);
     ac->childIndex.setValue(bvhjoint->getId()+1);
 
-    simulation::Node::SPtr nodeOfArticulations = nodeOfArticulationCenters->createChild("articulations");
+    const simulation::Node::SPtr nodeOfArticulations = nodeOfArticulationCenters->createChild("articulations");
 
-    sofa::helper::io::bvh::BVHChannels* channels = bvhjoint->getChannels();
-    sofa::helper::io::bvh::BVHMotion* motion = bvhjoint->getMotion();
+    const sofa::helper::io::bvh::BVHChannels* channels = bvhjoint->getChannels();
+    const sofa::helper::io::bvh::BVHMotion* motion = bvhjoint->getMotion();
 
     msg_info()<<"num Frames found in BVH ="<<motion->frameCount;
 
@@ -134,7 +134,7 @@ void ArticulatedHierarchyContainer::buildCenterArticulationsTree(sofa::helper::i
             a = sofa::core::objectmodel::New<Articulation>();
             nodeOfArticulations->addObject(a);
             ac->articulations.push_back(a.get());
-            a->axis.setValue(type::Vector3(1,0,0));
+            a->axis.setValue(type::Vec3(1,0,0));
             a->translation.setValue(true);
             a->articulationIndex.setValue(id);
             for (int k=0; k<motion->frameCount; k++)
@@ -145,7 +145,7 @@ void ArticulatedHierarchyContainer::buildCenterArticulationsTree(sofa::helper::i
             a = sofa::core::objectmodel::New<Articulation>();
             nodeOfArticulations->addObject(a);
             ac->articulations.push_back(a.get());
-            a->axis.setValue(type::Vector3(0,1,0));
+            a->axis.setValue(type::Vec3(0,1,0));
             a->translation.setValue(true);
             a->articulationIndex.setValue(id);
             for (int k=0; k<motion->frameCount; k++)
@@ -156,7 +156,7 @@ void ArticulatedHierarchyContainer::buildCenterArticulationsTree(sofa::helper::i
             a = sofa::core::objectmodel::New<Articulation>();
             nodeOfArticulations->addObject(a);
             ac->articulations.push_back(a.get());
-            a->axis.setValue(type::Vector3(0,0,1));
+            a->axis.setValue(type::Vec3(0,0,1));
             a->translation.setValue(true);
             a->articulationIndex.setValue(id);
             for (int k=0; k<motion->frameCount; k++)
@@ -167,7 +167,7 @@ void ArticulatedHierarchyContainer::buildCenterArticulationsTree(sofa::helper::i
             a = sofa::core::objectmodel::New<Articulation>();
             nodeOfArticulations->addObject(a);
             ac->articulations.push_back(a.get());
-            a->axis.setValue(type::Vector3(1,0,0));
+            a->axis.setValue(type::Vec3(1,0,0));
             a->rotation.setValue(true);
             a->articulationIndex.setValue(id);
             for (int k=0; k<motion->frameCount; k++)
@@ -178,7 +178,7 @@ void ArticulatedHierarchyContainer::buildCenterArticulationsTree(sofa::helper::i
             a = sofa::core::objectmodel::New<Articulation>();
             nodeOfArticulations->addObject(a);
             ac->articulations.push_back(a.get());
-            a->axis.setValue(type::Vector3(0,1,0));
+            a->axis.setValue(type::Vec3(0,1,0));
             a->rotation.setValue(true);
             a->articulationIndex.setValue(id);
             for (int k=0; k<motion->frameCount; k++)
@@ -189,7 +189,7 @@ void ArticulatedHierarchyContainer::buildCenterArticulationsTree(sofa::helper::i
             a = sofa::core::objectmodel::New<Articulation>();
             nodeOfArticulations->addObject(a);
             ac->articulations.push_back(a.get());
-            a->axis.setValue(type::Vector3(0,0,1));
+            a->axis.setValue(type::Vec3(0,0,1));
             a->rotation.setValue(true);
             a->articulationIndex.setValue(id);
             for (int k=0; k<motion->frameCount; k++)
@@ -222,7 +222,7 @@ void ArticulatedHierarchyContainer::init ()
 
     if (joint != nullptr)
     {
-        simulation::Node::SPtr articulationCenters = context->createChild("ArticulationCenters");
+        const simulation::Node::SPtr articulationCenters = context->createChild("ArticulationCenters");
 
         buildCenterArticulationsTree(joint, 0, "Root", articulationCenters.get());
 
@@ -238,10 +238,12 @@ void ArticulatedHierarchyContainer::init ()
         context->getTreeObjects<ArticulationCenter>(&articulationCenters);
         msg_info() << "Found " << articulationCenters.size() << " centers";
         type::vector<ArticulationCenter*>::const_iterator ac = articulationCenters.begin();
-        type::vector<ArticulationCenter*>::const_iterator acEnd = articulationCenters.end();
+        const type::vector<ArticulationCenter*>::const_iterator acEnd = articulationCenters.end();
         for (; ac != acEnd; ac++)
         {
             context = dynamic_cast<simulation::Node *>((*ac)->getContext());
+            if (!context)
+                continue;
             for (simulation::Node::ChildIterator it = context->child.begin(); it != context->child.end(); ++it)
             {
                 simulation::Node* n =  it->get();
@@ -249,7 +251,7 @@ void ArticulatedHierarchyContainer::init ()
             }
 
             // for Arboris Mapping, init the transformation for each articulation center
-            type::Quat<SReal> q; // TODO: add a rotation component to the positionning on the ArticulatedHierarchyContainer
+            type::Quat<SReal> q; // TODO: add a rotation component to the positioning on the ArticulatedHierarchyContainer
             (*ac)->H_p_pLc.set((*ac)->posOnParent.getValue(),q);
             (*ac)->H_c_cLp.set((*ac)->posOnChild.getValue(), q);
             (*ac)->H_pLc_cLp.identity();
@@ -258,4 +260,5 @@ void ArticulatedHierarchyContainer::init ()
 }
 
 
-} // namespace sofa::component::container
+} // namespace articulatedsystemplugin
+

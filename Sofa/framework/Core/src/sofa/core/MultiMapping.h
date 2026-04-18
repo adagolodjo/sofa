@@ -19,25 +19,20 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_MULTIMAPPING_H
-#define SOFA_CORE_MULTIMAPPING_H
+#pragma once
 
 #include <sofa/core/BaseMapping.h>
 #include <sofa/core/config.h>
 #include <sofa/helper/fwd.h>
 #include <sofa/core/State.h>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 /**
  *  \brief Specialized interface to describe many to many mapping.
  *   All the input must have the same type, and all the output must have the same type. See also class Multi2Mapping.
  */
-
 template <class TIn, class TOut>
 class MultiMapping : public BaseMapping
 {
@@ -77,7 +72,7 @@ protected:
 
 public:
 
-    Data<bool> f_applyRestPosition; ///< @todo document this
+    Data<bool> f_applyRestPosition; ///< set to true to apply this mapping to restPosition at init
 protected:
 
     /// Constructor
@@ -236,26 +231,6 @@ public:
         return BaseMapping::canCreate(obj, context, arg);
     }
 
-    /// Construction method called by ObjectFactory.
-    ///
-    /// This implementation read the input and output attributes to
-    /// find the input and output models of this mapping.
-    template<class T>
-    static typename T::SPtr create(T*, core::objectmodel::BaseContext* context, core::objectmodel::BaseObjectDescription* arg)
-    {
-        typename T::SPtr obj = sofa::core::objectmodel::New<T>();
-
-        if (context)
-            context->addObject(obj);
-
-        if (arg)
-        {
-            obj->parse(arg);
-        }
-
-        return obj;
-    }
-
 protected:
 
     void getVecInCoord     (const MultiVecCoordId id,         type::vector<      InDataVecCoord* > &v) const
@@ -290,6 +265,7 @@ protected:
 
 extern template class SOFA_CORE_API MultiMapping< sofa::defaulttype::Vec1Types, sofa::defaulttype::Vec1Types >;
 extern template class SOFA_CORE_API MultiMapping< sofa::defaulttype::Vec2Types, sofa::defaulttype::Vec1Types >;
+extern template class SOFA_CORE_API MultiMapping< sofa::defaulttype::Vec2Types, sofa::defaulttype::Vec2Types >;
 extern template class SOFA_CORE_API MultiMapping< sofa::defaulttype::Vec3Types, sofa::defaulttype::Vec3Types >;
 extern template class SOFA_CORE_API MultiMapping< sofa::defaulttype::Vec3Types, sofa::defaulttype::Vec2Types >;
 extern template class SOFA_CORE_API MultiMapping< sofa::defaulttype::Vec3Types, sofa::defaulttype::Vec1Types >;
@@ -300,11 +276,5 @@ extern template class SOFA_CORE_API MultiMapping< sofa::defaulttype::Rigid3Types
 extern template class SOFA_CORE_API MultiMapping< sofa::defaulttype::Rigid3Types, sofa::defaulttype::Rigid3Types >;
 
 #endif
-
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core
 

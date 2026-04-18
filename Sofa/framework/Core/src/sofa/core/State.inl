@@ -19,16 +19,31 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_STATE_INL
-#define SOFA_CORE_STATE_INL
+#pragma once
 
 #include <sofa/core/State.h>
+#include <sofa/core/AccumulationVecId.inl>
 
-namespace sofa
+namespace sofa::core
 {
+template <class TDataTypes>
+void State<TDataTypes>::addToTotalForces(core::ConstVecDerivId forceId)
+{
+    accumulatedForces.addToContributingVecIds(forceId);
+}
 
-namespace core
+template <class TDataTypes>
+void State<TDataTypes>::removeFromTotalForces(core::ConstVecDerivId forceId)
 {
+    accumulatedForces.removeFromContributingVecIds(forceId);
+}
+
+template <class TDataTypes>
+State<TDataTypes>::State()
+    : accumulatedForces(*this)
+{
+    State::addToTotalForces(core::vec_id::read_access::force);
+}
 
 template<class DataTypes>
 objectmodel::BaseData* State<DataTypes>::baseWrite(VecId v)
@@ -57,37 +72,32 @@ const objectmodel::BaseData* State<DataTypes>::baseRead(ConstVecId v) const
 }
 
 template<class DataTypes>
-void State<DataTypes>::computeBBox(const core::ExecParams*, bool)
+auto State<DataTypes>::computeBBox() const -> sofa::type::BoundingBox
 {
-    const VecCoord& x = read(ConstVecCoordId::position())->getValue();
+    const VecCoord& x = read(vec_id::read_access::position)->getValue();
     const size_t xSize = x.size();
 
     if (xSize <= 0)
-        return;
+        return {};
 
-    Real p[3];
+    type::Vec3 p;
     DataTypes::get(p[0], p[1], p[2], x[0]);
-    Real maxBBox[3] = {p[0], p[1], p[2]};
-    Real minBBox[3] = {p[0], p[1], p[2]};
+
+    type::BoundingBox bbox;
+    bbox.include(p);
 
     for (size_t i = 1; i < xSize; i++)
     {
         DataTypes::get(p[0], p[1], p[2], x[i]);
-        for (int c = 0; c < 3; c++)
-        {
-            if (p[c] > maxBBox[c])
-                maxBBox[c] = p[c];
-
-            else if (p[c] < minBBox[c])
-                minBBox[c] = p[c];
-        }
+        bbox.include(p);
     }
 
-    this->f_bbox.setValue(sofa::type::TBoundingBox<Real>(minBBox,maxBBox));
+    return bbox;
 }
 
-} // namespace core
-
-} // namespace sofa
-
-#endif
+template<class DataTypes>
+void State<DataTypes>::computeBBox(const core::ExecParams*, bool)
+{
+    this->f_bbox.setValue(computeBBox());
+}
+} // namespace sofa::core

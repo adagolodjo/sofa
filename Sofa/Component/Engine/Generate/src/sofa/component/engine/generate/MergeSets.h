@@ -23,7 +23,7 @@
 #include <sofa/component/engine/generate/config.h>
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 
 #include <set>
 
@@ -59,7 +59,7 @@ public:
     Data<std::string> f_op; ///< name of operation to compute (union, intersection, difference, symmetric_difference)
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_MERGESETS_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_MERGESETS_CPP)
 extern template class SOFA_COMPONENT_ENGINE_GENERATE_API MergeSets<int>;
 extern template class SOFA_COMPONENT_ENGINE_GENERATE_API MergeSets<unsigned int>;
 //extern template class SOFA_COMPONENT_ENGINE_GENERATE_API MergeSets<long long>;

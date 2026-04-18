@@ -24,7 +24,7 @@
 #include <sofa/component/collision/response/contact/config.h>
 #include <sofa/type/Vec.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/collision/DetectionOutput.h>
 #include <sofa/core/collision/NarrowPhaseDetection.h>
 
@@ -40,10 +40,10 @@ namespace sofa::component::collision::response::contact
 // forward declaration
 class NarrowPhaseDetection;
 
-class SOFA_COMPONENT_COLLISION_RESPONSE_CONTACT_API ContactListener : public virtual core::objectmodel::BaseObject
+class SOFA_COMPONENT_COLLISION_RESPONSE_CONTACT_API ContactListener : public virtual core::objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(ContactListener, core::objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(ContactListener, core::objectmodel::BaseComponent);
 
 
     ContactListener(core::CollisionModel* collModel1 = nullptr, core::CollisionModel* collModel2 = nullptr );
@@ -63,11 +63,11 @@ public:
     // Returns the full ContactsVector
     type::vector<type::vector<core::collision::DetectionOutput>> getContactsVector() const;
 
-    // Returns the contact points in the form of a vector of tuples containing two positive integers and two Vector3.
-    // The Vector3 store the X, Y, Z coordinates of the points in contact
+    // Returns the contact points in the form of a vector of tuples containing two positive integers and two Vec3.
+    // The Vec3 store the X, Y, Z coordinates of the points in contact
     // The integers specify to which collision models the points belong. (e.g. (collModel2, (3., 5., 7.), collModel1, (3.1, 5., 6.9)))
     // TODO: replace the tuple with a struct to avoid forgetting which element refers to what.
-    std::vector<std::tuple<unsigned int, sofa::type::Vector3, unsigned int, sofa::type::Vector3>> getContactPoints() const; // model, position, model, position
+    std::vector<std::tuple<unsigned int, sofa::type::Vec3, unsigned int, sofa::type::Vec3>> getContactPoints() const; // model, position, model, position
 
     // Returns the collision elements in the form of a vector of tuples containing four positive integers.
     // The second and fourth integer represent the id of the collision element in the collision models (from a topology)
@@ -104,7 +104,7 @@ public:
             return false;
         }
 
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
     template<class T>
@@ -116,10 +116,10 @@ public:
         std::string collModelPath1;
         std::string collModelPath2;
 
-        if(arg)
+        if(arg && context)
         {
-            collModelPath1 = arg->getAttribute(std::string("collisionModel1"), nullptr );
-            collModelPath2 = arg->getAttribute(std::string("collisionModel2"), nullptr );
+            collModelPath1 = arg->getAttribute(std::string("collisionModel1"), "" );
+            collModelPath2 = arg->getAttribute(std::string("collisionModel2"), "" );
 
             // now 3 cases
             if ( strcmp( collModelPath1.c_str(),"" ) != 0  )

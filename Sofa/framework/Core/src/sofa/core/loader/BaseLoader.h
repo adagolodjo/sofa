@@ -19,27 +19,20 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_LOADER_BASELOADER_H
-#define SOFA_CORE_LOADER_BASELOADER_H
+#pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/objectmodel/DataFileName.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace loader
+namespace sofa::core::loader
 {
 
 bool SOFA_CORE_API canLoad(const char* filename);
 
-class SOFA_CORE_API BaseLoader : public objectmodel::BaseObject
+class SOFA_CORE_API BaseLoader : public objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(BaseLoader, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(BaseLoader, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(BaseLoader)
 
     virtual bool load() = 0;
@@ -52,9 +45,6 @@ public:
 
     objectmodel::DataFileName d_filename;
 
-    SOFA_ATTRIBUTE_DISABLED__LOADER_FILENAME("To fix your code, use d_filename")
-    DeprecatedAndRemoved f_filename{};
-
 protected:
     BaseLoader() ;
     ~BaseLoader() override ;
@@ -63,10 +53,5 @@ protected:
     static bool readLine(char* buf, int size, FILE* f) ;
 };
 
-} /// namespace loader
+} /// namespace sofa::core::loader
 
-} /// namespace core
-
-} /// namespace sofa
-
-#endif /// SOFA_CORE_LOADER_BASELOADER_H

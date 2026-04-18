@@ -27,33 +27,33 @@
 namespace sofa::component::topology::container::grid
 {
 
-int GridTopologyClass = core::RegisterObject("Base class fo a regular grid in 3D")
-        .addAlias("Grid")
-        .add< GridTopology >()
-        ;
-
+void registerGridTopology(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Base class fo a regular grid in 3D.")
+        .add< GridTopology >());
+}
 
 GridTopology::GridUpdate::GridUpdate(GridTopology *t):
     m_topology(t)
 {
     addInput(&t->d_n);
-    addOutput(&t->seqEdges);
-    addOutput(&t->seqQuads);
-    addOutput(&t->seqHexahedra);
+    addOutput(&t->d_seqEdges);
+    addOutput(&t->d_seqQuads);
+    addOutput(&t->d_seqHexahedra);
     setDirtyValue();
 }
 
 void GridTopology::GridUpdate::doUpdate()
-{   
+{
     if (m_topology->d_computeHexaList.getValue())
         updateHexas();
 
     if (m_topology->d_computeQuadList.getValue())
         updateQuads();
-    
+
     if (m_topology->d_computeTriangleList.getValue())
-        updateTriangles();    
-    
+        updateTriangles();
+
     if (m_topology->d_computeEdgeList.getValue())
         updateEdges();
 }
@@ -67,21 +67,27 @@ void GridTopology::parse(core::objectmodel::BaseObjectDescription* arg)
         int nx = arg->getAttributeAsInt("nx", d_n.getValue().x());
         int ny = arg->getAttributeAsInt("ny", d_n.getValue().y());
         int nz = arg->getAttributeAsInt("nz", d_n.getValue().z());
-        d_n.setValue(Vec3i(nx,ny,nz));
+        d_n.setValue(type::Vec3i(nx,ny,nz));
     }
 
     this->setNbGridPoints();
 }
 
+Size GridTopology::getNbHexahedra()
+{
+    const auto n = d_n.getValue();
+    return (n[0] - 1) * (n[1] - 1) * (n[2] - 1);
+}
+
 
 void GridTopology::GridUpdate::updateEdges()
 {
-    SeqEdges& edges = *m_topology->seqEdges.beginWriteOnly();
+    SeqEdges& edges = *m_topology->d_seqEdges.beginWriteOnly();
     edges.clear();
-    const SeqTriangles& triangles = m_topology->seqTriangles.getValue();
+    const SeqTriangles& triangles = m_topology->d_seqTriangles.getValue();
     if (triangles.empty()) // if has triangles will create edges using triangles, otherwise will use the quads from the grid
     {
-        const Vec3i& n = m_topology->d_n.getValue();
+        const type::Vec3i& n = m_topology->d_n.getValue();
         edges.reserve((n[0] - 1)*n[1] * n[2] +
             n[0] * (n[1] - 1)*n[2] +
             n[0] * n[1] * (n[2] - 1));
@@ -103,7 +109,7 @@ void GridTopology::GridUpdate::updateEdges()
     }
     else
     {
-        // Similar algo as createEdgeSetArray in TriangleSetTopologyContainer 
+        // Similar algo as createEdgeSetArray in TriangleSetTopologyContainer
         // create a temporary map to find redundant edges
         std::map<Edge, EdgeID> edgeMap;
         for (size_t i = 0; i<triangles.size(); ++i)
@@ -117,7 +123,7 @@ void GridTopology::GridUpdate::updateEdges()
                 // sort vertices in lexicographic order
                 const Edge e = ((v1<v2) ? Edge(v1, v2) : Edge(v2, v1));
 
-                if (edgeMap.find(e) == edgeMap.end())
+                if (!edgeMap.contains(e))
                 {
                     // edge not in edgeMap so create a new one
                     const size_t edgeIndex = edgeMap.size();
@@ -129,18 +135,18 @@ void GridTopology::GridUpdate::updateEdges()
         }
     }
 
-    m_topology->seqEdges.endEdit();
+    m_topology->d_seqEdges.endEdit();
 }
 
 void GridTopology::GridUpdate::updateTriangles()
 {
     // need quads to create the triangulation
-    if (m_topology->seqQuads.getValue().empty())
+    if (m_topology->d_seqQuads.getValue().empty())
         updateQuads();
 
     // base on quads
-    const SeqQuads& quads = m_topology->seqQuads.getValue();
-    SeqTriangles& triangles = *m_topology->seqTriangles.beginWriteOnly();
+    const SeqQuads& quads = m_topology->d_seqQuads.getValue();
+    SeqTriangles& triangles = *m_topology->d_seqTriangles.beginWriteOnly();
     triangles.clear();
     triangles.reserve(quads.size()*2);
 
@@ -150,13 +156,13 @@ void GridTopology::GridUpdate::updateTriangles()
         triangles.push_back(Triangle(quads[i][0], quads[i][2], quads[i][3]));
     }
 
-    m_topology->seqTriangles.endEdit();
+    m_topology->d_seqTriangles.endEdit();
 }
 
 void GridTopology::GridUpdate::updateQuads()
 {
-    SeqQuads& quads = *m_topology->seqQuads.beginWriteOnly();
-    const Vec3i& n = m_topology->d_n.getValue();
+    SeqQuads& quads = *m_topology->d_seqQuads.beginWriteOnly();
+    const type::Vec3i& n = m_topology->d_n.getValue();
     quads.clear();
     quads.reserve((n[0]-1)*(n[1]-1)*n[2]+(n[0]-1)*n[1]*(n[2]-1)+n[0]*(n[1]-1)*(n[2]-1));
     // quads along XY plane
@@ -184,13 +190,13 @@ void GridTopology::GridUpdate::updateQuads()
                         m_topology->point(x,y+1,z+1),
                         m_topology->point(x,y,z+1)));
 
-    m_topology->seqQuads.endEdit();
+    m_topology->d_seqQuads.endEdit();
 }
 
 void GridTopology::GridUpdate::updateHexas()
 {
-    SeqHexahedra& hexahedra = *m_topology->seqHexahedra.beginWriteOnly();
-    const Vec3i& n = m_topology->d_n.getValue();
+    SeqHexahedra& hexahedra = *m_topology->d_seqHexahedra.beginWriteOnly();
+    const type::Vec3i& n = m_topology->d_n.getValue();
     hexahedra.clear();
     hexahedra.reserve((n[0]-1)*(n[1]-1)*(n[2]-1));
     for (int z=0; z<n[2]-1; z++)
@@ -201,7 +207,7 @@ void GridTopology::GridUpdate::updateHexas()
                         m_topology->point(x  ,y  ,z+1),m_topology->point(x+1,y  ,z+1),
                         m_topology->point(x+1,y+1,z+1),m_topology->point(x  ,y+1,z+1)));
 
-    m_topology->seqHexahedra.endEdit();
+    m_topology->d_seqHexahedra.endEdit();
 }
 
 /// To avoid duplicating the code in the different variants of the constructor
@@ -209,30 +215,30 @@ void GridTopology::GridUpdate::updateHexas()
 /// The following constructor is "chained" by the other constructors to
 /// defined only one the member initialization.
 GridTopology::GridTopology()
-    : d_n(initData(&d_n,Vec3i(2,2,2),"n","grid resolution. (default = 2 2 2)"))
+    : d_n(initData(&d_n,type::Vec3i(2,2,2),"n","grid resolution. (default = 2 2 2)"))
     , d_computeHexaList(initData(&d_computeHexaList, true, "computeHexaList", "put true if the list of Hexahedra is needed during init (default=true)"))
     , d_computeQuadList(initData(&d_computeQuadList, true, "computeQuadList", "put true if the list of Quad is needed during init (default=true)"))
-    , d_computeTriangleList(initData(&d_computeTriangleList, true, "computeTriangleList", "put true if the list of triangle is needed during init (default=true)"))
+    , d_computeTriangleList(initData(&d_computeTriangleList, true, "computeTriangleList", "put true if the list of Triangles is needed during init (default=true)"))
     , d_computeEdgeList(initData(&d_computeEdgeList, true, "computeEdgeList", "put true if the list of Lines is needed during init (default=true)"))
     , d_computePointList(initData(&d_computePointList, true, "computePointList", "put true if the list of Points is needed during init (default=true)"))
     , d_createTexCoords(initData(&d_createTexCoords, (bool)false, "createTexCoords", "If set to true, virtual texture coordinates will be generated using 3D interpolation (default=false)."))
 {
     setNbGridPoints();
-    GridUpdate::SPtr gridUpdate = sofa::core::objectmodel::New<GridUpdate>(this);
+    const GridUpdate::SPtr gridUpdate = sofa::core::objectmodel::New<GridUpdate>(this);
     this->addSlave(gridUpdate);
 }
 
 /// This constructor is chained with the one without parameter
-GridTopology::GridTopology(const Vec3i& dimXYZ ) :
+GridTopology::GridTopology(const type::Vec3i& dimXYZ ) :
     GridTopology()
 {
     d_n.setValue(dimXYZ);
     checkGridResolution();
 }
 
-/// This constructor is chained with the one with a Vec3i parameter
+/// This constructor is chained with the one with a type::Vec3i parameter
 GridTopology::GridTopology(int nx, int ny, int nz) :
-    GridTopology(Vec3i(nx,ny,nz))
+    GridTopology(type::Vec3i(nx,ny,nz))
 {
 }
 
@@ -252,7 +258,7 @@ void GridTopology::init()
 
     if (d_computeQuadList.getValue())
         this->computeQuadList();
-    
+
     if (d_computeEdgeList.getValue())
         this->computeEdgeList();
 
@@ -266,9 +272,10 @@ void GridTopology::reinit()
 
 void GridTopology::setSize(int nx, int ny, int nz)
 {
-    if (nx == this->d_n.getValue()[0] && ny == this->d_n.getValue()[1] && nz == this->d_n.getValue()[2])
+    const auto n = this->d_n.getValue();
+    if (nx == n[0] && ny == n[1] && nz == n[2])
         return;
-    this->d_n.setValue(Vec3i(nx,ny,nz));
+    this->d_n.setValue(type::Vec3i(nx,ny,nz));
     setNbGridPoints();
 
     checkGridResolution();
@@ -276,7 +283,7 @@ void GridTopology::setSize(int nx, int ny, int nz)
 
 void GridTopology::checkGridResolution()
 {
-    const Vec3i& _n = d_n.getValue();
+    const type::Vec3i& _n = d_n.getValue();
 
     if (_n[0] < 1 || _n[1] < 1 || _n[2] < 1)
     {
@@ -285,7 +292,7 @@ void GridTopology::checkGridResolution()
                          " Continuing with default value=[2; 2; 2]."
                          " Set a valid grid resolution to remove this warning message.";
 
-        this->d_n.setValue(Vec3i(2,2,2));
+        this->d_n.setValue(type::Vec3i(2,2,2));
         changeGridResolutionPostProcess();
     }
 
@@ -294,16 +301,16 @@ void GridTopology::checkGridResolution()
 
 Grid_dimension GridTopology::getDimensions() const
 {
-	const Vec3i& _n = d_n.getValue();
+	const type::Vec3i& _n = d_n.getValue();
 	int dim = 0;
 	for (int i = 0; i<3; i++)
-		if (_n[i] > 1) 
+		if (_n[i] > 1)
 			dim++;
 
 	return (Grid_dimension)dim;
 }
 
-void GridTopology::setSize(Vec3i n)
+void GridTopology::setSize(type::Vec3i n)
 {
     setSize(n[0],n[1],n[2]);
 }
@@ -329,9 +336,9 @@ void GridTopology::computeEdgeList()
 
 void GridTopology::computePointList()
 {
-    auto nbPoints= this->getNbPoints();
-    // put the result in seqPoints
-    SeqPoints& seq_P= *(seqPoints.beginWriteOnly());
+    const auto nbPoints= this->getNbPoints();
+    // put the result in d_seqPoints
+    SeqPoints& seq_P= *(d_seqPoints.beginWriteOnly());
     seq_P.resize(nbPoints);
 
     for (Size i=0; i<nbPoints; i++)
@@ -339,29 +346,33 @@ void GridTopology::computePointList()
         seq_P[i] = this->getPoint(i);
     }
 
-    seqPoints.endEdit();
+    d_seqPoints.endEdit();
 }
 
 GridTopology::Index GridTopology::getIndex( int i, int j, int k ) const
 {
-    return Index(d_n.getValue()[0]* ( d_n.getValue()[1]*k + j ) + i);
+    const auto& n = d_n.getValue();
+    return Index(n[0]* ( n[1]*k + j ) + i);
 }
 
 
 sofa::type::Vec3 GridTopology::getPoint(Index i) const
 {
-    int x = i%d_n.getValue()[0]; i/=d_n.getValue()[0];
-    int y = i%d_n.getValue()[1]; i/=d_n.getValue()[1];
-    int z = int(i);
+    const auto& n = d_n.getValue();
+    const int x = i%n[0]; i/=n[0];
+    const int y = i%n[1]; i/=n[1];
+    const int z = int(i);
 
     return getPointInGrid(x,y,z);
 }
 
 sofa::type::Vec3 GridTopology::getPointInGrid(int i, int j, int k) const
 {
-    Index id = this->getIndex(i, j, k);
-    if (id < seqPoints.getValue().size())
-        return seqPoints.getValue()[id];
+    const auto& spoints = d_seqPoints.getValue();
+
+    const Index id = this->getIndex(i, j, k);
+    if (id < spoints.size())
+        return spoints[id];
     else
         return sofa::type::Vec3();
 }
@@ -369,9 +380,11 @@ sofa::type::Vec3 GridTopology::getPointInGrid(int i, int j, int k) const
 
 GridTopology::Hexa GridTopology::getHexaCopy(Index i)
 {
-    int x = i%(d_n.getValue()[0]-1); i/=(d_n.getValue()[0]-1);
-    int y = i%(d_n.getValue()[1]-1); i/=(d_n.getValue()[1]-1);
-    int z = int(i);
+    const auto& n = d_n.getValue();
+
+    const int x = i%(n[0]-1); i/=(n[0]-1);
+    const int y = i%(n[1]-1); i/=(n[1]-1);
+    const int z = int(i);
     return getHexahedron(x,y,z);
 }
 
@@ -386,27 +399,29 @@ GridTopology::Hexa GridTopology::getHexahedron(int x, int y, int z)
 
 GridTopology::Quad GridTopology::getQuadCopy(Index i)
 {
-    if (d_n.getValue()[0] == 1)
+    const auto& n = d_n.getValue();
+
+    if (n[0] == 1)
     {
-        int y = i%(d_n.getValue()[1]-1);
-        i/=(d_n.getValue()[1]-1);
-        int z = i%(d_n.getValue()[2]-1);
+        const int y = i%(n[1]-1);
+        i/=(n[1]-1);
+        const int z = i%(n[2]-1);
 
         return getQuad(1,y,z);
     }
-    else if (d_n.getValue()[1] == 1)
+    else if (n[1] == 1)
     {
-        int x = i%(d_n.getValue()[0]-1);
-        i/=(d_n.getValue()[0]-1);
-        int z = i%(d_n.getValue()[2]-1);
+        const int x = i%(n[0]-1);
+        i/=(n[0]-1);
+        const int z = i%(n[2]-1);
 
         return getQuad(x,1,z);
     }
     else
     {
-        int x = i%(d_n.getValue()[0]-1);
-        i/=(d_n.getValue()[0]-1);
-        int y = i%(d_n.getValue()[1]-1);
+        const int x = i%(n[0]-1);
+        i/=(n[0]-1);
+        const int y = i%(n[1]-1);
 
         return getQuad(x,y,1);
     }
@@ -414,10 +429,12 @@ GridTopology::Quad GridTopology::getQuadCopy(Index i)
 
 GridTopology::Quad GridTopology::getQuad(int x, int y, int z)
 {
-    if (d_n.getValue()[2] == 1)
+    const auto& n = d_n.getValue();
+
+    if (n[2] == 1)
         return Quad(point(x, y, 1), point(x+1, y, 1),
                 point(x+1, y+1, 1), point(x, y+1, 1));
-    else if (d_n.getValue()[1] == 1)
+    else if (n[1] == 1)
         return Quad(point(x, 1, z), point(x+1, 1, z),
                 point(x+1, 1, z+1), point(x, 1, z+1));
     else

@@ -19,19 +19,15 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CATEGORYLIBRARY_H
-#define SOFA_CATEGORYLIBRARY_H
+#pragma once
 
-#include "ComponentLibrary.h"
+#include <sofa/core/ComponentLibrary.h>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 
-typedef sofa::core::ObjectFactory::Creator    Creator;
+using Creator = sofa::core::ObjectFactory::BaseObjectCreator;
 
 /**
  *  \brief An Generic Category of the Sofa Library
@@ -68,8 +64,8 @@ public:
      *  CollisionAlgorithm, CollisionAlgorithm, CollisionAlgorithm,
      *  CollisionModel, ConfigurationSetting, ConstraintSet,
      *  ConstraintSolver, ConstraintSolver, ContextObject, Controller,
-     *  Engine, ForceField, InteractionForceField, LinearSolver,
-     *  Loader, Mapping, Mass, MechanicalState, OdeSolver,
+     *  Engine, Exporter, ForceField, InteractionForceField, LinearSolver, LinearSystem,
+     *  Loader, Mapping, Mass, MechanicalState, OdeSolver, OrderingMethod,
      *  ProjectiveConstraintSet, TopologicalMapping, Topology,
      *  TopologyObject, and VisualModel
      */
@@ -84,7 +80,4 @@ protected:
     VecComponent components;
 };
 
-}
-}
-
-#endif
+} // namespace sofa::core

@@ -25,12 +25,12 @@
 #include <sofa/core/collision/Intersection.h>
 
 #include <sofa/component/collision/detection/intersection/DiscreteIntersection.h>
-#include <sofa/component/collision/geometry/SphereModel.h>
-#include <sofa/component/collision/geometry/PointModel.h>
-#include <sofa/component/collision/geometry/LineModel.h>
-#include <sofa/component/collision/geometry/TriangleModel.h>
-#include <sofa/component/collision/geometry/CubeModel.h>
-#include <sofa/component/collision/geometry/RayModel.h>
+#include <sofa/component/collision/geometry/SphereCollisionModel.h>
+#include <sofa/component/collision/geometry/PointCollisionModel.h>
+#include <sofa/component/collision/geometry/LineCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
+#include <sofa/component/collision/geometry/CubeCollisionModel.h>
+#include <sofa/component/collision/geometry/RayCollisionModel.h>
 
 namespace sofa::component::collision::detection::intersection
 {
@@ -40,18 +40,13 @@ class SOFA_COMPONENT_COLLISION_DETECTION_INTERSECTION_API RayDiscreteIntersectio
     typedef DiscreteIntersection::OutputVector OutputVector;
 
 public:
-    RayDiscreteIntersection(DiscreteIntersection* object, bool addSelf=true);
+    RayDiscreteIntersection(DiscreteIntersection* intersection, bool addSelf=true);
+        
+    template<class T> bool testIntersection(collision::geometry::Ray&, collision::geometry::TSphere<T>&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Ray&, collision::geometry::Triangle&, const core::collision::Intersection* currentIntersection);
 
-    template<class T> bool testIntersection(collision::geometry::Ray&, collision::geometry::TSphere<T>&);
-    bool testIntersection(collision::geometry::Ray&, collision::geometry::Triangle&);
-
-    template<class T> int computeIntersection(collision::geometry::Ray&, collision::geometry::TSphere<T>&, OutputVector*);
-    int computeIntersection(collision::geometry::Ray&, collision::geometry::Triangle&, OutputVector*);
-
-protected:
-
-    DiscreteIntersection* intersection;
-
+    template<class T> int computeIntersection(collision::geometry::Ray&, collision::geometry::TSphere<T>&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Ray&, collision::geometry::Triangle&, OutputVector*, const core::collision::Intersection* currentIntersection);
 };
 
 } //namespace sofa::component::collision::detection::intersection

@@ -23,7 +23,7 @@
 #include <sofa/component/engine/transform/config.h>
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/defaulttype/RigidTypes.h>
@@ -42,9 +42,8 @@ public:
     SOFA_CLASS(SOFA_TEMPLATE(MapIndices,T),core::DataEngine);
     typedef T Value;
     typedef sofa::type::vector<T> VecValue;
-    typedef unsigned int Index;
-    typedef sofa::type::vector<Index> VecIndex;
-    typedef std::map<Index, Index> MapIndex;
+    typedef sofa::type::vector<sofa::Index> VecIndex;
+    typedef std::map<sofa::Index, sofa::Index> MapIndex;
 protected:
     MapIndices();
 
@@ -65,7 +64,7 @@ public:
     template<class V>
     void applyIndex(V& v, const MapIndex& m)
     {
-        typename MapIndex::const_iterator it = m.find(v);
+        const typename MapIndex::const_iterator it = m.find(v);
         if (it != m.end())
             v = it->second;
     }
@@ -73,7 +72,7 @@ public:
     void apply(Value& v, const MapIndex& m);
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_MAPINDICES_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_MAPINDICES_CPP)
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MapIndices<int>;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MapIndices<unsigned int>;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MapIndices< type::fixed_array<unsigned int, 2> >;

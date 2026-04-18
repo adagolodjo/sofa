@@ -98,7 +98,7 @@ void BarycentricPenalityContact<TCollisionModel1,TCollisionModel2,ResponseDataTy
         if (index < 0) // duplicate contact
         {
             int i2 = -1-index;
-            core::collision::DetectionOutput* o2 = &outputs[i2];
+            const core::collision::DetectionOutput* o2 = &outputs[i2];
             if (o2->value <= o->value)
             {
                 // current contact is ignored
@@ -144,7 +144,7 @@ void BarycentricPenalityContact<TCollisionModel1,TCollisionModel2,ResponseDataTy
         if (index >= 0)
         {
             dmsg_info() << " removed contact "<<it->first ;
-            ContactIndexMap::iterator oldit = it;
+            const ContactIndexMap::iterator oldit = it;
             ++it;
             contactIndex.erase(oldit);
         }
@@ -159,7 +159,7 @@ void BarycentricPenalityContact<TCollisionModel1,TCollisionModel2,ResponseDataTy
     ff->clear(size);
     mapper1.resize(size);
     mapper2.resize(size);
-    const double d0 = intersectionMethod->getContactDistance() + model1->getProximity() + model2->getProximity(); // - 0.001;
+    const double d0 = intersectionMethod->getContactDistance() + model1->getContactDistance() + model2->getContactDistance(); // - 0.001;
     for (int i=0; i<insize; i++)
     {
         int index = oldIndex[i];

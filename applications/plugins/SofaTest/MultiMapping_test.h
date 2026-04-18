@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -30,8 +30,8 @@
 #include <sofa/simulation/VectorOperations.h>
 #include <sofa/linearalgebra/FullVector.h>
 #include <SofaEigen2Solver/EigenSparseMatrix.h>
-#include <SofaBaseMechanics/MechanicalObject.h>
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/component/statecontainer/MechanicalObject.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 #include <SceneCreator/SceneCreator.h>
 #include <sofa/type/vector.h>
 #include <sofa/core/MultiMapping.h>
@@ -49,7 +49,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
 {
     typedef _MultiMapping Mapping;
     typedef typename Mapping::In In;
-    typedef component::container::MechanicalObject<In> InDOFs;
+    typedef component::statecontainer::MechanicalObject<In> InDOFs;
     typedef typename InDOFs::Real  Real;
     typedef typename InDOFs::Deriv  InDeriv;
     typedef typename InDOFs::VecCoord  InVecCoord;
@@ -62,7 +62,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
     typedef Data<InVecDeriv> InDataVecDeriv;
 
     typedef typename Mapping::Out Out;
-    typedef component::container::MechanicalObject<Out> OutDOFs;
+    typedef component::statecontainer::MechanicalObject<Out> OutDOFs;
     typedef typename OutDOFs::Coord     OutCoord;
     typedef typename OutDOFs::Deriv     OutDeriv;
     typedef typename OutDOFs::VecCoord  OutVecCoord;
@@ -85,7 +85,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
     type::vector<simulation::Node::SPtr> parents; ///< Parent nodes, created by setupScene
     simulation::Simulation* simulation;  ///< created by the constructor an re-used in the tests
     std::pair<Real,Real> deltaRange; ///< The minimum and maximum magnitudes of the change of each scalar value of the small displacement is deltaRange * numeric_limits<Real>::epsilon. This epsilon is 1.19209e-07 for float and 2.22045e-16 for double.
-    Real errorMax;     ///< The test is successfull if the (infinite norm of the) difference is less than  maxError * numeric_limits<Real>::epsilon
+    Real errorMax;     ///< The test is successful if the (infinite norm of the) difference is less than  maxError * numeric_limits<Real>::epsilon
 
 
     MultiMapping_test():deltaRange(1,1000),errorMax(10)
@@ -122,7 +122,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
 
 
 
-    /** Returns OutCoord substraction a-b (should return a OutDeriv, but???)
+    /** Returns OutCoord subtraction a-b (should return a OutDeriv, but???)
       */
     OutDeriv difference( const OutCoord& c1, const OutCoord& c2 )
     {
@@ -136,7 +136,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
      * the resulting child position is compared with the expected one.
      * Additionally, the Jacobian-related methods are tested using finite differences.
      *
-     * The parent coordinates are transfered in the parent states, then the scene is initialized, then various mapping functions are applied.
+     * The parent coordinates are transferred in the parent states, then the scene is initialized, then various mapping functions are applied.
      * The parent states are resized based on the size of the parentCoords vectors. The child state is not resized. Its should be already sized,
      * or its size set automatically during initialization.
      *
@@ -152,7 +152,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
         typedef component::linearsolver::EigenSparseMatrix<In,Out> EigenSparseMatrix;
         core::MechanicalParams mparams;
         mparams.setKFactor(1.0);
-        mparams.setSymmetricMatrix(false);
+        mparams.setSupportOnlySymmetricMatrix(false);
 
         // transfer the parent values in the parent states
         for( size_t i=0; i<parentCoords.size(); i++ )
@@ -166,8 +166,8 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
         sofa::simulation::getSimulation()->init(root.get());
 
         /// apply the mapping
-        mapping->apply(&mparams, core::VecCoordId::position(), core::VecCoordId::position());
-        mapping->applyJ(&mparams, core::VecDerivId::velocity(), core::VecDerivId::velocity());
+        mapping->apply(&mparams, core::vec_id::write_access::position, core::vec_id::read_access::position);
+        mapping->applyJ(&mparams, core::vec_id::write_access::velocity, core::vec_id::read_access::velocity);
 
         /// test apply: check if the child positions are the expected ones
         bool succeed=true;
@@ -217,7 +217,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
         }
         WriteOutVecDeriv fout = outDofs->writeForces();
         copyToData( fout, fc );
-        mapping->applyJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        mapping->applyJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         for(Index i=0; i<Np.size(); i++) copyFromData( fp[i], inDofs[i]->readForces() );
         //        cout<<"parent forces fp = "<<fp<<endl;
 
@@ -238,8 +238,8 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
             WriteInVecDeriv vin = inDofs[p]->writeVelocities();
             copyToData( vin, vp[p] );
         }
-        mparams.setDx(core::ConstVecDerivId::velocity());
-        mapping->applyJ( &mparams, core::VecDerivId::velocity(), core::VecDerivId::velocity() );
+        mparams.setDx(core::vec_id::write_access::velocity);
+        mapping->applyJ( &mparams, core::vec_id::write_access::velocity, core::vec_id::read_access::velocity );
         ReadOutVecDeriv vout = outDofs->readVelocities();
         copyFromData( vc, vout);
         //        cout<<"child velocity vc = " << vc << endl;
@@ -255,8 +255,8 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
             WriteInVecDeriv fin = inDofs[p]->writeForces();
             copyToData( fin, dfp[p] );
         }
-        mapping->updateK( &mparams, core::ConstVecDerivId::force() ); // updating stiffness matrix for the current state and force
-        mapping->applyDJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        mapping->updateK( &mparams, core::vec_id::write_access::force ); // updating stiffness matrix for the current state and force
+        mapping->applyDJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         for( Index p=0; p<Np.size(); p++ ){
             copyFromData( dfp[p], inDofs[p]->readForces() ); // fp + df due to geometric stiffness
 //            cout<<"dfp["<< p <<"] = " << dfp[p] << endl;
@@ -308,7 +308,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
             copyToData( fin, fp[p] );  // reset parent forces before accumulating child forces
         }
         copyToData( fout, fc );
-        mapping->applyJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        mapping->applyJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         for( Index p=0; p<Np.size(); p++ )
             copyFromData( fp[p], inDofs[p]->readForces() );
 
@@ -323,7 +323,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
             copyToData( pin, xp1[p] );
 //            cout<<"new parent positions xp1["<< p << "] = " << xp1[p] << endl;
         }
-        mapping->apply ( &mparams, core::VecCoordId::position(), core::VecCoordId::position() );
+        mapping->apply ( &mparams, core::vec_id::write_access::position, core::vec_id::read_access::position );
         ReadOutVecCoord pout = outDofs->readPositions();
         copyFromData( xc1, pout );
 //        cout<<"new child positions xc1 = " << xc1 << endl;
@@ -349,7 +349,7 @@ struct MultiMapping_test : public Sofa_test<typename _MultiMapping::Real>
             copyToData( fin, fp2[p] );  // reset parent forces before accumulating child forces
         }
         copyToData( fout, fc );
-        mapping->applyJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        mapping->applyJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         type::vector<InVecDeriv> fp12(Np.size());
         for( Index p=0; p<Np.size(); p++ ){
             copyFromData( fp2[p], inDofs[p]->readForces() );

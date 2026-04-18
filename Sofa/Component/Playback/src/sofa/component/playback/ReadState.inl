@@ -37,7 +37,7 @@ using sofa::simulation::mechanicalvisitor::MechanicalPropagateOnlyPositionAndVel
 namespace sofa::component::playback
 {
 
-using type::Vector3;
+using type::Vec3;
 
 ReadState::ReadState()
     : d_filename( initData(&d_filename, "filename", "output file name"))
@@ -45,8 +45,8 @@ ReadState::ReadState()
     , d_shift( initData(&d_shift, 0.0, "shift", "shift between times in the file and times when they will be read"))
     , d_loop( initData(&d_loop, false, "loop", "set to 'true' to re-read the file when reaching the end"))
     , d_scalePos( initData(&d_scalePos, 1.0, "scalePos", "scale the input mechanical object"))
-    , d_rotation( initData(&d_rotation, Vector3(0.,0.,0.), "rotation", "rotate the input mechanical object"))
-    , d_translation( initData(&d_translation, Vector3(0.,0.,0.), "translation", "translate the input mechanical object"))
+    , d_rotation( initData(&d_rotation, Vec3(0.,0.,0.), "rotation", "rotate the input mechanical object"))
+    , d_translation( initData(&d_translation, Vec3(0.,0.,0.), "translation", "translate the input mechanical object"))
     , mmodel(nullptr)
     , infile(nullptr)
 #if SOFA_COMPONENT_PLAYBACK_HAVE_ZLIB
@@ -185,7 +185,7 @@ bool ReadState::readNext(double time, std::vector<std::string>& validLines)
             buf[0] = '\0';
             while (gzgets(gzfile,buf,sizeof(buf))!=nullptr && buf[0])
             {
-                size_t l = strlen(buf);
+                const size_t l = strlen(buf);
                 if (buf[l-1] == '\n')
                 {
                     buf[l-1] = '\0';
@@ -238,8 +238,8 @@ void ReadState::processReadState()
     bool updated = false;
 
     const double scale = d_scalePos.getValue();
-    const Vector3& rotation = d_rotation.getValue();
-    const Vector3& translation = d_translation.getValue();
+    const Vec3& rotation = d_rotation.getValue();
+    const Vec3& translation = d_translation.getValue();
 
     for (std::vector<std::string>::iterator it=validLines.begin(); it!=validLines.end(); ++it)
     {
@@ -248,7 +248,7 @@ void ReadState::processReadState()
         str >> cmd;
         if (cmd == "X=")
         {
-            mmodel->readVec(core::VecId::position(), str);
+            mmodel->readVec(sofa::core::vec_id::write_access::position, str);
             mmodel->applyScale(scale,scale,scale);
             mmodel->applyRotation(rotation[0],rotation[1],rotation[2]);
             mmodel->applyTranslation(translation[0],translation[1],translation[2]);
@@ -257,7 +257,7 @@ void ReadState::processReadState()
         }
         else if (cmd == "V=")
         {
-            mmodel->readVec(core::VecId::velocity(), str);
+            mmodel->readVec(sofa::core::vec_id::write_access::velocity, str);
             updated = true;
         }
     }

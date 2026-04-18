@@ -29,7 +29,7 @@ using sofa::testing::NumericTest;
 
 //Including Simulation
 #include <sofa/simulation/Simulation.h>
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 #include <sofa/simulation/Node.h>
 
 // Including mechanical object
@@ -37,7 +37,7 @@ using sofa::testing::NumericTest;
 using MechanicalObject3 = sofa::component::statecontainer::MechanicalObject<sofa::defaulttype::Vec3Types> ;
 
 // Solvers
-#include <SofaGeneralImplicitOdeSolver/VariationalSymplecticSolver.h>
+#include <sofa/component/odesolver/backward/VariationalSymplecticSolver.h>
 
 #include <sofa/defaulttype/VecTypes.h>
 
@@ -63,7 +63,7 @@ struct VariationalSymplecticImplicitSolverDynamic_test : public component::odeso
     typedef typename DataTypes::Coord Coord;
 
     typedef statecontainer::MechanicalObject<DataTypes> MechanicalObject;
-    typedef component::odesolver::VariationalSymplecticSolver VariationalSymplecticSolver;
+    typedef component::odesolver::backward::VariationalSymplecticSolver VariationalSymplecticSolver;
 
     /// Position and velocity array
     type::vector<double> positionsArray;
@@ -116,8 +116,8 @@ struct VariationalSymplecticImplicitSolverDynamic_test : public component::odeso
         totalEnergy = m*g*z0; // energy at initial time
 
         // Set constants
-        double denominator = 4*m+h*h*K+4*h*(rm*m + rk*K);//4*h*(-rk*K+rm*m);
-        double constant = -h*K;
+        const double denominator = 4*m+h*h*K+4*h*(rm*m + rk*K);//4*h*(-rk*K+rm*m);
+        const double constant = -h*K;
 
         // Compute velocities, energies and positions
         for(int i=1;i< size+1; i++)
@@ -138,16 +138,16 @@ struct VariationalSymplecticImplicitSolverDynamic_test : public component::odeso
         double time = m_si.root->getTime();
 
         // Get mechanical object
-        simulation::Node::SPtr massNode = m_si.root->getChild("MassNode");
+        const simulation::Node::SPtr massNode = m_si.root->getChild("MassNode");
         typename statecontainer::MechanicalObject<_DataTypes>::SPtr dofs = massNode->get<statecontainer::MechanicalObject<_DataTypes>>(m_si.root->SearchDown);
-        typename VariationalSymplecticSolver::SPtr variationalSolver = m_si.root->get<VariationalSymplecticSolver>(m_si.root->SearchDown);
+        const typename VariationalSymplecticSolver::SPtr variationalSolver = m_si.root->get<VariationalSymplecticSolver>(m_si.root->SearchDown);
         
 
         // Animate
         do
         {
             // Record the mass position
-            Coord p0=dofs.get()->read(sofa::core::ConstVecCoordId::position())->getValue()[0];
+            Coord p0=dofs.get()->read(sofa::core::vec_id::read_access::position)->getValue()[0];
 
             double absoluteError = fabs(p0[1]-positionsArray[i]);
 
@@ -167,12 +167,12 @@ struct VariationalSymplecticImplicitSolverDynamic_test : public component::odeso
 
 
             // Check if hamiltonian energy is constant when there is no damping
-            if(checkEnergyConservation && fabs(variationalSolver->f_hamiltonianEnergy.getValue() -totalEnergy) > toleranceEnergy )
+            if(checkEnergyConservation && fabs(variationalSolver->d_hamiltonianEnergy.getValue() - totalEnergy) > toleranceEnergy )
             {
-                ADD_FAILURE() << "Hamiltonian energy at time " << time << " is wrong: "  << std::endl
-                    <<" expected Energy is " << totalEnergy << std::endl
-                    <<" actual Energy is   " << variationalSolver->f_hamiltonianEnergy.getValue() << std::endl
-                    << "absolute error     = " << fabs(variationalSolver->f_hamiltonianEnergy.getValue() -totalEnergy) << std::endl;
+                ADD_FAILURE() << "Hamiltonian energy at time " << time << " is wrong: " << std::endl
+                              << " expected Energy is " << totalEnergy << std::endl
+                              << " actual Energy is   " << variationalSolver->d_hamiltonianEnergy.getValue() << std::endl
+                              << "absolute error     = " << fabs(variationalSolver->d_hamiltonianEnergy.getValue() - totalEnergy) << std::endl;
                 return false;
             }
 
@@ -185,13 +185,13 @@ struct VariationalSymplecticImplicitSolverDynamic_test : public component::odeso
 
 };
 
-// Define the list of DataTypes to instanciate
+// Define the list of DataTypes to instantiate
 using ::testing::Types;
 typedef Types<
     Vec3Types
-> DataTypes; // the types to instanciate.
+> DataTypes; // the types to instantiate.
 
-// Test suite for all the instanciations
+// Test suite for all the instantiations
 TYPED_TEST_SUITE(VariationalSymplecticImplicitSolverDynamic_test, DataTypes);
 
 // Test case: h=0.1 k=100 m =1 rm=0.1 rk=0.1

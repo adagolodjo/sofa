@@ -22,8 +22,10 @@
 #pragma once
 #include <SofaMatrix/config.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <SofaMatrix/BaseMatrixImageProxy.h>
+
+#include <sofa/core/behavior/BaseMatrixLinearSystem.h>
 
 namespace sofa::component::linearsolver
 {
@@ -32,10 +34,10 @@ namespace sofa::component::linearsolver
  * Component to convert a BaseMatrix from the linear solver into an image that can be visualized in the GUI.
  * Use GlobalSystemMatrixExporter in order to save an image on the disk.
  */
-class SOFA_SOFAMATRIX_API GlobalSystemMatrixImage : public core::objectmodel::BaseObject
+class SOFA_SOFAMATRIX_API GlobalSystemMatrixImage : public core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(GlobalSystemMatrixImage, core::objectmodel::BaseObject);
+    SOFA_CLASS(GlobalSystemMatrixImage, core::objectmodel::BaseComponent);
 
 protected:
 
@@ -45,8 +47,8 @@ protected:
     void init() override;
     void handleEvent(core::objectmodel::Event *event) override;
 
-    Data< type::BaseMatrixImageProxy > d_bitmap; ///< A proxy to visualize the produced image in the GUI through a DataWidget
-    SingleLink<GlobalSystemMatrixImage, sofa::core::behavior::LinearSolver, BaseLink::FLAG_STOREPATH|BaseLink::FLAG_STRONGLINK> l_linearSolver;
+    Data< type::BaseMatrixImageProxy > d_bitmap; ///< Visualization of the representation of the matrix as a binary image. White pixels are zeros, black pixels are non-zeros.
+    SingleLink<GlobalSystemMatrixImage, sofa::core::behavior::BaseMatrixLinearSystem, BaseLink::FLAG_STOREPATH|BaseLink::FLAG_STRONGLINK> l_linearSystem;
 };
 
 } //namespace sofa::component::linearsolver

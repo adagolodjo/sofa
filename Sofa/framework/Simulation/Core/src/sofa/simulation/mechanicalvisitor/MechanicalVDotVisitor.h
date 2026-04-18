@@ -32,13 +32,14 @@ class SOFA_SIMULATION_CORE_API MechanicalVDotVisitor : public BaseMechanicalVisi
 public:
     sofa::core::ConstMultiVecId a;
     sofa::core::ConstMultiVecId b;
-    MechanicalVDotVisitor(const sofa::core::ExecParams* params, sofa::core::ConstMultiVecId a, sofa::core::ConstMultiVecId b, SReal* t)
-            : BaseMechanicalVisitor(params) , a(a), b(b) //, total(t)
+    SReal* const m_total { nullptr };
+
+    MechanicalVDotVisitor(const sofa::core::ExecParams* eparams, sofa::core::ConstMultiVecId avecid, sofa::core::ConstMultiVecId bvecid, SReal* t)
+            : BaseMechanicalVisitor(eparams) , a(avecid), b(bvecid), m_total(t)
     {
 #ifdef SOFA_DUMP_VISITOR_INFO
         setReadWriteVectors();
 #endif
-        rootData = t;
     }
 
     Result fwdMechanicalState(VisitorContext* ctx,sofa::core::behavior::BaseMechanicalState* mm) override;
@@ -49,10 +50,6 @@ public:
     std::string getInfos() const override;
     /// Specify whether this action can be parallelized.
     bool isThreadSafe() const override
-    {
-        return true;
-    }
-    bool writeNodeData() const override
     {
         return true;
     }

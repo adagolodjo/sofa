@@ -19,7 +19,7 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "console.h"
+#include <sofa/helper/system/console.h>
 
 #ifndef WIN32
 
@@ -31,10 +31,8 @@
 #endif
 
 
-namespace sofa {
-namespace helper {
-
-namespace console {
+namespace sofa::helper::console
+{
 
 void setStatus(Status status) noexcept
 {
@@ -59,6 +57,4 @@ size_t getColumnCount()
 #endif
 }
 
-}
-}
 }

@@ -20,9 +20,9 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
-#include "JoinPoints.h"
+#include <sofa/component/engine/generate/JoinPoints.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/helper/system/FileRepository.h>
 #include <list>
 
@@ -117,7 +117,7 @@ void JoinPoints<DataTypes>::doUpdate()
     {
         typename std::list<Coord>::iterator itNearestPoint;
         std::list<int>::iterator itNearestCoeff;
-        bool hasNearestPoint = getNearestPoint(itCurrentPoint, copyPoints, coeffs, itNearestPoint, itNearestCoeff, distance);
+        const bool hasNearestPoint = getNearestPoint(itCurrentPoint, copyPoints, coeffs, itNearestPoint, itNearestCoeff, distance);
 
         //if we get a point in the sphere's ROI
         if (hasNearestPoint)

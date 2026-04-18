@@ -1,12 +1,13 @@
 #!bash
 
 usage() {
-    echo "Usage: windows-postinstall-fixup.sh <build-dir> <install-dir>"
+    echo "Usage: windows-postinstall-fixup.sh <script-dir> <build-dir> <install-dir>"
 }
 
 if [ "$#" -ge 2 ]; then
-    BUILD_DIR="$(cd $1 && pwd)"
-    INSTALL_DIR="$(cd $2 && pwd)"
+    SCRIPT_DIR="$(cd $1 && pwd)"
+    BUILD_DIR="$(cd $2 && pwd)"
+    INSTALL_DIR="$(cd $3 && pwd)"
 else
     usage; exit 1
 fi
@@ -18,50 +19,28 @@ if [[ "$INSTALL_DIR" == *"/NSIS/"* ]] && [[ -e "$INSTALL_DIR/../applications/bin
     INSTALL_DIR_BIN="$INSTALL_DIR/applications/bin"
 fi
 
+echo "SCRIPT_DIR = $SCRIPT_DIR"
 echo "BUILD_DIR = $BUILD_DIR"
 echo "INSTALL_DIR = $INSTALL_DIR"
 echo "INSTALL_DIR_BIN = $INSTALL_DIR_BIN"
 
-# Keep plugin_list as short as possible
-echo "" > "$INSTALL_DIR_BIN/plugin_list.conf"
-disabled_plugins='plugins_ignored_by_default'
-for plugin in \
-        SofaEulerianFluid     \
-        SofaDistanceGrid      \
-        SofaImplicitField     \
-        MultiThreading        \
-        DiffusionSolver       \
-        image                 \
-        Compliant             \
-        SofaPython            \
-        Flexible              \
-        Registration          \
-        ExternalBehaviorModel \
-        ManifoldTopologies    \
-        ManualMapping         \
-        THMPGSpatialHashing   \
-        SofaCarving           \
-        RigidScale            \
-                              \
-        LMConstraint          \
-        SofaHaptics           \
-        SofaValidation        \
-        SofaNonUniformFem     \
-        SofaExporter          \
-        SofaPreconditioner    \
-        SofaMiscTopology      \
-        SofaMiscExtra         \
-        SofaMiscForceField    \
-        SofaMiscEngine        \
-        SofaMiscSolver        \
-        SofaMiscFem           \
-        SofaMiscMapping       \
-    ; do
-    disabled_plugins=$disabled_plugins'\|'$plugin
-done
-grep -v $disabled_plugins "$INSTALL_DIR_BIN/plugin_list.conf.default" >> "$INSTALL_DIR_BIN/plugin_list.conf"
+source $SCRIPT_DIR/common.sh
+clean_default_plugins "$INSTALL_DIR_BIN"
 
-# Copy all plugin libs in install/bin to make them easily findable
-cd "$INSTALL_DIR" && find -name "*.dll" -path "*/plugins/*" | while read lib; do
-    cp "$lib" "$INSTALL_DIR_BIN"
+move_metis "$INSTALL_DIR"
+
+# Copy all plugin libs in install/bin (preserving sub-directory structure) to make them easily findable
+cd "$INSTALL_DIR"
+for p in plugins/*/; do
+  cd $INSTALL_DIR/$p && find . -name "*.dll" | while read lib; do
+    cp --parents "$lib" "$INSTALL_DIR"
+  done
 done
+
+# Copy all plugins config files in etc/ini to make them easily findable
+INSTALL_DIR_ETC="$INSTALL_DIR/etc"
+mkdir -p $INSTALL_DIR_ETC
+cd "$INSTALL_DIR" && find -name "*.ini" -path "*/plugins/*/etc/*" | while read f; do
+    cp  "$f" "$INSTALL_DIR_ETC"
+done
+

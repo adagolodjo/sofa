@@ -27,13 +27,16 @@ using sofa::core::objectmodel::ComponentState;
 using sofa::testing::BaseSimulationTest ;
 using sofa::simulation::Node ;
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 using sofa::core::objectmodel::BaseObject;
 
 #include <sofa/core/PathResolver.h>
 using sofa::core::PathResolver;
 
+#include <sofa/defaulttype/RigidTypes.h>
 using sofa::defaulttype::Rigid3Types;
+
+#include <sofa/defaulttype/VecTypes.h>
 using sofa::defaulttype::Vec3Types;
 
 namespace
@@ -47,10 +50,11 @@ public:
     Node* node {nullptr};
     PathResolver_simutest()
     {
-        importPlugin("SofaComponentAll") ;
         std::stringstream scene ;
         scene << "<?xml version='1.0'?>"
                  "<Node name='Root' gravity='0 -9.81 0' time='0' animate='0' >               \n"
+                 "   <DefaultAnimationLoop />                                                \n"
+                 "   <DefaultVisualManagerLoop />                                            \n"
                  "   <MechanicalObject name='mstate0'/>                                      \n"
                  "   <InfoComponent name='obj'/>                                             \n"
                  "   <Node name='child1'>                                                    \n"
@@ -61,7 +65,7 @@ public:
                  "</Node>                                                                    \n" ;
         c = new SceneInstance("xml", scene.str()) ;
         c->initScene() ;
-        Node* root = c->root.get() ;
+        const Node* root = c->root.get() ;
         Base* b = sofa::core::PathResolver::FindBaseFromPath(root, "@/child1/child2");
         node = dynamic_cast<Node*>(b);
     }
@@ -80,13 +84,13 @@ TEST_P(PathResolverToBaseObject, CheckPathToBaseObject)
     auto& t = GetParam();
     if(t[2]=="true")
     {
-        ASSERT_TRUE(PathResolver::CheckPath(node, BaseObject::GetClass(), t[0])) << t[1] << " " << t[2];
-        ASSERT_TRUE(PathResolver::CheckPaths(node, BaseObject::GetClass(), t[0])) << t[1] << " " << t[2];
+        ASSERT_TRUE(PathResolver::CheckPath(node, sofa::core::objectmodel::BaseComponent::GetClass(), t[0])) << t[1] << " " << t[2];
+        ASSERT_TRUE(PathResolver::CheckPaths(node, sofa::core::objectmodel::BaseComponent::GetClass(), t[0])) << t[1] << " " << t[2];
     }
     else
     {
-        ASSERT_FALSE(PathResolver::CheckPath(node, BaseObject::GetClass(), t[0])) << t[1] << " " << t[2];
-        ASSERT_FALSE(PathResolver::CheckPaths(node, BaseObject::GetClass(), t[0])) << t[1] << " " << t[2];
+        ASSERT_FALSE(PathResolver::CheckPath(node, sofa::core::objectmodel::BaseComponent::GetClass(), t[0])) << t[1] << " " << t[2];
+        ASSERT_FALSE(PathResolver::CheckPaths(node, sofa::core::objectmodel::BaseComponent::GetClass(), t[0])) << t[1] << " " << t[2];
     }
 }
 
@@ -102,18 +106,18 @@ INSTANTIATE_TEST_SUITE_P(CheckPathToBaseObject,
 // introduced in https://github.com/sofa-framework/sofa/pull/1717
 TEST_F(PathResolverToBaseObject, DISABLED_CheckPathToBaseObject_tofix)
 {
-    std::vector<std::string> t = { "@/child1", "The linked address is pointing to a node while trying to load it in an object. Using two different types should return", "false" };
+    const std::vector<std::string> t = { "@/child1", "The linked address is pointing to a node while trying to load it in an object. Using two different types should return", "false" };
     ASSERT_NE(node, nullptr);
 
     if (t[2] == "true")
     {
-        ASSERT_TRUE(PathResolver::CheckPath(node, BaseObject::GetClass(), t[0])) << t[1] << " " << t[2];
-        ASSERT_TRUE(PathResolver::CheckPaths(node, BaseObject::GetClass(), t[0])) << t[1] << " " << t[2];
+        ASSERT_TRUE(PathResolver::CheckPath(node, sofa::core::objectmodel::BaseComponent::GetClass(), t[0])) << t[1] << " " << t[2];
+        ASSERT_TRUE(PathResolver::CheckPaths(node, sofa::core::objectmodel::BaseComponent::GetClass(), t[0])) << t[1] << " " << t[2];
     }
     else
     {
-        ASSERT_FALSE(PathResolver::CheckPath(node, BaseObject::GetClass(), t[0])) << t[1] << " " << t[2];
-        ASSERT_FALSE(PathResolver::CheckPaths(node, BaseObject::GetClass(), t[0])) << t[1] << " " << t[2];
+        ASSERT_FALSE(PathResolver::CheckPath(node, sofa::core::objectmodel::BaseComponent::GetClass(), t[0])) << t[1] << " " << t[2];
+        ASSERT_FALSE(PathResolver::CheckPaths(node, sofa::core::objectmodel::BaseComponent::GetClass(), t[0])) << t[1] << " " << t[2];
     }
 }
 

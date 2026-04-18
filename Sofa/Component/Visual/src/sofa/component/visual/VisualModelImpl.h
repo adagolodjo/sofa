@@ -22,44 +22,18 @@
 #pragma once
 #include <sofa/component/visual/config.h>
 
-#include <sofa/core/State.h>
+#include <sofa/type/Vec.h>
+#include <sofa/helper/io/Mesh.h>
+#include <sofa/defaulttype/VecTypes.h>
 #include <sofa/core/visual/VisualModel.h>
+#include <sofa/core/visual/VisualState.h>
 #include <sofa/core/objectmodel/DataFileName.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
-#include <sofa/type/Vec.h>
-#include <sofa/defaulttype/VecTypes.h>
-#include <sofa/defaulttype/RigidTypes.h>
-#include <sofa/helper/io/Mesh.h>
-#include <sofa/core/topology/TopologyData.inl>
+
 #include <string>
 
 namespace sofa::component::visual
 {
-
-using sofa::core::objectmodel::Data ;
-
-class SOFA_COMPONENT_VISUAL_API Vec3State : public core::State< sofa::defaulttype::Vec3Types >
-{
-public:
-    core::topology::PointData< VecCoord > m_positions; ///< Vertices coordinates
-    core::topology::PointData< VecCoord > m_restPositions; ///< Vertices rest coordinates
-    core::topology::PointData< VecDeriv > m_vnormals; ///< Normals of the model
-    bool modified; ///< True if input vertices modified since last rendering
-
-    Vec3State() ;
-
-    virtual void resize(Size vsize) ;
-    virtual Size getSize() const ;
-
-    //State API
-    virtual       Data<VecCoord>* write(core::VecCoordId  v ) ;
-    virtual const Data<VecCoord>* read(core::ConstVecCoordId  v )  const ;
-    virtual Data<VecDeriv>*	write(core::VecDerivId v ) ;
-    virtual const Data<VecDeriv>* read(core::ConstVecDerivId v ) const ;
-
-    virtual       Data<MatrixDeriv>*	write(core::MatrixDerivId /* v */) { return nullptr; }
-    virtual const Data<MatrixDeriv>*	read(core::ConstMatrixDerivId /* v */) const {  return nullptr; }
-};
 
 /**
  *  \brief Abstract class which implements partially VisualModel.
@@ -70,85 +44,83 @@ public:
  *  At the moment, it is only implemented by OglModel for OpenGL systems.
  *
  */
-
-class SOFA_COMPONENT_VISUAL_API VisualModelImpl : public core::visual::VisualModel, public Vec3State //, public RigidState
+class SOFA_COMPONENT_VISUAL_API VisualModelImpl : public core::visual::VisualModel, public sofa::core::visual::VisualState<defaulttype::Vec3Types>
 {
 public:
-    SOFA_CLASS2(VisualModelImpl, core::visual::VisualModel, Vec3State);
+    SOFA_CLASS2(VisualModelImpl, core::visual::VisualModel, sofa::core::visual::VisualState<defaulttype::Vec3Types>);
 
-    using Index = sofa::Index;
-    
+    typedef sofa::type::Vec<2, float> TexCoord;
+    typedef type::vector<TexCoord> VecTexCoord;
+
     //Indices must be unsigned int for drawing
     using visual_index_type = unsigned int;
 
-    typedef type::fixed_array<visual_index_type, 2> VisualEdge;
-    typedef type::fixed_array<visual_index_type, 3> VisualTriangle;
-    typedef type::fixed_array<visual_index_type, 4> VisualQuad;
+    typedef sofa::topology::Element<sofa::geometry::Edge> VisualEdge;
+    typedef sofa::topology::Element<sofa::geometry::Triangle> VisualTriangle;
+    typedef sofa::topology::Element<sofa::geometry::Quad> VisualQuad;
     typedef type::vector<VisualEdge> VecVisualEdge;
     typedef type::vector<VisualTriangle> VecVisualTriangle;
     typedef type::vector<VisualQuad> VecVisualQuad;
 
-    typedef Vec3State::DataTypes DataTypes;
+    typedef sofa::core::visual::VisualState<defaulttype::Vec3Types>::DataTypes DataTypes;
     typedef DataTypes::Real Real;
     typedef DataTypes::Coord Coord;
     typedef DataTypes::VecCoord VecCoord;
     typedef DataTypes::Deriv Deriv;
     typedef DataTypes::VecDeriv VecDeriv;
 
-    typedef sofa::type::Vec<2, Real> TexCoord;
-    typedef type::vector<TexCoord> VecTexCoord;
 
-    bool useTopology; ///< True if list of facets should be taken from the attached topology
+    bool useTopology; ///< True if list of d_facets should be taken from the attached topology
     int lastMeshRev; ///< Time stamps from the last time the mesh was updated from the topology
     bool castShadow; ///< True if object cast shadows
 
     sofa::core::topology::BaseMeshTopology* m_topology;
 
-    Data<bool> m_initRestPositions; ///< True if rest positions should be initialized with initial positions, False if nothing should be done
-    Data<bool> m_useNormals; ///< True if normals should be read from file
-    Data<bool> m_updateNormals; ///< True if normals should be updated at each iteration
-    Data<bool> m_computeTangents; ///< True if tangents should be computed at startup
-    Data<bool> m_updateTangents; ///< True if tangents should be updated at each iteration
-    Data<bool> m_handleDynamicTopology; ///< True if topological changes should be handled
-    Data<bool> m_fixMergedUVSeams; ///< True if UV seams should be handled even when duplicate UVs are merged
-    Data<bool> m_keepLines; ///< keep and draw lines (false by default)
+    Data<bool> d_initRestPositions; ///< True if rest positions must be initialized with initial positions
+    Data<bool> d_useNormals; ///< True if normals should be read from file
+    Data<bool> d_updateNormals; ///< True if normals should be updated at each iteration
+    Data<bool> d_computeTangents; ///< True if tangents should be computed at startup
+    Data<bool> d_updateTangents; ///< True if tangents should be updated at each iteration
+    Data<bool> d_handleDynamicTopology; ///< True if topological changes should be handled
+    Data<bool> d_fixMergedUVSeams; ///< True if UV seams should be handled even when duplicate UVs are merged
+    Data<bool> d_keepLines; ///< keep and draw lines (false by default)
 
-    Data< VecCoord > m_vertices2; ///< vertices of the model (only if vertices have multiple normals/texcoords, otherwise positions are used)
-    core::topology::PointData< VecTexCoord > m_vtexcoords; ///< coordinates of the texture
-    core::topology::PointData< VecCoord > m_vtangents; ///< tangents for normal mapping
-    core::topology::PointData< VecCoord > m_vbitangents; ///< tangents for normal mapping
-    core::topology::EdgeData< VecVisualEdge > m_edges; ///< edges of the model
-    core::topology::TriangleData< VecVisualTriangle > m_triangles; ///< triangles of the model
-    core::topology::QuadData< VecVisualQuad > m_quads; ///< quads of the model
+    Data< VecCoord > d_vertices2; ///< vertices of the model (only if vertices have multiple normals/texcoords, otherwise positions are used)
+    core::topology::PointData< VecTexCoord > d_vtexcoords; ///< coordinates of the texture
+    core::topology::PointData< VecCoord > d_vtangents; ///< tangents for normal mapping
+    core::topology::PointData< VecCoord > d_vbitangents; ///< tangents for normal mapping
+    core::topology::EdgeData< VecVisualEdge > d_edges; ///< edges of the model
+    core::topology::TriangleData< VecVisualTriangle > d_triangles; ///< triangles of the model
+    core::topology::QuadData< VecVisualQuad > d_quads; ///< quads of the model
 
     bool m_textureChanged {false};
 
     /// If vertices have multiple normals/texcoords, then we need to separate them
     /// This vector store which input position is used for each vertex
     /// If it is empty then each vertex correspond to one position
-    Data< type::vector<visual_index_type> > m_vertPosIdx;
+    Data< type::vector<visual_index_type> > d_vertPosIdx;
 
     /// Similarly this vector store which input normal is used for each vertex
     /// If it is empty then each vertex correspond to one normal
-    Data< type::vector<visual_index_type> > m_vertNormIdx;
+    Data< type::vector<visual_index_type> > d_vertNormIdx;
 
     /// Rendering method.
     virtual void internalDraw(const core::visual::VisualParams* /*vparams*/, bool /*transparent*/) {}
 
 public:
-
-    sofa::core::objectmodel::DataFileName fileMesh;
-    sofa::core::objectmodel::DataFileName texturename;
+    sofa::core::objectmodel::DataFileName d_fileMesh;
+    sofa::core::objectmodel::DataFileName d_texturename;
 
     /// @name Initial transformation attributes
     /// @{
     typedef sofa::type::Vec<3,Real> Vec3Real;
-    Data< Vec3Real > m_translation; ///< Initial Translation of the object
-    Data< Vec3Real > m_rotation; ///< Initial Rotation of the object
-    Data< Vec3Real > m_scale; ///< Initial Scale of the object
 
-    Data< TexCoord > m_scaleTex; ///< Scale of the texture
-    Data< TexCoord > m_translationTex; ///< Translation of the texture
+    Data< Vec3Real > d_translation; ///< Initial Translation of the object
+    Data< Vec3Real > d_rotation; ///< Initial Rotation of the object
+    Data< Vec3Real > d_scale; ///< Initial Scale of the object
+
+    Data< TexCoord > d_scaleTex; ///< Scale of the texture
+    Data< TexCoord > d_translationTex; ///< Translation of the texture
 
     void applyTranslation(const SReal dx, const SReal dy, const SReal dz) override;
 
@@ -167,28 +139,31 @@ public:
 
     void setTranslation(SReal dx, SReal dy, SReal dz)
     {
-        m_translation.setValue(Vec3Real((Real)dx,(Real)dy,(Real)dz));
+        d_translation.setValue(Vec3Real((Real)dx, (Real)dy, (Real)dz));
     }
 
     void setRotation(SReal rx, SReal ry, SReal rz)
     {
-        m_rotation.setValue(Vec3Real((Real)rx,(Real)ry,(Real)rz));
+        d_rotation.setValue(Vec3Real((Real)rx, (Real)ry, (Real)rz));
     }
 
     void setScale(SReal sx, SReal sy, SReal sz)
     {
-        m_scale.setValue(Vec3Real((Real)sx,(Real)sy,(Real)sz));
+        d_scale.setValue(Vec3Real((Real)sx, (Real)sy, (Real)sz));
     }
     /// @}
 
     sofa::type::Vec3f bbox[2];
-    Data< sofa::type::Material > material;
-    Data< bool > putOnlyTexCoords;
-    Data< bool > srgbTexturing;
+
+    Data< sofa::type::Material > d_material;
+    Data< bool > d_putOnlyTexCoords;
+    Data< bool > d_srgbTexturing;
 
     class FaceGroup
     {
     public:
+
+
         /// tri0: first triangle index of a group
         /// nbt: number of triangle elements
         visual_index_type tri0, nbt;
@@ -218,8 +193,8 @@ public:
         }
     };
 
-    Data< type::vector<sofa::type::Material> > materials;
-    Data< type::vector<FaceGroup> > groups;
+    Data< type::vector<sofa::type::Material> > d_materials;
+    Data< type::vector<FaceGroup> > d_groups;
 
     /// Link to be set to the topology container in the component graph.
     SingleLink <VisualModelImpl, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
@@ -235,8 +210,8 @@ public:
 
     virtual bool hasTransparent();
     bool hasOpaque();
-
-    void drawVisual(const core::visual::VisualParams* vparams) override;
+    
+    void doDrawVisual(const core::visual::VisualParams* vparams) override;
     void drawTransparent(const core::visual::VisualParams* vparams) override;
     void drawShadow(const core::visual::VisualParams* vparams) override;
 
@@ -249,23 +224,23 @@ public:
 
     void setFilename(std::string s)
     {
-        fileMesh.setValue(s);
+        d_fileMesh.setValue(s);
     }
 
-    std::string getFilename() {return fileMesh.getValue();}
+    std::string getFilename() {return d_fileMesh.getValue();}
 
-    void setColor(Real r, Real g, Real b, Real a);
+    void setColor(float r, float g, float b, float a);
 
-    void setColor(const std::string& color);
+    void setColor(std::string color);
 
     void setUseNormals(bool val)
     {
-        m_useNormals.setValue(val);
+        d_useNormals.setValue(val);
     }
 
     bool getUseNormals() const
     {
-        return m_useNormals.getValue();
+        return d_useNormals.getValue();
     }
 
     void setCastShadow(bool val)
@@ -287,10 +262,10 @@ public:
 
     const VecCoord& getVertices() const
     {
-        if (!m_vertPosIdx.getValue().empty())
+        if (!d_vertPosIdx.getValue().empty())
         {
-            // Splitted vertices for multiple texture or normal coordinates per vertex.
-            return m_vertices2.getValue();
+            // Split vertices for multiple texture or normal coordinates per vertex.
+            return d_vertices2.getValue();
         }
 
         return m_positions.getValue();
@@ -303,32 +278,32 @@ public:
 
     const VecTexCoord& getVtexcoords() const
     {
-        return m_vtexcoords.getValue();
+        return d_vtexcoords.getValue();
     }
 
     const VecCoord& getVtangents() const
     {
-        return m_vtangents.getValue();
+        return d_vtangents.getValue();
     }
 
     const VecCoord& getVbitangents() const
     {
-        return m_vbitangents.getValue();
+        return d_vbitangents.getValue();
     }
 
     const VecVisualTriangle& getTriangles() const
     {
-        return m_triangles.getValue();
+        return d_triangles.getValue();
     }
 
     const VecVisualQuad& getQuads() const
     {
-        return m_quads.getValue();
+        return d_quads.getValue();
     }
-    
+
     const VecVisualEdge& getEdges() const
     {
-        return m_edges.getValue();
+        return d_edges.getValue();
     }
 
     void setVertices(VecCoord * x)
@@ -343,32 +318,32 @@ public:
 
     void setVtexcoords(VecTexCoord * vt)
     {
-        m_vtexcoords.setValue(*vt);
+        d_vtexcoords.setValue(*vt);
     }
 
     void setVtangents(VecCoord * v)
     {
-        m_vtangents.setValue(*v);
+        d_vtangents.setValue(*v);
     }
 
     void setVbitangents(VecCoord * v)
     {
-        m_vbitangents.setValue(*v);
+        d_vbitangents.setValue(*v);
     }
 
     void setTriangles(VecVisualTriangle * t)
     {
-        m_triangles.setValue(*t);
+        d_triangles.setValue(*t);
     }
 
     void setQuads(VecVisualQuad * q)
     {
-        m_quads.setValue(*q);
+        d_quads.setValue(*q);
     }
-    
+
     void setEdges(VecVisualEdge * e)
     {
-        m_edges.setValue(*e);
+        d_edges.setValue(*e);
     }
 
     virtual void computePositions();
@@ -381,35 +356,33 @@ public:
     virtual void updateBuffers() {}
     virtual void deleteBuffers() {}
     virtual void deleteTextures() {}
-
-    void updateVisual() override;
+    
+    void doUpdateVisual(const core::visual::VisualParams*) override;
 
     void init() override;
     void initFromTopology();
     void initPositionFromVertices();
     void initFromFileMesh();
-
-    void initVisual() override;
-
+    
     /// Append this mesh to an OBJ format stream.
     /// The number of vertices position, normal, and texture coordinates already written is given as parameters
     /// This method should update them
-    void exportOBJ(std::string name, std::ostream* out, std::ostream* mtl, Index& vindex, Index& nindex, Index& tindex, int& count) override;
+    void exportOBJ(std::string name, std::ostream* out, std::ostream* mtl, sofa::Index& vindex, sofa::Index& nindex, sofa::Index& tindex, int& count) override;
 
     /// Returns the sofa class name. By default the name of the c++ class is exposed...
     /// More details on the name customization infrastructure is in NameDecoder.h
     static std::string GetCustomTemplateName()
     {
-        return sofa::helper::NameDecoder::getTemplateName<Vec3State>();
+        return sofa::defaulttype::Vec3Types::Name();
     }
 
     /// Utility method to compute tangent from vertices and texture coordinates.
     static Coord computeTangent(const Coord &v1, const Coord &v2, const Coord &v3,
-            const TexCoord &t1, const TexCoord &t2, const TexCoord &t3);
+                                const TexCoord &t1, const TexCoord &t2, const TexCoord &t3);
 
     /// Utility method to compute bitangent from vertices and texture coordinates.
     static Coord computeBitangent(const Coord &v1, const Coord &v2, const Coord &v3,
-            const TexCoord &t1, const TexCoord &t2, const TexCoord &t3);
+                                  const TexCoord &t1, const TexCoord &t2, const TexCoord &t3);
 
     /// Temporary added here from RigidState deprecated inheritance
     sofa::defaulttype::Rigid3fTypes::VecCoord xforms;
@@ -420,11 +393,11 @@ public:
     bool removeInNode( core::objectmodel::BaseNode* node ) override { Inherit1::removeInNode(node); Inherit2::removeInNode(node); return true; }
 
 protected:
-    /// Internal buffer to be filled by topology Data @sa m_triangles callback when points are removed. Those dirty triangles will be updated at next updateVisual 
+    /// Internal buffer to be filled by topology Data @sa d_triangles callback when points are removed. Those dirty triangles will be updated at next updateVisual
     /// This avoid to update the whole mesh.
     std::set< sofa::core::topology::BaseMeshTopology::TriangleID> m_dirtyTriangles;
 
-    /// Internal buffer similar to @sa m_dirtyTriangles but to be used by topolgy Data @sa m_quads callback when points are removed.
+    /// Internal buffer similar to @sa m_dirtyTriangles but to be used by topolgy Data @sa d_quads callback when points are removed.
     std::set< sofa::core::topology::BaseMeshTopology::QuadID> m_dirtyQuads;
 };
 

@@ -153,8 +153,7 @@ void OpenCLProgram::createProgram(std::string * s)
 void OpenCLProgram::createProgram(std::string *source,std::map<std::string,std::string> *types)
 {
     std::string s;
-    std::map<std::string,std::string>::iterator it;
-
+    
     s = createTypes(types);
     s += *source;
     createProgram(&s);
@@ -207,7 +206,14 @@ bool OpenCLProgram::loadSource(const std::string& file_source, std::string* dest
 
     //chercher la taille du fichier
     fseek(file, 0, SEEK_END);
-    size = ftell(file);
+    long ftell_result = ftell(file);
+    if (ftell_result < 0)
+    {
+        std::cerr << "OPENCL Error: ftell failed for " << file_name << std::endl;
+        fclose(file);
+        return false;
+    }
+    size = static_cast<size_t>(ftell_result);
     fseek(file,0, SEEK_SET);
 
     //allouer la taille nécessaire pour que le tableau puisse accueillir le contenu du fichier
@@ -230,6 +236,7 @@ std::string OpenCLProgram::buildLog(int device)
     if (size == 0) return "";
 
     string = (char*)malloc(sizeof(char)*(size+1));
+    if (string == nullptr) return "";
     clGetProgramBuildInfo((cl_program)_program,   (cl_device_id)sofa::gpu::opencl::myopencldevice(device), CL_PROGRAM_BUILD_LOG, size, string, NULL);
     while (size > 0 && (string[size-1] == 0 || string[size-1] == ' ' || string[size-1] == '\n' || string[size-1] == '\r' || string[size-1] == '\t')) --size;
     if (size == 0) { free(string); return ""; }

@@ -24,10 +24,8 @@
 
 #include <sofa/simulation/Visitor.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 class SOFA_SIMULATION_CORE_API TopologyChangeVisitor : public Visitor
@@ -38,7 +36,7 @@ public:
 
     ~TopologyChangeVisitor() override {}
 
-    virtual void processTopologyChange(simulation::Node* node, sofa::core::objectmodel::BaseObject* obj);
+    virtual void processTopologyChange(simulation::Node* node, sofa::core::objectmodel::BaseComponent* obj);
 
     Result processNodeTopDown(simulation::Node* node) override;
     void processNodeBottomUp(simulation::Node* node) override;
@@ -56,8 +54,7 @@ protected:
 };
 
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

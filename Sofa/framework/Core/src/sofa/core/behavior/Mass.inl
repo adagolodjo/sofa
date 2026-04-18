@@ -23,7 +23,8 @@
 
 #include <sofa/core/MechanicalParams.h>
 #include <sofa/core/behavior/Mass.h>
-#include <sofa/core/behavior/BaseConstraint.h>
+#include <sofa/core/behavior/ForceField.inl>
+#include <sofa/core/behavior/BaseLagrangianConstraint.h>
 #include <sofa/core/behavior/MultiMatrixAccessor.h>
 #include <sofa/defaulttype/DataTypeInfo.h>
 #include <fstream>
@@ -48,7 +49,12 @@ void Mass<DataTypes>::addMDx(const MechanicalParams* mparams, MultiVecDerivId fi
 {
     if (mparams)
     {
-            addMDx(mparams, *fid[this->mstate.get()].write(), *mparams->readDx(this->mstate), factor);
+        auto mstate = this->mstate.get();
+
+        if (auto* dxData = mparams->readDx(mstate))
+        {
+            addMDx(mparams, *fid[mstate].write(), *dxData, factor);
+        }
     }
 }
 
@@ -64,7 +70,8 @@ void Mass<DataTypes>::accFromF(const MechanicalParams* mparams, MultiVecDerivId 
 {
     if(mparams)
     {
-            accFromF(mparams, *aid[this->mstate.get()].write(), *mparams->readF(this->mstate));
+        auto mstate = this->mstate.get();
+        accFromF(mparams, *aid[mstate].write(), *mparams->readF(mstate));
     }
     else msg_error() <<"Mass<DataTypes>::accFromF(const MechanicalParams* mparams, MultiVecDerivId aid) receives no mparam";
 }
@@ -77,18 +84,10 @@ void Mass<DataTypes>::accFromF(const MechanicalParams* /*mparams*/, DataVecDeriv
 
 
 template<class DataTypes>
-void Mass<DataTypes>::addDForce(const MechanicalParams*
-                                #ifndef NDEBUG
-                                mparams
-                                #endif
-                                ,
+void Mass<DataTypes>::addDForce(const MechanicalParams* mparams,
                                 DataVecDeriv & /*df*/, const DataVecDeriv & /*dx*/)
 {
-#ifndef NDEBUG
-    // @TODO Remove
-    // Hack to disable warning message
-    sofa::core::mechanicalparams::kFactorIncludingRayleighDamping(mparams, this->rayleighStiffness.getValue());
-#endif
+    SOFA_UNUSED(mparams);
 }
 
 template<class DataTypes>
@@ -97,7 +96,8 @@ void Mass<DataTypes>::addMBKdx(const MechanicalParams* mparams, MultiVecDerivId 
     this->ForceField<DataTypes>::addMBKdx(mparams, dfId);
     if (mparams->mFactorIncludingRayleighDamping(rayleighMass.getValue()) != 0.0)
     {
-        addMDx(mparams, *dfId[this->mstate.get()].write(), *mparams->readDx(this->mstate), mparams->mFactorIncludingRayleighDamping(rayleighMass.getValue()));
+        addMDx(mparams, *dfId[this->mstate.get()].write(),
+                *mparams->readDx(this->mstate.get()), mparams->mFactorIncludingRayleighDamping(rayleighMass.getValue()));
     }
 }
 
@@ -105,7 +105,7 @@ template<class DataTypes>
 SReal Mass<DataTypes>::getKineticEnergy(const MechanicalParams* mparams) const
 {
     if (this->mstate)
-        return getKineticEnergy(mparams /* PARAMS FIRST */, *mparams->readV(this->mstate));
+        return getKineticEnergy(mparams /* PARAMS FIRST */, *mparams->readV(this->mstate.get()));
     return 0.0;
 }
 
@@ -121,7 +121,7 @@ template<class DataTypes>
 SReal Mass<DataTypes>::getPotentialEnergy(const MechanicalParams* mparams) const
 {
     if (this->mstate)
-        return getPotentialEnergy(mparams /* PARAMS FIRST */, *mparams->readX(this->mstate));
+        return getPotentialEnergy(mparams /* PARAMS FIRST */, *mparams->readX(this->mstate.get()));
     return 0.0;
 }
 
@@ -134,18 +134,19 @@ SReal Mass<DataTypes>::getPotentialEnergy(const MechanicalParams* /*mparams*/, c
 
 
 template<class DataTypes>
-type::Vector6 Mass<DataTypes>::getMomentum( const MechanicalParams* mparams ) const
+type::Vec6 Mass<DataTypes>::getMomentum( const MechanicalParams* mparams ) const
 {
-    if (this->mstate)
-        return getMomentum(mparams, *mparams->readX(this->mstate), *mparams->readV(this->mstate));
-    return type::Vector6();
+    auto state = this->mstate.get();
+    if (state)
+        return getMomentum(mparams, *mparams->readX(state), *mparams->readV(state));
+    return type::Vec6();
 }
 
 template<class DataTypes>
-type::Vector6 Mass<DataTypes>::getMomentum( const MechanicalParams* /*mparams*/, const DataVecCoord& /*x*/, const DataVecDeriv& /*v*/ ) const
+type::Vec6 Mass<DataTypes>::getMomentum( const MechanicalParams* /*mparams*/, const DataVecCoord& /*x*/, const DataVecDeriv& /*v*/ ) const
 {
     msg_warning() << "Method getMomentum( const MechanicalParams*, const DataVecCoord&, const DataVecDeriv& ) not implemented.";
-    return type::Vector6();
+    return type::Vec6();
 }
 
 
@@ -203,9 +204,9 @@ void Mass<DataTypes>::initGnuplot(const std::string path)
     if (!this->getName().empty())
     {
         if (m_gnuplotFileEnergy != nullptr)
-            delete m_gnuplotFileEnergy;
+            m_gnuplotFileEnergy.reset();
 
-        m_gnuplotFileEnergy = new std::ofstream( (path+this->getName()+"_Energy.txt").c_str() );
+        m_gnuplotFileEnergy = std::make_unique<std::ofstream>( (path+this->getName()+"_Energy.txt").c_str() );
     }
 }
 

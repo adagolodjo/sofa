@@ -47,7 +47,7 @@ public:
     static constexpr sofa::Index NbRows = T::NbRows;
     static constexpr sofa::Index NbCols = T::NbCols;
 
-    void onSetUp() override
+    void doSetUp() override
     {
         m_testedMatrix = std::make_unique<Matrix>();
         m_testedMatrix->resize(NbRows, NbCols);
@@ -55,7 +55,7 @@ public:
         m_modelMatrix.clear();
     }
 
-    void onTearDown() override
+    void doTearDown() override
     {
         m_testedMatrix.reset();
     }
@@ -115,8 +115,8 @@ public:
         {
             for (sofa::linearalgebra::BaseMatrix::Index j = 0; j < m_testedMatrix->colSize(); ++j)
             {
-                if ( i >= posRow && i < posRow + decltype(mat)::nbLines
-                  && j >= posCol && j < posCol + decltype(mat)::nbCols)
+                if ( i >= posRow && i < posRow + (sofa::linearalgebra::BaseMatrix::Index)decltype(mat)::nbLines
+                  && j >= posCol && j < posCol + (sofa::linearalgebra::BaseMatrix::Index)decltype(mat)::nbCols)
                 {
                     EXPECT_NEAR(m_testedMatrix->operator()(i,j), mat(i-posRow,j-posCol), Inherit::epsilon())
                         << "i = " << i << ", j = " << j << ", posRow = " << posRow << ", posCol = " << posCol << "\n"

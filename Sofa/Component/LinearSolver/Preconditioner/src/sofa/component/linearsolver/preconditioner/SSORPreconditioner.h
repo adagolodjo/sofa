@@ -51,8 +51,7 @@ public:
     typedef SReal Real;
     typedef sofa::component::linearsolver::MatrixLinearSolver<TMatrix,TVector,TThreadManager> Inherit;
 
-    Data<bool> f_verbose; ///< Dump system state at each iteration
-    Data<double> f_omega; ///< Omega coefficient
+    Data<double> d_omega; ///< Omega coefficient
 protected:
     SSORPreconditioner();
 public:
@@ -63,6 +62,8 @@ public:
     {
         return new SSORPreconditionerInvertData();
     }
+
+    void parse(core::objectmodel::BaseObjectDescription *arg) override;
 
 protected :
 

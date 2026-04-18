@@ -20,14 +20,16 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
+#include <sofa/component/solidmechanics/fem/elastic/BaseLinearElasticityFEMForceField.h>
 #include <sofa/component/solidmechanics/fem/elastic/config.h>
-
 #include <sofa/core/behavior/ForceField.h>
 #include <sofa/core/topology/TopologyData.h>
-#include <sofa/type/vector.h>
-#include <sofa/type/Vec.h>
-#include <sofa/type/Mat.h>
+#include <sofa/core/visual/DrawMesh.h>
+#include <sofa/helper/ColorMap.h>
 #include <sofa/helper/map.h>
+#include <sofa/type/Mat.h>
+#include <sofa/type/Vec.h>
+#include <sofa/type/vector.h>
 
 // corotational tetrahedron from
 // @InProceedings{NPF05,
@@ -48,10 +50,10 @@ namespace sofa::component::solidmechanics::fem::elastic
 /** Compute Finite Element forces based on tetrahedral elements.
  */
 template<class DataTypes>
-class TetrahedralCorotationalFEMForceField : public core::behavior::ForceField<DataTypes>
+class TetrahedralCorotationalFEMForceField : public BaseLinearElasticityFEMForceField<DataTypes>
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE(TetrahedralCorotationalFEMForceField, DataTypes), SOFA_TEMPLATE(core::behavior::ForceField, DataTypes));
+    SOFA_CLASS(SOFA_TEMPLATE(TetrahedralCorotationalFEMForceField, DataTypes), SOFA_TEMPLATE(BaseLinearElasticityFEMForceField, DataTypes));
 
     typedef typename DataTypes::VecCoord VecCoord;
     typedef typename DataTypes::VecDeriv VecDeriv;
@@ -101,6 +103,7 @@ public:
         StrainDisplacementTransposed strainDisplacementTransposedMatrix;
         /// large displacement method
         type::fixed_array<Coord,4> rotatedInitialElements;
+        type::Mat<4, 4, Real> elemShapeFun;
         Transformation rotation;
         /// polar method
         Transformation initialTransformation;
@@ -121,8 +124,9 @@ public:
             return in;
         }
     };
+
     /// container that stotes all requires information for each tetrahedron
-    core::topology::TetrahedronData<sofa::type::vector<TetrahedronInformation> > tetrahedronInfo;
+    core::topology::TetrahedronData<sofa::type::vector<TetrahedronInformation> > d_tetrahedronInfo;
 
     /// @name Full system matrix assembly support
     /// @{
@@ -135,43 +139,45 @@ public:
     /// @}
 
     SReal m_potentialEnergy;
-
     sofa::core::topology::BaseMeshTopology* _topology;
 
 public:
     int method;
-    Data<std::string> f_method; ///< the computation method of the displacements
-    Data<Real> _poissonRatio; ///< FEM Poisson Ratio
-    Data<Real> _youngModulus; ///< FEM Young Modulus
-    Data<VecReal> _localStiffnessFactor; ///< Allow specification of different stiffness per element. If there are N element and M values are specified, the youngModulus factor for element i would be localStiffnessFactor[i*M/N]
-    Data<bool> _updateStiffnessMatrix;
-    Data<bool> _assembling;
-    Data<bool> f_drawing; ///<  draw the forcefield if true
-    Data<bool> _displayWholeVolume;
-    Data<sofa::type::RGBAColor> drawColor1; ///<  draw color for faces 1
-    Data<sofa::type::RGBAColor> drawColor2; ///<  draw color for faces 2
-    Data<sofa::type::RGBAColor> drawColor3; ///<  draw color for faces 3
-    Data<sofa::type::RGBAColor> drawColor4; ///<  draw color for faces 4
-    Data<std::map < std::string, sofa::type::vector<double> > > _volumeGraph;
 
-    /// Link to be set to the topology container in the component graph. 
-    SingleLink<TetrahedralCorotationalFEMForceField<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
+    Data<std::string> d_method; ///< "small", "large" (by QR) or "polar" displacements
+    Data<VecReal> d_localStiffnessFactor; ///< Allow specification of different stiffness per element. If there are N element and M values are specified, the youngModulus factor for element i would be localStiffnessFactor[i*M/N]
+    Data<bool> d_updateStiffnessMatrix;
+    Data<bool> d_assembling;
+    Data<bool> d_drawing; ///<  draw the forcefield if true
+    Data<bool> _displayWholeVolume;
+    Data<sofa::type::RGBAColor> d_drawColor1; ///<  draw color for faces 1
+    Data<sofa::type::RGBAColor> d_drawColor2; ///<  draw color for faces 2
+    Data<sofa::type::RGBAColor> d_drawColor3; ///<  draw color for faces 3
+    Data<sofa::type::RGBAColor> d_drawColor4; ///<  draw color for faces 4
+    Data<std::map < std::string, sofa::type::vector<double> > > _volumeGraph;
+    
+    Data<bool> d_computeVonMisesStress; ///< compute and display von Mises stress: 0: no computations, 1: using corotational strain, 2: using full Green strain. Set listening=1
+    Data<type::vector<Real> > d_vonMisesPerElement; ///< von Mises Stress per element
+    Data<type::vector<Real> > d_vonMisesPerNode; ///< von Mises Stress per node
+    
+    sofa::helper::ColorMap* m_vonMisesColorMap;
+    Real prevMaxStress = -1.0;
+
+    using Inherit1::l_topology;
+
+
 protected:
     TetrahedralCorotationalFEMForceField();
 
-    /// Pointer to the topology container. Will be set by link @sa l_topology
-    sofa::core::topology::BaseMeshTopology* m_topology;
+    ~TetrahedralCorotationalFEMForceField() override;
+
 public:
-
-    void setPoissonRatio(Real val) { this->_poissonRatio.setValue(val); }
-
-    void setYoungModulus(Real val) { this->_youngModulus.setValue(val); }
 
     void setMethod(int val) { method = val; }
 
-    void setUpdateStiffnessMatrix(bool val) { this->_updateStiffnessMatrix.setValue(val); }
+    void setUpdateStiffnessMatrix(bool val) { this->d_updateStiffnessMatrix.setValue(val); }
 
-    void setComputeGlobalMatrix(bool val) { this->_assembling.setValue(val); }
+    void setComputeGlobalMatrix(bool val) { this->d_assembling.setValue(val); }
 
     void init() override;
     void reinit() override;
@@ -185,6 +191,9 @@ public:
     }
 
     void addKToMatrix(sofa::linearalgebra::BaseMatrix *m, SReal kFactor, unsigned int &offset) override;
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix) override;
+
+    void buildDampingMatrix(core::behavior::DampingMatrix* /*matrix*/) final;
 
     // Getting the rotation of the vertex by averaing the rotation of neighboring elements
     void getRotation(Transformation& R, Index nodeIdx);
@@ -193,17 +202,17 @@ public:
 
     // Getting the stiffness matrix of index i
     void getElementStiffnessMatrix(Real* stiffness, Index nodeIdx);
-    void getElementStiffnessMatrix(Real* stiffness, core::topology::BaseMeshTopology::Tetrahedron& te);
 
 
     void draw(const core::visual::VisualParams* vparams) override;
 
     void computeBBox(const core::ExecParams* params, bool onlyVisible) override;
 
+    void computeVonMisesStress();
 
 protected:
     /** Method to create @sa TetrahedronInformation when a new tetrahedron is created.
-    * Will be set as creation callback in the TetrahedronData @sa tetrahedronInfo
+    * Will be set as creation callback in the TetrahedronData @sa d_tetrahedronInfo
     */
     void createTetrahedronInformation(Index tetrahedronIndex, TetrahedronInformation& tInfo,
         const core::topology::BaseMeshTopology::Tetrahedron& tetra,
@@ -218,7 +227,7 @@ protected:
     void computeMaterialStiffness(int i, Index&a, Index&b, Index&c, Index&d);
 
     /// overloaded by classes with non-uniform stiffness
-    virtual void computeMaterialStiffness(MaterialStiffness& materialMatrix, Index&a, Index&b, Index&c, Index&d, SReal localStiffnessFactor=1);
+    virtual void computeMaterialStiffness(int tetrahedronId, MaterialStiffness& materialMatrix, Index&a, Index&b, Index&c, Index&d, SReal localStiffnessFactor=1);
 
     void computeForce( Displacement &F, const Displacement &Depl, const MaterialStiffness &K, const StrainDisplacementTransposed &J );
     void computeForce( Displacement &F, const Displacement &Depl, const MaterialStiffness &K, const StrainDisplacementTransposed &J, SReal fact );
@@ -241,9 +250,11 @@ protected:
 
     void printStiffnessMatrix(int idTetra);
 
+    core::visual::DrawElementMesh<sofa::geometry::Tetrahedron> m_drawMesh;
+
 };
 
-#if  !defined(SOFA_COMPONENT_FORCEFIELD_TETRAHEDRALCOROTATIONALFEMFORCEFIELD_CPP)
+#if !defined(SOFA_COMPONENT_FORCEFIELD_TETRAHEDRALCOROTATIONALFEMFORCEFIELD_CPP)
 
 extern template class SOFA_COMPONENT_SOLIDMECHANICS_FEM_ELASTIC_API TetrahedralCorotationalFEMForceField<sofa::defaulttype::Vec3Types>;
 

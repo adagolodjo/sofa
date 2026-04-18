@@ -44,11 +44,11 @@ using sofa::core::ExecParams ;
 using sofa::simulation::Node ;
 
 #include <sofa/simulation/Simulation.h>
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 
-#include <SofaSimulationGraph/SimpleApi.h>
+#include <sofa/simpleapi/SimpleApi.h>
 
-#include <SofaSimulationCommon/SceneLoaderXML.h>
+#include <sofa/simulation/common/SceneLoaderXML.h>
 using sofa::simulation::SceneLoaderXML ;
 
 #include <string>
@@ -96,21 +96,26 @@ public:
     typename MechanicalObject<DataTypes>::SPtr mstate;
     typename DiagonalMass<DataTypes>::SPtr mass;
 
-    void SetUp() override
+    void doSetUp() override
     {
-        sofa::simpleapi::importPlugin("SofaComponentAll") ;
+        this->loadPlugins({
+            Sofa.Component.Topology.Container.Dynamic,
+            Sofa.Component.Topology.Container.Grid,
+            Sofa.Component.StateContainer,
+            Sofa.Component.Mass
+        });
 
-        simulation::setSimulation(simulation = new simulation::graph::DAGSimulation());
+        simulation = simulation::getSimulation();
         root = simulation::getSimulation()->createNewGraph("root");
     }
 
-    void TearDown() override
+    void doTearDown() override
     {
         if (root!=nullptr)
-            simulation::getSimulation()->unload(root);
+            sofa::simulation::node::unload(root);
     }
 
-    void createSceneGraph(VecCoord positions, BaseObject::SPtr topologyContainer, BaseObject::SPtr geometryAlgorithms)
+    void createSceneGraph(VecCoord positions, sofa::core::objectmodel::BaseComponent::SPtr topologyContainer, sofa::core::objectmodel::BaseComponent::SPtr geometryAlgorithms)
     {
         node = root->createChild("node");
         mstate = New<MechanicalObject<DataTypes> >();
@@ -138,11 +143,11 @@ public:
             EXPECT_NEAR(expectedMass[i], mass->d_vertexMass.getValue()[i], 1e-4);
     }
 
-    void runTest(VecCoord positions, BaseObject::SPtr topologyContainer, BaseObject::SPtr geometryAlgorithms,
+    void runTest(VecCoord positions, sofa::core::objectmodel::BaseComponent::SPtr topologyContainer, sofa::core::objectmodel::BaseComponent::SPtr geometryAlgorithms,
                  MassType expectedTotalMass, const VecMass& expectedMass)
     {
         createSceneGraph(positions, topologyContainer, geometryAlgorithms);
-        simulation::getSimulation()->init(root.get());
+        sofa::simulation::node::initRoot(root.get());
         check(expectedTotalMass, expectedMass);
     }
 
@@ -153,14 +158,12 @@ public:
                 "<?xml version='1.0'?>"
                 "<Node 	name='Root' gravity='0 0 0' time='0' animate='0'   > "
                 "    <MechanicalObject />                                                                       "
-                "    <RegularGrid nx='2' ny='2' nz='2' xmin='0' xmax='2' ymin='0' ymax='2' zmin='0' zmax='2' /> "
+                "    <RegularGridTopology nx='2' ny='2' nz='2' xmin='0' xmax='2' ymin='0' ymax='2' zmin='0' zmax='2' /> "
                 "    <HexahedronSetGeometryAlgorithms />                                                        "
                 "   <DiagonalMass name='m_mass'/>                            "
                 "</Node>                                                     " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -188,14 +191,12 @@ public:
                 "<?xml version='1.0'?>                                                                          "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                    "
                 "    <MechanicalObject />                                                                       "
-                "    <RegularGrid nx='2' ny='2' nz='2' xmin='0' xmax='2' ymin='0' ymax='2' zmin='0' zmax='2' /> "
+                "    <RegularGridTopology nx='2' ny='2' nz='2' xmin='0' xmax='2' ymin='0' ymax='2' zmin='0' zmax='2' /> "
                 "    <HexahedronSetGeometryAlgorithms />                                                        "
                 "    <DiagonalMass name='m_mass' massDensity='1.0' />                                           "
                 "</Node>                                                                                        " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -221,14 +222,12 @@ public:
                 "<?xml version='1.0'?>                                                                          "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                    "
                 "    <MechanicalObject />                                                                       "
-                "    <RegularGrid nx='2' ny='2' nz='2' xmin='0' xmax='2' ymin='0' ymax='2' zmin='0' zmax='2' /> "
+                "    <RegularGridTopology nx='2' ny='2' nz='2' xmin='0' xmax='2' ymin='0' ymax='2' zmin='0' zmax='2' /> "
                 "    <HexahedronSetGeometryAlgorithms/>                                                         "
                 "    <DiagonalMass name='m_mass' totalMass='10'/>                                               "
                 "</Node>                                                                                        " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         root->init(sofa::core::execparams::defaultInstance()) ;
 
@@ -253,14 +252,12 @@ public:
                 "<?xml version='1.0'?>                                                                          "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                    "
                 "    <MechanicalObject />                                                                       "
-                "    <RegularGrid nx='2' ny='2' nz='2' xmin='0' xmax='2' ymin='0' ymax='2' zmin='0' zmax='2' /> "
+                "    <RegularGridTopology nx='2' ny='2' nz='2' xmin='0' xmax='2' ymin='0' ymax='2' zmin='0' zmax='2' /> "
                 "    <HexahedronSetGeometryAlgorithms />                                                        "
                 "    <DiagonalMass name='m_mass' massDensity='1.0' totalMass='10'/>                             "
                 "</Node>                                                                                        " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
 
@@ -278,7 +275,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -290,9 +287,7 @@ public:
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
 
@@ -316,7 +311,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -324,13 +319,11 @@ public:
                 "            <TetrahedronSetTopologyModifier name='Modifier' />                                     "
                 "            <TetrahedronSetGeometryAlgorithms template='Vec3d' name='GeomAlgo' />                  "
                 "            <Hexa2TetraTopologicalMapping name='default28' input='@../grid' output='@Container' /> "
-                "            <DiagonalMass name='m_mass' massDensity='-1.0'/>                                        "
+                "            <DiagonalMass name='m_mass' massDensity='-1.0'/>                                       "
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
 
@@ -348,7 +341,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -356,13 +349,11 @@ public:
                 "            <TetrahedronSetTopologyModifier name='Modifier' />                                     "
                 "            <TetrahedronSetGeometryAlgorithms template='Vec3d' name='GeomAlgo' />                  "
                 "            <Hexa2TetraTopologicalMapping name='default28' input='@../grid' output='@Container' /> "
-                "            <DiagonalMass name='m_mass' totalMass='10.0'/>                                        "
+                "            <DiagonalMass name='m_mass' totalMass='10.0'/>                                         "
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -387,7 +378,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -399,9 +390,7 @@ public:
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -420,7 +409,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -428,13 +417,11 @@ public:
                 "            <TetrahedronSetTopologyModifier name='Modifier' />                                     "
                 "            <TetrahedronSetGeometryAlgorithms template='Vec3d' name='GeomAlgo' />                  "
                 "            <Hexa2TetraTopologicalMapping name='default28' input='@../grid' output='@Container' /> "
-                "            <DiagonalMass name='m_mass' massDensity='10.0' totalMass='10.0'/>                                        "
+                "            <DiagonalMass name='m_mass' massDensity='10.0' totalMass='10.0'/>                      "
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -453,7 +440,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -461,13 +448,11 @@ public:
                 "            <TetrahedronSetTopologyModifier name='Modifier' />                                     "
                 "            <TetrahedronSetGeometryAlgorithms template='Vec3d' name='GeomAlgo' />                  "
                 "            <Hexa2TetraTopologicalMapping name='default28' input='@../grid' output='@Container' /> "
-                "            <DiagonalMass name='m_mass' massDensity='-10.0' totalMass='10.0'/>                                        "
+                "            <DiagonalMass name='m_mass' massDensity='-10.0' totalMass='10.0'/>                     "
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -486,7 +471,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -494,13 +479,11 @@ public:
                 "            <TetrahedronSetTopologyModifier name='Modifier' />                                     "
                 "            <TetrahedronSetGeometryAlgorithms template='Vec3d' name='GeomAlgo' />                  "
                 "            <Hexa2TetraTopologicalMapping name='default28' input='@../grid' output='@Container' /> "
-                "            <DiagonalMass name='m_mass' massDensity='10.0' totalMass='-10.0'/>                                        "
+                "            <DiagonalMass name='m_mass' massDensity='10.0' totalMass='-10.0'/>                     "
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -519,7 +502,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -531,9 +514,7 @@ public:
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -558,7 +539,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -570,9 +551,7 @@ public:
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -591,7 +570,7 @@ public:
         static const string scene =
                 "<?xml version='1.0'?>                                                                              "
                 "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-                "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+                "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
                 "    <MechanicalObject />                                                                           "
                 "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
                 "    <Node name='Tetra' >                                                                           "
@@ -603,9 +582,7 @@ public:
                 "    </Node>                                                                                        "
                 "</Node>                                                                                            " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.c_str(),
-                                                          sofa::Size(scene.size()));
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
 
         ASSERT_NE(root.get(), nullptr) ;
         root->init(sofa::core::execparams::defaultInstance()) ;
@@ -630,9 +607,7 @@ public:
                  "   <DiagonalMass name='m_mass' filename='"<< filename <<"'/>      "
                  "</Node>                                                     " ;
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory ("loadWithNoParam",
-                                                          scene.str().c_str(),
-                                                          sofa::Size(scene.str().size())) ;
+        const Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.str().c_str());
         ASSERT_NE(root.get(), nullptr) ;
 
         TheDiagonalMass* mass = root->getTreeObject<TheDiagonalMass>() ;
@@ -677,13 +652,11 @@ public:
             "    </Node>                                                                                        "
             "</Node>                                                                                            ";
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam",
-            scene.c_str(),
-            sofa::Size(scene.size()));
+        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
         ASSERT_NE(root.get(), nullptr);
 
         /// Init simulation
-        sofa::simulation::getSimulation()->init(root.get());
+        sofa::simulation::node::initRoot(root.get());
 
         TheDiagonalMass* mass = root->getTreeObject<TheDiagonalMass>();
         ASSERT_NE(mass, nullptr);
@@ -738,7 +711,7 @@ public:
         static const string scene =
             "<?xml version='1.0'?>                                                                              "
             "<Node  name='Root' gravity='0 0 0' time='0' animate='0'   >                                        "
-            "    <RequiredPlugin name='SofaTopologyMapping'/>                                                   "
+            "    <RequiredPlugin pluginName='Sofa.Component.Topology.Mapping'/>                                       "
             "    <RegularGridTopology name='grid' n='2 2 2' min='0 0 0' max='2 2 2' p0='0 0 0' />               "
             "    <Node name='Tetra' >                                                                           "
             "            <MechanicalObject position='@../grid.position' />                                      "
@@ -750,13 +723,11 @@ public:
             "    </Node>                                                                                        "
             "</Node>                                                                                            ";
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam",
-            scene.c_str(),
-            sofa::Size(scene.size()));
+        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
         ASSERT_NE(root.get(), nullptr);
         
         /// Init simulation
-        sofa::simulation::getSimulation()->init(root.get());
+        sofa::simulation::node::initRoot(root.get());
 
         TheDiagonalMass* mass = root->getTreeObject<TheDiagonalMass>();
         ASSERT_NE(mass, nullptr);
@@ -816,13 +787,11 @@ public:
             "    </Node>                                                                                        "
             "</Node>                                                                                            ";
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam",
-            scene.c_str(),
-            sofa::Size(scene.size()));
+        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
         ASSERT_NE(root.get(), nullptr);
 
         /// Init simulation
-        sofa::simulation::getSimulation()->init(root.get());
+        sofa::simulation::node::initRoot(root.get());
 
         TheDiagonalMass* mass = root->getTreeObject<TheDiagonalMass>();
         ASSERT_NE(mass, nullptr);
@@ -906,13 +875,11 @@ public:
             "    </Node>                                                                                        "
             "</Node>                                                                                            ";
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam",
-            scene.c_str(),
-            sofa::Size(scene.size()));
+        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
         ASSERT_NE(root.get(), nullptr);
 
         /// Init simulation
-        sofa::simulation::getSimulation()->init(root.get());
+        sofa::simulation::node::initRoot(root.get());
 
         TheDiagonalMass* mass = root->getTreeObject<TheDiagonalMass>();
         ASSERT_NE(mass, nullptr);
@@ -977,13 +944,11 @@ public:
             "    </Node>                                                                                        "
             "</Node>                                                                                            ";
 
-        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam",
-            scene.c_str(),
-            sofa::Size(scene.size()));
+        Node::SPtr root = SceneLoaderXML::loadFromMemory("loadWithNoParam", scene.c_str());
         ASSERT_NE(root.get(), nullptr);
 
         /// Init simulation
-        sofa::simulation::getSimulation()->init(root.get());
+        sofa::simulation::node::initRoot(root.get());
 
         TheDiagonalMass* mass = root->getTreeObject<TheDiagonalMass>();
         ASSERT_NE(mass, nullptr);
@@ -1033,10 +998,10 @@ TEST_F(DiagonalMass3_test, singleEdge)
     positions.push_back(Coord(0.0f, 0.0f, 0.0f));
     positions.push_back(Coord(0.0f, 1.0f, 0.0f));
 
-    EdgeSetTopologyContainer::SPtr topologyContainer = New<EdgeSetTopologyContainer>();
+    const EdgeSetTopologyContainer::SPtr topologyContainer = New<EdgeSetTopologyContainer>();
     topologyContainer->addEdge(0, 1);
 
-    EdgeSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
+    const EdgeSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
         = New<EdgeSetGeometryAlgorithms<Vec3Types> >();
 
     const MassType expectedTotalMass = 1.0f;
@@ -1056,10 +1021,10 @@ TEST_F(DiagonalMass3_test, singleTriangle)
     positions.push_back(Coord(1.0f, 0.0f, 0.0f));
     positions.push_back(Coord(0.0f, 1.0f, 0.0f));
 
-    TriangleSetTopologyContainer::SPtr topologyContainer = New<TriangleSetTopologyContainer>();
+    const TriangleSetTopologyContainer::SPtr topologyContainer = New<TriangleSetTopologyContainer>();
     topologyContainer->addTriangle(0, 1, 2);
 
-    TriangleSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
+    const TriangleSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
         = New<TriangleSetGeometryAlgorithms<Vec3Types> >();
 
     const MassType expectedTotalMass = 1.0f;
@@ -1080,10 +1045,10 @@ TEST_F(DiagonalMass3_test, singleQuad)
     positions.push_back(Coord(1.0f, 1.0f, 0.0f));
     positions.push_back(Coord(1.0f, 0.0f, 0.0f));
 
-    QuadSetTopologyContainer::SPtr topologyContainer = New<QuadSetTopologyContainer>();
+    const QuadSetTopologyContainer::SPtr topologyContainer = New<QuadSetTopologyContainer>();
     topologyContainer->addQuad(0, 1, 2, 3);
 
-    QuadSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
+    const QuadSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
         = New<QuadSetGeometryAlgorithms<Vec3Types> >();
 
     const MassType expectedTotalMass = 1.0f;
@@ -1104,10 +1069,10 @@ TEST_F(DiagonalMass3_test, singleTetrahedron)
     positions.push_back(Coord(1.0f, 0.0f, 0.0f));
     positions.push_back(Coord(0.0f, 0.0f, 1.0f));
 
-    TetrahedronSetTopologyContainer::SPtr topologyContainer = New<TetrahedronSetTopologyContainer>();
+    const TetrahedronSetTopologyContainer::SPtr topologyContainer = New<TetrahedronSetTopologyContainer>();
     topologyContainer->addTetra(0, 1, 2, 3);
 
-    TetrahedronSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
+    const TetrahedronSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
         = New<TetrahedronSetGeometryAlgorithms<Vec3Types> >();
 
     const MassType expectedTotalMass = 1.0f;
@@ -1132,10 +1097,10 @@ TEST_F(DiagonalMass3_test, singleHexahedron)
     positions.push_back(Coord(1.0f, 1.0f, 1.0f));
     positions.push_back(Coord(0.0f, 1.0f, 1.0f));
 
-    HexahedronSetTopologyContainer::SPtr topologyContainer = New<HexahedronSetTopologyContainer>();
+    const HexahedronSetTopologyContainer::SPtr topologyContainer = New<HexahedronSetTopologyContainer>();
     topologyContainer->addHexa(0, 1, 2, 3, 4, 5, 6, 7);
 
-    HexahedronSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
+    const HexahedronSetGeometryAlgorithms<Vec3Types>::SPtr geometryAlgorithms
         = New<HexahedronSetGeometryAlgorithms<Vec3Types> >();
 
     const MassType expectedTotalMass = 1.0f;

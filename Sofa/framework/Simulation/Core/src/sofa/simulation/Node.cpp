@@ -49,10 +49,8 @@
 #include <sofa/core/Mapping.h>
 
 #include <sofa/simulation/Node.inl>
-#include <sofa/simulation/VisitorScheduler.h>
 #include <sofa/simulation/PropagateEventVisitor.h>
 #include <sofa/simulation/UpdateMappingEndEvent.h>
-#include <sofa/simulation/AnimateVisitor.h>
 #include <sofa/simulation/DeactivatedNodeVisitor.h>
 #include <sofa/simulation/InitVisitor.h>
 #include <sofa/simulation/MechanicalVisitor.h>
@@ -62,7 +60,12 @@
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/helper/Factory.inl>
 #include <sofa/helper/cast.h>
+#include <sofa/type/hardening.h>
+
 #include <iostream>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
 
 /// If you want to activate/deactivate that please set them to true/false
 #define DEBUG_VISITOR false
@@ -71,9 +74,8 @@
 namespace sofa::simulation
 {
 using core::objectmodel::BaseNode;
-using core::objectmodel::BaseObject;
 
-Node::Node(const std::string& name)
+Node::Node(const std::string& nodename, Node* parent)
     : core::objectmodel::BaseNode()
     , sofa::core::objectmodel::Context()
     , child(initLink("child", "Child nodes"))
@@ -100,6 +102,7 @@ Node::Node(const std::string& name)
 
     , animationManager(initLink("animationLoop","The AnimationLoop attached to this node (only valid for root node)"))
     , visualLoop(initLink("visualLoop", "The VisualLoop attached to this node (only valid for root node)"))
+    , visualStyle(initLink("visualStyle", "The VisualStyle(s) attached to this node"))
     , topology(initLink("topology", "The Topology attached to this node"))
     , meshTopology(initLink("meshTopology", "The MeshTopology / TopologyContainer attached to this node"))
     , state(initLink("state", "The State attached to this node (storing vectors such as position, velocity)"))
@@ -110,16 +113,23 @@ Node::Node(const std::string& name)
 
     , debug_(false)
     , initialized(false)
+    , l_parents(initLink("parents", "Parents nodes in the graph"))
 {
+    if( parent )
+        parent->addChild(this);
+
     _context = this;
-    setName(name);
+    setName(nodename);
     f_printLog.setValue(DEBUG_LINK);
 }
 
 
 Node::~Node()
 {
+    for (auto& aChild : child )
+        aChild->l_parents.remove(this);
 }
+
 
 void Node::parse( sofa::core::objectmodel::BaseObjectDescription* arg )
 {
@@ -154,7 +164,19 @@ void Node::parse( sofa::core::objectmodel::BaseObjectDescription* arg )
         else if (str[0] == 'F' || str[0] == 'f')
             val = false;
         else if ((str[0] >= '0' && str[0] <= '9') || str[0] == '-')
-            val = (atoi(str) != 0);
+        {
+            int parsed{};
+            if(sofa::type::hardening::safeStrToInt(str, parsed))
+            {
+                val = (parsed != 0);
+            }
+            else
+            {
+                msg_warning() << "Error while parsing " << str;
+                val = false;
+            }
+        }
+        
         else continue;
         if (!oldFlags.empty()) oldFlags += ' ';
         if (val) oldFlags += oldVisualFlags[i];
@@ -167,7 +189,7 @@ void Node::parse( sofa::core::objectmodel::BaseObjectDescription* arg )
 
         sofa::core::objectmodel::BaseObjectDescription objDesc("displayFlags","VisualStyle");
         objDesc.setAttribute("displayFlags", oldFlags);
-        sofa::core::objectmodel::BaseObject::SPtr obj = sofa::core::ObjectFactory::CreateObject(this, &objDesc);
+        sofa::core::objectmodel::BaseComponent::SPtr obj = sofa::core::ObjectFactory::CreateObject(this, &objDesc);
     }
 }
 
@@ -221,25 +243,34 @@ void Node::moveChild(BaseNode::SPtr node, BaseNode::SPtr prev_parent)
     doMoveChild(node, prev_parent);
 }
 /// Add an object. Detect the implemented interfaces and add the object to the corresponding lists.
-bool Node::addObject(BaseObject::SPtr obj, sofa::core::objectmodel::TypeOfInsertion insertionLocation)
+bool Node::addObject(sofa::core::objectmodel::BaseComponent::SPtr obj, sofa::core::objectmodel::TypeOfInsertion insertionLocation)
 {
+    // If an object we are trying to add already has a context, it is in another node in the
+    // graph: we need to remove it from this context before to insert it into the current
+    // one.
+    if(obj->getContext() != BaseContext::getDefault())
+    {
+        msg_error() << "Object '" << obj->getName() << "' already has a node ("<< obj->getPathName() << "). Please remove it from this node before adding it to a new one.";
+        return false;
+    }
+
     notifyBeginAddObject(this, obj);
-    bool ret = doAddObject(obj, insertionLocation);
+    const bool ret = doAddObject(obj, insertionLocation);
     notifyEndAddObject(this, obj);
     return ret;
 }
 
 /// Remove an object
-bool Node::removeObject(BaseObject::SPtr obj)
+bool Node::removeObject(sofa::core::objectmodel::BaseComponent::SPtr obj)
 {
     notifyBeginRemoveObject(this, obj);
-    bool ret = doRemoveObject(obj);
+    const bool ret = doRemoveObject(obj);
     notifyEndRemoveObject(this, obj);
     return ret;
 }
 
 /// Move an object from another node
-void Node::moveObject(BaseObject::SPtr obj)
+void Node::moveObject(sofa::core::objectmodel::BaseComponent::SPtr obj)
 {
     Node* prev_parent = down_cast<Node>(obj->getContext()->toBaseNode());
     if (prev_parent)
@@ -254,88 +285,88 @@ void Node::moveObject(BaseObject::SPtr obj)
 }
 
 
-void Node::notifyBeginAddChild(Node::SPtr parent, Node::SPtr child) const
+void Node::notifyBeginAddChild(Node::SPtr parent, Node::SPtr childPtr) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onBeginAddChild(parent.get(), child.get());
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onBeginAddChild(parent.get(), childPtr.get());
 }
 
-void Node::notifyEndAddChild(Node::SPtr parent, Node::SPtr child) const
+void Node::notifyEndAddChild(Node::SPtr parent, Node::SPtr childPtr) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onEndAddChild(parent.get(), child.get());
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onEndAddChild(parent.get(), childPtr.get());
 }
 
-void Node::notifyBeginRemoveChild(Node::SPtr parent, Node::SPtr child) const
+void Node::notifyBeginRemoveChild(Node::SPtr parent, Node::SPtr childPtr) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onBeginRemoveChild(parent.get(), child.get());
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onBeginRemoveChild(parent.get(), childPtr.get());
 }
 
-void Node::notifyEndRemoveChild(Node::SPtr parent, Node::SPtr child) const
+void Node::notifyEndRemoveChild(Node::SPtr parent, Node::SPtr childPtr) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onEndRemoveChild(parent.get(), child.get());
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onEndRemoveChild(parent.get(), childPtr.get());
 }
 
-void Node::notifyBeginAddObject(Node::SPtr parent, core::objectmodel::BaseObject::SPtr obj) const
+void Node::notifyBeginAddObject(Node::SPtr parent, core::objectmodel::BaseComponent::SPtr objPtr) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onBeginAddObject(parent.get(), obj.get());
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onBeginAddObject(parent.get(), objPtr.get());
 }
 
-void Node::notifyEndAddObject(Node::SPtr parent, core::objectmodel::BaseObject::SPtr obj) const
+void Node::notifyEndAddObject(Node::SPtr parent, core::objectmodel::BaseComponent::SPtr objPtr) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onEndAddObject(parent.get(), obj.get());
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onEndAddObject(parent.get(), objPtr.get());
 }
 
-void Node::notifyBeginRemoveObject(Node::SPtr parent, core::objectmodel::BaseObject::SPtr obj) const
+void Node::notifyBeginRemoveObject(Node::SPtr parent, core::objectmodel::BaseComponent::SPtr objPtr) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onBeginRemoveObject(parent.get(), obj.get());
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onBeginRemoveObject(parent.get(), objPtr.get());
 }
 
-void Node::notifyEndRemoveObject(Node::SPtr parent, core::objectmodel::BaseObject::SPtr obj) const
+void Node::notifyEndRemoveObject(Node::SPtr parent, core::objectmodel::BaseComponent::SPtr objPtr) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onEndRemoveObject(parent.get(), obj.get());
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onEndRemoveObject(parent.get(), objPtr.get());
 }
 
-void Node::notifyBeginAddSlave(core::objectmodel::BaseObject* master, core::objectmodel::BaseObject* slave) const
+void Node::notifyBeginAddSlave(core::objectmodel::BaseComponent* master, core::objectmodel::BaseComponent* slave) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onBeginAddSlave(master, slave);
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onBeginAddSlave(master, slave);
 }
 
-void Node::notifyEndAddSlave(core::objectmodel::BaseObject* master, core::objectmodel::BaseObject* slave) const
+void Node::notifyEndAddSlave(core::objectmodel::BaseComponent* master, core::objectmodel::BaseComponent* slave) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onEndAddSlave(master, slave);
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onEndAddSlave(master, slave);
 }
 
-void Node::notifyBeginRemoveSlave(core::objectmodel::BaseObject* master, core::objectmodel::BaseObject* slave) const
+void Node::notifyBeginRemoveSlave(core::objectmodel::BaseComponent* master, core::objectmodel::BaseComponent* slave) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onBeginRemoveSlave(master, slave);
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onBeginRemoveSlave(master, slave);
 }
 
-void Node::notifyEndRemoveSlave(core::objectmodel::BaseObject* master, core::objectmodel::BaseObject* slave) const
+void Node::notifyEndRemoveSlave(core::objectmodel::BaseComponent* master, core::objectmodel::BaseComponent* slave) const
 {
-    Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
-    for (auto& listener : root->listener)
-        listener->onEndRemoveSlave(master, slave);
+    const Node* root = down_cast<Node>(this->getContext()->getRootContext()->toBaseNode());
+    for (const auto& rootListener : root->listener)
+        rootListener->onEndRemoveSlave(master, slave);
 }
 
 void Node::notifySleepChanged(Node* node) const
@@ -370,10 +401,10 @@ void Node::removeListener(MutationListener* obj)
 
 
 /// Find an object given its name
-core::objectmodel::BaseObject* Node::getObject(const std::string& name) const
+core::objectmodel::BaseComponent* Node::getObject(const std::string& objectName) const
 {
     for (ObjectIterator it = object.begin(), itend = object.end(); it != itend; ++it)
-        if ((*it)->getName() == name)
+        if ((*it)->getName() == objectName)
             return it->get();
     return nullptr;
 }
@@ -396,7 +427,7 @@ sofa::core::objectmodel::Base* Node::findLinkDestClass(const core::objectmodel::
         dmsg_info() << "LINK: Looking for " << destType->className << "<" << destType->templateName << "> " << pathStr << " from Node " << getName() ;
 
     std::size_t ppos = 0;
-    std::size_t psize = pathStr.size();
+    const std::size_t psize = pathStr.size();
     if (ppos == psize || (ppos == psize-2 && pathStr[ppos] == '[' && pathStr[ppos+1] == ']')) // self-reference
     {
         if(DEBUG_LINK)
@@ -406,7 +437,7 @@ sofa::core::objectmodel::Base* Node::findLinkDestClass(const core::objectmodel::
         return destType->dynamicCast(link->getOwnerBase());
     }
     Node* node = this;
-    BaseObject* master = nullptr;
+    sofa::core::objectmodel::BaseComponent* master = nullptr;
     bool based = false;
     if (ppos < psize && pathStr[ppos] == '[') // relative index in the list of objects
     {
@@ -415,13 +446,21 @@ sofa::core::objectmodel::Base* Node::findLinkDestClass(const core::objectmodel::
             msg_error() << "Invalid index-based path \"" << path << "\"";
             return nullptr;
         }
-        int index = atoi(pathStr.c_str()+ppos+1);
+        char* endptr = nullptr;
+        errno = 0;
+        long parsedIndex = std::strtol(pathStr.c_str()+ppos+1, &endptr, 10);
+        if (errno != 0 || endptr == pathStr.c_str()+ppos+1 || parsedIndex < INT_MIN || parsedIndex > INT_MAX)
+        {
+            msg_error() << "Invalid index in path \"" << path << "\"";
+            return nullptr;
+        }
+        int index = static_cast<int>(parsedIndex);
 
         if(DEBUG_LINK)
            dmsg_info() << "  index-based path to " << index ;
 
         ObjectReverseIterator it = object.rbegin();
-        ObjectReverseIterator itend = object.rend();
+        const ObjectReverseIterator itend = object.rend();
         if (link && link->getOwnerBase())
         {
             // index from last
@@ -495,33 +534,33 @@ sofa::core::objectmodel::Base* Node::findLinkDestClass(const core::objectmodel::
         {
             std::size_t p2pos = pathStr.find('/',ppos);
             if (p2pos == std::string::npos) p2pos = psize;
-            std::string name = pathStr.substr(ppos,p2pos-ppos);
+            std::string nameStr = pathStr.substr(ppos,p2pos-ppos);
             ppos = p2pos+1;
             if (master)
             {
                 if(DEBUG_LINK)
-                    dmsg_info() << "  to slave object " << name ;
-                master = master->getSlave(name);
+                    dmsg_info() << "  to slave object " << nameStr ;
+                master = master->getSlave(nameStr);
                 if (!master) return nullptr;
             }
             else
             {
                 for (;;)
                 {
-                    BaseObject* obj = node->getObject(name);
-                    Node* child = node->getChild(name);
-                    if (child)
+                    sofa::core::objectmodel::BaseComponent* obj = node->getObject(nameStr);
+                    Node* childPtr = node->getChild(nameStr);
+                    if (childPtr)
                     {
-                        node = child;
+                        node = childPtr;
                         if(DEBUG_LINK)
-                            dmsg_info() << "  to child node " << name ;
+                            dmsg_info() << "  to child node " << nameStr ;
                         break;
                     }
                     else if (obj)
                     {
                         master = obj;
                         if(DEBUG_LINK)
-                            dmsg_info()  << "  to object " << name ;
+                            dmsg_info()  << "  to object " << nameStr ;
                         break;
                     }
                     if (based) return nullptr;
@@ -553,7 +592,7 @@ sofa::core::objectmodel::Base* Node::findLinkDestClass(const core::objectmodel::
         }
         for (ObjectIterator it = node->object.begin(), itend = node->object.end(); it != itend; ++it)
         {
-            BaseObject* obj = it->get();
+            sofa::core::objectmodel::BaseComponent* obj = it->get();
             Base *o = destType->dynamicCast(obj);
             if (!o) continue;
             if(DEBUG_LINK)
@@ -585,7 +624,7 @@ sofa::core::objectmodel::Base* Node::findLinkDestClass(const core::objectmodel::
 }
 
 /// Add an object. Detect the implemented interfaces and add the object to the corresponding lists.
-bool Node::doAddObject(BaseObject::SPtr sobj, sofa::core::objectmodel::TypeOfInsertion insertionLocation)
+bool Node::doAddObject(sofa::core::objectmodel::BaseComponent::SPtr sobj, sofa::core::objectmodel::TypeOfInsertion insertionLocation)
 {
     this->setObjectContext(sobj);
     if(insertionLocation == sofa::core::objectmodel::TypeOfInsertion::AtEnd)
@@ -593,7 +632,7 @@ bool Node::doAddObject(BaseObject::SPtr sobj, sofa::core::objectmodel::TypeOfIns
     else
         object.addBegin(sobj);
 
-    BaseObject* obj = sobj.get();
+    sofa::core::objectmodel::BaseComponent* obj = sobj.get();
 
     if( !obj->insertInNode( this ) )
     {
@@ -603,13 +642,13 @@ bool Node::doAddObject(BaseObject::SPtr sobj, sofa::core::objectmodel::TypeOfIns
 }
 
 /// Remove an object
-bool Node::doRemoveObject(BaseObject::SPtr sobj)
+bool Node::doRemoveObject(sofa::core::objectmodel::BaseComponent::SPtr sobj)
 {
     dmsg_warning_when(sobj == nullptr) << "Trying to remove a nullptr object";
 
     this->clearObjectContext(sobj);
     object.remove(sobj);
-    BaseObject* obj = sobj.get();
+    sofa::core::objectmodel::BaseComponent* obj = sobj.get();
 
     if(obj != nullptr && !obj->removeInNode( this ) )
         unsorted.remove(obj);
@@ -617,7 +656,7 @@ bool Node::doRemoveObject(BaseObject::SPtr sobj)
 }
 
 /// Remove an object
-void Node::doMoveObject(BaseObject::SPtr sobj, Node* prev_parent)
+void Node::doMoveObject(sofa::core::objectmodel::BaseComponent::SPtr sobj, Node* prev_parent)
 {
     if (prev_parent != nullptr)
         prev_parent->removeObject(sobj);
@@ -632,16 +671,6 @@ core::topology::Topology* Node::getTopology() const
         return this->topology;
     else
         return get<core::topology::Topology>(SearchParents);
-}
-
-/// Mesh Topology (unified interface for both static and dynamic topologies)
-core::topology::BaseMeshTopology* Node::getMeshTopologyLink(SearchDirection dir) const
-{
-    SOFA_UNUSED(dir);
-    if (this->meshTopology)
-        return this->meshTopology;
-    else
-        return get<core::topology::BaseMeshTopology>(SearchParents);
 }
 
 /// Degrees-of-Freedom
@@ -718,23 +747,23 @@ core::visual::VisualLoop* Node::getVisualLoop() const
 }
 
 /// Find a child node given its name
-Node* Node::getChild(const std::string& name) const
+Node* Node::getChild(const std::string& childName) const
 {
     for (ChildIterator it = child.begin(), itend = child.end(); it != itend; ++it)
     {
-        if ((*it)->getName() == name)
+        if ((*it)->getName() == childName)
             return it->get();
     }
     return nullptr;
 }
 
 /// Get a descendant node given its name
-Node* Node::getTreeNode(const std::string& name) const
+Node* Node::getTreeNode(const std::string& nodeName) const
 {
     Node* result = nullptr;
-    result = getChild(name);
+    result = getChild(nodeName);
     for (ChildIterator it = child.begin(), itend = child.end(); result == nullptr && it != itend; ++it)
-        result = (*it)->getTreeNode(name);
+        result = (*it)->getTreeNode(nodeName);
     return result;
 }
 
@@ -748,7 +777,7 @@ Node* Node::getNodeInGraph(const std::string& absolutePath) const
         return dynamic_cast<Node*>(this->getRootContext());
 
     Node* ret = nullptr;
-    Node* parent = dynamic_cast<Node*>(this->getRootContext());
+    const Node* parent = dynamic_cast<Node*>(this->getRootContext());
     while (p != "")
     {
         std::string nodeName = p.substr(0, p.find('/'));
@@ -791,7 +820,7 @@ void Node::removeControllers()
 {
     removeObject(*animationManager.begin());
     typedef NodeSequence<core::behavior::OdeSolver> Solvers;
-    Solvers solverRemove = solver;
+    const Solvers solverRemove = solver;
     for ( Solvers::iterator i=solverRemove.begin(), iend=solverRemove.end(); i!=iend; ++i )
         removeObject( *i );
 }
@@ -804,7 +833,6 @@ const core::objectmodel::BaseContext* Node::getContext() const
 {
     return _context;
 }
-
 
 void Node::setDefaultVisualContextValue()
 {
@@ -824,17 +852,6 @@ void Node::setDefaultVisualContextValue()
     */
 }
 
-void Node::bwdInit()
-{
-    if (mechanicalMapping && !mechanicalMapping->isMechanical())
-    {
-        // BUGFIX: the mapping was configured as not mechanical -> remove it from mechanicalMapping and put it in mapping
-        core::BaseMapping* bmap = mechanicalMapping.get();
-        mapping.add(bmap);
-        mechanicalMapping.remove(bmap);
-    }
-}
-
 void Node::initialize()
 {
     initialized = true;  // flag telling is the node is initialized
@@ -843,34 +860,11 @@ void Node::initialize()
     updateSimulationContext();
 }
 
-void Node::updateContext()
-{
-    updateSimulationContext();
-    updateVisualContext();
-    if ( debug_ )
-        msg_info()<<"Node::updateContext, node = "<<getName()<<", updated context = "<< *static_cast<core::objectmodel::Context*>(this) ;
-}
-
-void Node::updateSimulationContext()
-{
-    for ( unsigned i=0; i<contextObject.size(); ++i )
-    {
-        contextObject[i]->init();
-        contextObject[i]->apply();
-    }
-}
-
 void Node::updateVisualContext()
 {
-    // Apply local modifications to the context
-    for ( unsigned i=0; i<contextObject.size(); ++i )
-    {
-        contextObject[i]->init();
-        contextObject[i]->apply();
-    }
+    initializeContexts();
 
-    if ( debug_ )
-        msg_info()<<"Node::updateVisualContext, node = "<<getName()<<", updated context = "<< *static_cast<core::objectmodel::Context*>(this) ;
+    dmsg_info_when(debug_)<<"Node::updateVisualContext, node = "<<getName()<<", updated context = "<< *static_cast<core::objectmodel::Context*>(this) ;
 }
 
 /// Execute a recursive action starting from this node
@@ -932,6 +926,7 @@ void Node::printComponents()
     using core::objectmodel::ContextObject;
     using core::collision::Pipeline;
     using core::BaseState;
+    using core::visual::BaseVisualStyle;
 
     std::stringstream sstream;
 
@@ -989,6 +984,9 @@ void Node::printComponents()
     sstream << "\n" << "VisualModel: ";
     for (NodeSequence<VisualModel>::iterator i = visualModel.begin(), iend = visualModel.end(); i != iend; ++i)
         sstream << (*i)->getName() << " ";
+    sstream << "\n" << "BaseVisualStyle: ";
+    for (NodeSingle<BaseVisualStyle>::iterator i = visualStyle.begin(), iend = visualStyle.end(); i != iend; ++i)
+        sstream << (*i)->getName() << " ";
     sstream << "\n" << "CollisionModel: ";
     for (NodeSequence<CollisionModel>::iterator i = collisionModel.begin(), iend = collisionModel.end(); i != iend; ++i)
         sstream << (*i)->getName() << " ";
@@ -1003,11 +1001,6 @@ void Node::printComponents()
     msg_info() << sstream.str();
 }
 
-Node::SPtr Node::create( const std::string& name )
-{
-    return getSimulation()->createNewNode(name);
-}
-
 void Node::setSleeping(bool val)
 {
     if (val != d_isSleeping.getValue())
@@ -1017,8 +1010,870 @@ void Node::setSleeping(bool val)
     }
 }
 
+template<class LinkType, class Component>
+void checkAlreadyContains(Node& self, LinkType& link, Component* obj)
+{
+    if constexpr (!LinkType::IsMultiLink)
+    {
+        if (link != obj && link != nullptr)
+        {
+            static const auto componentClassName = Component::GetClass()->className;
+            msg_warning(&self) << "Trying to add a " << componentClassName << " ('"
+                << obj->getName() << "' [" << obj->getClassName() << "] " << obj << ")"
+                << " into the Node '" << self.getPathName()
+                << "', whereas it already contains one ('" << link->getName() << "' [" << link->getClassName() << "] " << link.get() << ")."
+                << " Only one " << componentClassName << " is permitted in a Node. The previous "
+                << componentClassName << " is replaced and the behavior is undefined.";
+        }
+    }
+}
+
+
+/// get all down objects respecting specified class_info and tags
+class GetDownObjectsVisitor : public Visitor
+{
+public:
+
+    GetDownObjectsVisitor(const sofa::core::objectmodel::ClassInfo& class_info, Node::GetObjectsCallBack& container, const sofa::core::objectmodel::TagSet& tags);
+    ~GetDownObjectsVisitor() ;
+
+    Result processNodeTopDown(simulation::Node* node) override
+    {
+        static_cast<const Node*>(node)->getLocalObjects( _class_info, _container, _tags );
+        return RESULT_CONTINUE;
+    }
+
+    /// Specify whether this action can be parallelized.
+    bool isThreadSafe() const override { return false; }
+
+    /// Return a category name for this action.
+    /// Only used for debugging / profiling purposes
+    const char* getCategoryName() const override { return "GetDownObjectsVisitor"; }
+    const char* getClassName()    const override { return "GetDownObjectsVisitor"; }
+
+protected:
+    const sofa::core::objectmodel::ClassInfo& _class_info;
+    Node::GetObjectsCallBack& _container;
+    const sofa::core::objectmodel::TagSet& _tags;
+};
+
+GetDownObjectsVisitor::GetDownObjectsVisitor(const sofa::core::objectmodel::ClassInfo& class_info,
+                                             Node::GetObjectsCallBack& container,
+                                             const sofa::core::objectmodel::TagSet& tags)
+    : Visitor( sofa::core::execparams::defaultInstance() )
+    , _class_info(class_info)
+    , _container(container)
+    , _tags(tags)
+{}
+
+GetDownObjectsVisitor::~GetDownObjectsVisitor(){}
+
+/// get all up objects respecting specified class_info and tags
+class GetUpObjectsVisitor : public Visitor
+{
+public:
+
+    GetUpObjectsVisitor(Node* searchNode, const sofa::core::objectmodel::ClassInfo& class_info, Node::GetObjectsCallBack& container, const sofa::core::objectmodel::TagSet& tags);
+    ~GetUpObjectsVisitor() override;
+
+    Result processNodeTopDown(simulation::Node* node) override
+    {
+        const Node* dagnode = dynamic_cast<const Node*>(node);
+        if( dagnode->_descendancy.contains(_searchNode) ) // searchNode is in the current node descendancy, so the current node is a parent of searchNode
+        {
+            dagnode->getLocalObjects( _class_info, _container, _tags );
+            return RESULT_CONTINUE;
+        }
+        else // the current node is NOT a parent of searchNode, stop here
+        {
+            return RESULT_PRUNE;
+        }
+    }
+
+    /// Specify whether this action can be parallelized.
+    bool isThreadSafe() const override { return false; }
+
+    /// Return a category name for this action.
+    /// Only used for debugging / profiling purposes
+    const char* getCategoryName() const override { return "GetUpObjectsVisitor"; }
+    const char* getClassName()    const override { return "GetUpObjectsVisitor"; }
+
+
+protected:
+
+    Node* _searchNode;
+    const sofa::core::objectmodel::ClassInfo& _class_info;
+    Node::GetObjectsCallBack& _container;
+    const sofa::core::objectmodel::TagSet& _tags;
+
+};
+
+GetUpObjectsVisitor::GetUpObjectsVisitor(Node* searchNode,
+                                         const sofa::core::objectmodel::ClassInfo& class_info,
+                                         Node::GetObjectsCallBack& container,
+                                         const sofa::core::objectmodel::TagSet& tags)
+    : Visitor( sofa::core::execparams::defaultInstance() )
+    , _searchNode( searchNode )
+    , _class_info(class_info)
+    , _container(container)
+    , _tags(tags)
+{}
+
+GetUpObjectsVisitor::~GetUpObjectsVisitor(){}
+
+/// Create, add, then return the new child of this Node
+Node::SPtr Node::createChild(const std::string& nodeName)
+{
+    Node::SPtr newchild;
+    if (nodeName.empty())
+    {
+        int i = 0;
+        std::string newName = "unnamed";
+        bool uid_found = false;
+        while (!uid_found)
+        {
+            uid_found = true;
+            for (const auto& c : this->child)
+            {
+                if (c->getName() == newName)
+                {
+                    newName = "unnamed" + std::to_string(++i);
+                    uid_found = true;
+                }
+            }
+            for (const auto& o : this->object)
+            {
+                if (o->getName() == newName)
+                {
+                    newName = "unnamed" + std::to_string(++i);
+                    uid_found = true;
+                }
+            }
+        }
+        msg_error("Node::createChild()") << "Empty string given to property 'name': Forcefully setting an empty name is forbidden.\n"
+                                        "Renaming to " + newName + " to avoid unexpected behaviors.";
+        newchild = sofa::core::objectmodel::New<Node>(newName);
+    }
+    else
+        newchild = sofa::core::objectmodel::New<Node>(nodeName);
+    this->addChild(newchild); newchild->updateSimulationContext();
+    return newchild;
+}
+
+
+void Node::moveChild(BaseNode::SPtr node)
+{
+    const Node::SPtr dagnode = sofa::core::objectmodel::SPtr_static_cast<Node>(node);
+    for (const auto& parent : dagnode->getParents()) {
+        Node::moveChild(node, parent);
+    }
+}
+
+
+/// Add a child node
+void Node::doAddChild(BaseNode::SPtr node)
+{
+    const Node::SPtr dagnode = sofa::core::objectmodel::SPtr_static_cast<Node>(node);
+    setDirtyDescendancy();
+    child.add(dagnode);
+    dagnode->l_parents.add(this);
+    dagnode->l_parents.updateLinks(); // to fix load-time unresolved links
+}
+
+/// Remove a child
+void Node::doRemoveChild(BaseNode::SPtr node)
+{
+    const Node::SPtr dagnode = sofa::core::objectmodel::SPtr_static_cast<Node>(node);
+    setDirtyDescendancy();
+    child.remove(dagnode);
+    dagnode->l_parents.remove(this);
+}
+
+/// Move a node from another node
+void Node::doMoveChild(BaseNode::SPtr node, BaseNode::SPtr previous_parent)
+{
+    const Node::SPtr dagnode = sofa::core::objectmodel::SPtr_static_cast<Node>(node);
+    if (!dagnode) return;
+
+    setDirtyDescendancy();
+    previous_parent->removeChild(node);
+
+    addChild(node);
+}
+
+/// Remove a child
+void Node::detachFromGraph()
+{
+    Node::SPtr me = this; // make sure we don't delete ourself before the end of this method
+    const LinkParents::Container& parents = l_parents.getValue();
+    while(!parents.empty())
+        parents.back()->removeChild(this);
+}
+
+/// Generic object access, possibly searching up or down from the current context
+///
+/// Note that the template wrapper method should generally be used to have the correct return type,
+void* Node::getObject(const sofa::core::objectmodel::ClassInfo& class_info, const sofa::core::objectmodel::TagSet& tags, SearchDirection dir) const
+{
+    if (dir == SearchRoot)
+    {
+        if (getNbParents()) return getRootContext()->getObject(class_info, tags, dir);
+        else dir = SearchDown; // we are the root, search down from here.
+    }
+    void *result = nullptr;
+
+    if (dir != SearchParents)
+        for (ObjectIterator it = this->object.begin(); it != this->object.end(); ++it)
+        {
+            sofa::core::objectmodel::BaseComponent* obj = it->get();
+            if (tags.empty() || (obj)->getTags().includes(tags))
+            {
+
+                result = class_info.dynamicCast(obj);
+                if (result != nullptr)
+                {
+
+                    break;
+                }
+            }
+        }
+
+    if (result == nullptr)
+    {
+        switch(dir)
+        {
+            case Local:
+                break;
+            case SearchParents:
+            case SearchUp:
+            {
+                const LinkParents::Container& parents = l_parents.getValue();
+                for ( unsigned int i = 0; i < parents.size() ; ++i){
+                    result = parents[i]->getObject(class_info, tags, SearchUp);
+                    if (result != nullptr) break;
+                }
+            }
+                break;
+            case SearchDown:
+                for(ChildIterator it = child.begin(); it != child.end(); ++it)
+                {
+                    result = (*it)->getObject(class_info, tags, dir);
+                    if (result != nullptr) break;
+                }
+                break;
+            case SearchRoot:
+                dmsg_error("Node") << "SearchRoot SHOULD NOT BE POSSIBLE HERE.";
+                break;
+        }
+    }
+
+    return result;
+}
+
+/// Generic object access, given a path from the current context
+///
+/// Note that the template wrapper method should generally be used to have the correct return type,
+void* Node::getObject(const sofa::core::objectmodel::ClassInfo& class_info, const std::string& path) const
+{
+    if (path.empty())
+    {
+        // local object
+        return Node::getObject(class_info, Local);
+    }
+    else if (path[0] == '/')
+    {
+        // absolute path; let's start from root
+        if (!getNbParents()) return getObject(class_info,std::string(path,1));
+        else return getRootContext()->getObject(class_info,path);
+    }
+    else if (std::string(path,0,2)==std::string("./"))
+    {
+        std::string newpath = std::string(path, 2);
+        while (!newpath.empty() && path[0] == '/')
+            newpath.erase(0);
+        return getObject(class_info,newpath);
+    }
+    else if (std::string(path,0,3)==std::string("../"))
+    {
+        // tricky case:
+        // let's test EACH parent and return the first object found (if any)
+        std::string newpath = std::string(path, 3);
+        while (!newpath.empty() && path[0] == '/')
+            newpath.erase(0);
+        if (getNbParents())
+        {
+            const LinkParents::Container& parents = l_parents.getValue();
+            for ( unsigned int i = 0; i < parents.size() ; ++i)
+            {
+                void* obj = parents[i]->getObject(class_info,newpath);
+                if (obj) return obj;
+            }
+            return nullptr;   // not found in any parent node at all
+        }
+        else return getObject(class_info,newpath);
+    }
+    else
+    {
+        std::string::size_type pend = path.find('/');
+        if (pend == std::string::npos) pend = path.length();
+        const std::string childName ( path, 0, pend );
+        const Node* childPtr = getChild(childName);
+        if (childPtr)
+        {
+            while (pend < path.length() && path[pend] == '/')
+                ++pend;
+            return childPtr->getObject(class_info, std::string(path, pend));
+        }
+        else if (pend < path.length())
+        {
+            return nullptr;
+        }
+        else
+        {
+            sofa::core::objectmodel::BaseComponent* obj = simulation::Node::getObject(childName);
+            if (obj == nullptr)
+            {
+                return nullptr;
+            }
+            else
+            {
+                void* result = class_info.dynamicCast(obj);
+                if (result == nullptr)
+                {
+                    dmsg_error("Node") << "Object "<<childName<<" in "<<getPathName()<<" does not implement class "<<class_info.name() ;
+                    return nullptr;
+                }
+                else
+                {
+                    return result;
+                }
+            }
+        }
+    }
+}
+
+
+/// Generic list of objects access, possibly searching up or down from the current context
+///
+/// Note that the template wrapper method should generally be used to have the correct return type,
+void Node::getObjects(const sofa::core::objectmodel::ClassInfo& class_info, GetObjectsCallBack& container, const sofa::core::objectmodel::TagSet& tags, SearchDirection dir) const
+{
+    if( dir == SearchRoot )
+    {
+        if( getNbParents() )
+        {
+            getRootContext()->getObjects( class_info, container, tags, dir );
+            return;
+        }
+        else dir = SearchDown; // we are the root, search down from here.
+    }
+
+
+    switch( dir )
+    {
+        case Local:
+            this->getLocalObjects( class_info, container, tags );
+            break;
+
+        case SearchUp:
+            this->getLocalObjects( class_info, container, tags ); // add locals then SearchParents
+            // no break here, we want to execute the SearchParents code.
+            [[fallthrough]];
+        case SearchParents:
+        {
+            // a visitor executed from top but only run for this' parents will enforce the selected object unicity due even with diamond graph setups
+            GetUpObjectsVisitor vis( const_cast<Node*>(this), class_info, container, tags);
+            getRootContext()->executeVisitor(&vis);
+        }
+            break;
+
+        case SearchDown:
+        {
+            // a regular visitor is enforcing the selected object unicity
+            GetDownObjectsVisitor vis(class_info, container, tags);
+            (const_cast<Node*>(this))->executeVisitor(&vis);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+/// Get a list of parent node
+sofa::core::objectmodel::BaseNode::Parents Node::getParents() const
+{
+    Parents p;
+
+    const LinkParents::Container& parents = l_parents.getValue();
+    for ( unsigned int i = 0; i < parents.size() ; ++i)
+        p.push_back(parents[i]);
+
+    return p;
+}
+
+
+/// returns number of parents
+size_t Node::getNbParents() const
+{
+    return l_parents.getValue().size();
+}
+
+/// return the first parent (returns nullptr if no parent)
+sofa::core::objectmodel::BaseNode* Node::getFirstParent() const
+{
+    const LinkParents::Container& parents = l_parents.getValue();
+    if( parents.empty() ) return nullptr;
+    else return l_parents.getValue()[0];
+}
+
+
+/// Test if the given node is a parent of this node.
+bool Node::hasParent(const BaseNode* node) const
+{
+    const LinkParents::Container& parents = l_parents.getValue();
+    for ( unsigned int i = 0; i < parents.size() ; ++i)
+    {
+        if (parents[i]==node) return true;
+    }
+    return false;
+}
+
+/// Test if the given context is a parent of this context.
+bool Node::hasParent(const BaseContext* context) const
+{
+    if (context == nullptr) return !getNbParents();
+
+    const LinkParents::Container& parents = l_parents.getValue();
+    for ( unsigned int i = 0; i < parents.size() ; ++i)
+        if (context == parents[i]->getContext()) return true;
+    return false;
+
+}
+
+
+
+/// Test if the given context is an ancestor of this context.
+/// An ancestor is a parent or (recursively) the parent of an ancestor.
+bool Node::hasAncestor(const BaseContext* context) const
+{
+    const LinkParents::Container& parents = l_parents.getValue();
+    for ( unsigned int i = 0; i < parents.size() ; ++i)
+        if (context == parents[i]->getContext()
+                || parents[i]->hasAncestor(context))
+            return true;
+    return false;
+}
+
+
+/// Mesh Topology that is relevant for this context
+/// (within it or its parents until a mapping is reached that does not preserve topologies).
+sofa::core::topology::BaseMeshTopology* Node::getMeshTopologyLink(SearchDirection dir) const
+{
+    // If there is a topology in the current node
+    if (this->meshTopology)
+        return this->meshTopology;
+
+    // If we are not forcing on local resolution, search in the parents
+    if (dir != Local)
+        return get<core::topology::BaseMeshTopology>(SearchParents);
+
+    // At that step there is no local topology or we are doing a non local search (so searching in the parents).
+
+    // TODO(dmarchal, 2025-07-16): Why a mapping interfere with the search for a topology ?
+    //                             This is the kind of "implicit" hard coded behavior that generates troubles
+    //                             Investigate if this could be removed without too much breaks
+
+    // Check if there is a local mapping and this mapping does not have the same topology so it step the search
+    if ( mechanicalMapping && ! mechanicalMapping->sameTopology())
+        return nullptr;
+
+    // TODO(dmarchal, 2025-07-16): This tests seems to do exactly the same as the one on MechanicalMapping.
+    //                             The test before can probably be removed
+    // Check if any of the other mapping does not have the same
+    for ( auto& aMapping : mapping)
+    {
+        if (!aMapping->sameTopology())
+            return nullptr;
+    }
+
+    // TODO(dmarchal, 2025-07-16): The following code is probably ill-defined, what it does it probably going to search
+    // in parents... for a topology, priorizing the "first" parent that returns one. It is kind of strange to search in parent
+    // while because at that step the search is: dir == Local ... so searching in parent is just "weird".
+
+    // No mapping with a different topology, continue on to the parents
+    const LinkParents::Container &parents = l_parents.getValue();
+    for ( unsigned int i = 0; i < parents.size() ; i++ )
+    {
+        // if the visitor is run from a sub-graph containing a multinode linked with a node outside of the subgraph, do not consider the outside node by looking on the sub-graph descendancy
+        if ( parents[i] )
+        {
+            sofa::core::topology::BaseMeshTopology* res = parents[i]->getMeshTopologyLink(Local);
+            if (res)
+                return res;
+        }
+    }
+    return nullptr; // not found in any parents
+}
+
+void Node::precomputeTraversalOrder( const sofa::core::ExecParams* params )
+{
+    // accumulating traversed Nodes
+    class TraversalOrderVisitor : public Visitor
+    {
+        NodeList& _orderList;
+    public:
+        TraversalOrderVisitor(const sofa::core::ExecParams* eparams, NodeList& orderList )
+            : Visitor(eparams)
+            , _orderList( orderList )
+        {
+            _orderList.clear();
+        }
+
+        Result processNodeTopDown(Node* node) override
+        {
+            _orderList.push_back(node);
+            return RESULT_CONTINUE;
+        }
+
+        const char* getClassName() const override {return "TraversalOrderVisitor";}
+    };
+
+    TraversalOrderVisitor tov( params, _precomputedTraversalOrder );
+    executeVisitor( &tov, false );
+}
+
+
+
+/// Execute a recursive action starting from this node
+void Node::doExecuteVisitor(simulation::Visitor* action, bool precomputedOrder)
+{
+    if( precomputedOrder && !_precomputedTraversalOrder.empty() )
+    {
+        for( NodeList::iterator it = _precomputedTraversalOrder.begin(), itend = _precomputedTraversalOrder.end() ; it != itend ; ++it )
+        {
+            if ( action->canAccessSleepingNode || !(*it)->getContext()->isSleeping() )
+                action->processNodeTopDown( *it );
+        }
+
+        for( NodeList::reverse_iterator it = _precomputedTraversalOrder.rbegin(), itend = _precomputedTraversalOrder.rend() ; it != itend ; ++it )
+        {
+            if ( action->canAccessSleepingNode || !(*it)->getContext()->isSleeping() )
+                action->processNodeBottomUp( *it );
+        }
+    }
+    else
+    {
+        // WARNING: do not store the traversal infos in the Node, as several visitors could traversed the graph simultaneously
+        // These infos are stored in a StatusMap per visitor.
+        updateDescendancy();
+
+        Visitor::TreeTraversalRepetition repeat;
+        if( action->treeTraversal(repeat) )
+        {
+            // Tree traversal order
+            //
+            // Diamond shapes are ignored, a child node is visited as soon as a parent node has been visited.
+            // The multi-nodes (with several parents) are visited either: only once, only twice or for every times
+            // depending on the visitor's 'repeat'
+            //
+            // Some particular visitors such as a flat graph display or VisualVisitors must follow such a traversal order.
+
+            StatusMap statusMap;
+            executeVisitorTreeTraversal( action, statusMap, repeat );
+        }
+        else
+        {
+            // Direct acyclic graph traversal order
+            //
+            // This is the default order, used for mechanics.
+            //
+            // A child node is visited only when all its parents have been visited.
+            // A child node is 'pruned' only if all its parents are 'pruned'.
+            // Every executed node in the forward traversal are stored in 'executedNodes',
+            // its reverse order is used for the backward traversal.
+
+            // Note that a newly 'pruned' node is still traversed (w/o execution) to be sure to execute its child nodes,
+            // that can have ancestors in another branch that is not pruned...
+            // An already pruned node is ignored.
+
+            NodeList executedNodes;
+            {
+                StatusMap statusMap;
+                executeVisitorTopDown( action, executedNodes, statusMap, this );
+            }
+            executeVisitorBottomUp( action, executedNodes );
+        }
+    }
+}
+
+
+void Node::executeVisitorTopDown(simulation::Visitor* action, NodeList& executedNodes, StatusMap& statusMap, Node* visitorRoot )
+{
+    if ( statusMap[this] != NOT_VISITED )
+    {
+        return; // skipped (already visited)
+    }
+
+    if( !this->isActive() )
+    {
+        // do not execute the visitor on this node
+        statusMap[this] = PRUNED;
+
+        // in that case we can considerer if some child are activated, the graph is not valid, so no need to continue the recursion
+        return;
+    }
+
+    if( this->isSleeping() && !action->canAccessSleepingNode )
+    {
+        // do not execute the visitor on this node
+        statusMap[this] = PRUNED;
+
+        return;
+    }
+
+    // pour chaque noeud "prune" on continue à parcourir quand même juste pour marquer le noeud comme parcouru
+
+    // check du "visitedStatus" des parents:
+    // un enfant n'est pruné que si tous ses parents le sont
+    // on ne passe à un enfant que si tous ses parents ont été visités
+    bool allParentsPruned = true;
+    bool hasParent = false;
+
+    if( visitorRoot != this )
+    {
+        // the graph structure is generally modified during an action anterior to the traversal but can possibly be modified during the current traversal
+        visitorRoot->updateDescendancy();
+
+        const LinkParents::Container &parents = l_parents.getValue();
+        for ( unsigned int i = 0; i < parents.size() ; i++ )
+        {
+            // if the visitor is run from a sub-graph containing a multinode linked with a node outside of the subgraph, do not consider the outside node by looking on the sub-graph descendancy
+            if ( visitorRoot->_descendancy.contains(parents[i]) || parents[i]==visitorRoot )
+            {
+                // all parents must have been visited before
+                if ( statusMap[parents[i]] == NOT_VISITED )
+                    return; // skipped for now... the other parent should come later
+
+                allParentsPruned = allParentsPruned && ( statusMap[parents[i]] == PRUNED );
+                hasParent = true;
+            }
+        }
+    }
+
+    // all parents have been visited, let's go with the visitor
+    if ( allParentsPruned && hasParent )
+    {
+        // do not execute the visitor on this node
+        statusMap[this] = PRUNED;
+
+        // ... but continue the recursion anyway!
+        if( action->childOrderReversed(this) )
+            for(unsigned int i = unsigned(child.size()); i>0;)
+                child[--i].get()->executeVisitorTopDown(action,executedNodes,statusMap,visitorRoot);
+        else
+            for(unsigned int i = 0; i<child.size(); ++i)
+                child[i].get()->executeVisitorTopDown(action,executedNodes,statusMap,visitorRoot);
+    }
+    else
+    {
+        // execute the visitor on this node
+        const Visitor::Result result = action->processNodeTopDown(this);
+
+        // update status
+        statusMap[this] = ( result == simulation::Visitor::RESULT_PRUNE ? PRUNED : VISITED );
+
+        executedNodes.push_back(this);
+
+        // ... and continue the recursion
+        if( action->childOrderReversed(this) )
+            for(unsigned int i = unsigned(child.size()); i>0;)
+                child[--i].get()->executeVisitorTopDown(action,executedNodes,statusMap,visitorRoot);
+        else
+            for(unsigned int i = 0; i<child.size(); ++i)
+                child[i].get()->executeVisitorTopDown(action,executedNodes,statusMap,visitorRoot);
+
+    }
+}
+
+
+// warning nodes that are dynamically created during the traversal, but that have not been traversed during the top-down, won't be traversed during the bottom-up
+// TODO is it what we want?
+// otherwise it is possible to restart from top, go to leaves and running bottom-up action while going up
+void Node::executeVisitorBottomUp( simulation::Visitor* action, NodeList& executedNodes )
+{
+    for( NodeList::reverse_iterator it = executedNodes.rbegin(), itend = executedNodes.rend() ; it != itend ; ++it )
+    {
+        (*it)->updateDescendancy();
+        action->processNodeBottomUp( *it );
+    }
+}
+
+
+void Node::setDirtyDescendancy()
+{
+    _descendancy.clear();
+    const LinkParents::Container &parents = l_parents.getValue();
+    for ( unsigned int i = 0; i < parents.size() ; i++ )
+    {
+        parents[i]->setDirtyDescendancy();
+    }
+}
+
+void Node::updateDescendancy()
+{
+    if( _descendancy.empty() && !child.empty() )
+    {
+        for(unsigned int i = 0; i<child.size(); ++i)
+        {
+            Node* node = child[i].get();
+            node->updateDescendancy();
+            _descendancy.insert( node->_descendancy.begin(), node->_descendancy.end() );
+            _descendancy.insert( node );
+        }
+    }
+}
+
+
+
+void Node::executeVisitorTreeTraversal( simulation::Visitor* action, StatusMap& statusMap, Visitor::TreeTraversalRepetition repeat, bool alreadyRepeated )
+{
+    if( !this->isActive() )
+    {
+        // do not execute the visitor on this node
+        statusMap[this] = PRUNED;
+        return;
+    }
+
+    if( this->isSleeping() && !action->canAccessSleepingNode )
+    {
+        // do not execute the visitor on this node
+        statusMap[this] = PRUNED;
+        return;
+    }
+
+    // node already visited and repetition must be avoid
+    if( statusMap[this] != NOT_VISITED )
+    {
+        if( repeat==Visitor::NO_REPETITION || ( alreadyRepeated && repeat==Visitor::REPEAT_ONCE ) ) return;
+        else alreadyRepeated = true;
+    }
+
+    if( action->processNodeTopDown(this) != simulation::Visitor::RESULT_PRUNE )
+    {
+        statusMap[this] = VISITED;
+        if( action->childOrderReversed(this) )
+            for(unsigned int i = unsigned(child.size()); i>0;)
+                child[--i].get()->executeVisitorTreeTraversal(action,statusMap,repeat,alreadyRepeated);
+        else
+            for(unsigned int i = 0; i<child.size(); ++i)
+                child[i].get()->executeVisitorTreeTraversal(action,statusMap,repeat,alreadyRepeated);
+    }
+    else
+    {
+        statusMap[this] = PRUNED;
+    }
+
+    action->processNodeBottomUp(this);
+}
+
+void Node::initVisualContext()
+{
+    if (getNbParents())
+    {
+        this->setDisplayWorldGravity(false); //only display gravity for the root: it will be propagated at each time step
+    }
+}
+
+void Node::initializeContexts()
+{
+    for ( unsigned i=0; i<contextObject.size(); ++i )
+    {
+        contextObject[i]->init();  // Call init of a ContextObject (a component in the scene)
+        contextObject[i]->apply(); // The component copy its internal state in the node's (that is inheriting from Contexte)
+    }
+}
+
+void Node::updateContext()
+{
+    // if there is a parent
+    sofa::core::objectmodel::BaseNode* firstParent = getFirstParent();
+    if ( firstParent )
+    {
+        dmsg_info_when(debug_)<<"Node::updateContext, node = "<<getName()<<", incoming context = "<< firstParent->getContext() ;
+
+        // TODO (dmarchal, 16-07-2025): There is underlying assumption here that the firstParent is
+        //                              the one we want copy the context from. This is an implict behavior
+        //                              if one day we refactor that part, maybe it would be better to have
+        //                              an an explicit context-relationship and trigger a warning in case like the following one
+        //                              saying there is an ambiguity and query scene designer to deambiguiate it.
+        copyContext(*static_cast<Context*>(static_cast<Node*>(firstParent)));
+    }
+
+    updateSimulationContext();
+    updateVisualContext();
+
+    dmsg_info_when(debug_)<<"Node::updateContext, node = "<<getName()<<", updated context = "<< *static_cast<core::objectmodel::Context*>(this) ;
+}
+
+void Node::updateSimulationContext()
+{
+    // if there is a parent
+    sofa::core::objectmodel::BaseNode* firstParent = getFirstParent();
+    if ( firstParent )
+    {
+        dmsg_info_when(debug_)<<"Node::updateSimulationContext, node = "<<getName()<<", incoming context = "<< firstParent->getContext() ;
+
+        // TODO (dmarchal, 16-07-2025): There is underlying assumption here that the firstParent is
+        //                              the one we want copy the context from. This is an implict behavior
+        //                              if one day we refactor that part, maybe it would be better to have
+        //                              an an explicit context-relationship and trigger a warning in case like the following one
+        //                              saying there is an ambiguity and query scene designer to deambiguiate it.
+        copySimulationContext(*static_cast<Context*>(static_cast<Node*>(firstParent)));
+    }
+
+    // if there is no parent... initialize all the context objects.
+    // TODO (dmarchal, 16-07-2025): It is weird to actually initialize something at update. A carfull investigation is probably worth
+    initializeContexts();
+}
+
+Node* Node::findCommonParent( simulation::Node* node2 )
+{
+    return static_cast<Node*>(getRoot())->findCommonParent(this, node2);
+}
+
+Node* Node::findCommonParent(Node* node1, Node* node2)
+{
+    updateDescendancy();
+
+    if (!_descendancy.contains(node1) || !_descendancy.contains(node2))
+        return nullptr; // this is NOT a parent
+
+    // this is a parent
+    for (unsigned int i = 0; i<child.size(); ++i)
+    {
+        // look for closer parents
+        Node* childcommon = child[i].get()->findCommonParent(node1, node2);
+
+        if (childcommon != nullptr)
+            return childcommon;
+    }
+    // NO closer parents found
+    return this;
+}
+
+void Node::getLocalObjects( const sofa::core::objectmodel::ClassInfo& class_info, Node::GetObjectsCallBack& container, const sofa::core::objectmodel::TagSet& tags ) const
+{
+    for (Node::ObjectIterator it = this->object.begin(); it != this->object.end(); ++it)
+    {
+        sofa::core::objectmodel::BaseComponent* obj = it->get();
+        void* result = class_info.dynamicCast(obj);
+        if (result != nullptr && (tags.empty() || (obj)->getTags().includes(tags)))
+            container(result);
+    }
+}
+
 #define NODE_DEFINE_SEQUENCE_ACCESSOR( CLASSNAME, FUNCTIONNAME, SEQUENCENAME ) \
-    void Node::add##FUNCTIONNAME( CLASSNAME* obj ) { SEQUENCENAME.add(obj); } \
+    void Node::add##FUNCTIONNAME( CLASSNAME* obj ) { checkAlreadyContains(*this, SEQUENCENAME, obj); SEQUENCENAME.add(obj); } \
     void Node::remove##FUNCTIONNAME( CLASSNAME* obj ) { SEQUENCENAME.remove(obj); }
 
 NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::behavior::BaseAnimationLoop, AnimationLoop, animationManager )
@@ -1043,12 +1898,13 @@ NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::objectmodel::ContextObject, ContextOb
 NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::objectmodel::ConfigurationSetting, ConfigurationSetting, configurationSetting )
 NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::visual::Shader, Shader, shaders )
 NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::visual::VisualModel, VisualModel, visualModel )
+NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::visual::BaseVisualStyle, VisualStyle, visualStyle )
 NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::visual::VisualManager, VisualManager, visualManager )
 NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::CollisionModel, CollisionModel, collisionModel )
 NODE_DEFINE_SEQUENCE_ACCESSOR( sofa::core::collision::Pipeline, CollisionPipeline, collisionPipeline )
 
 template class NodeSequence<Node,true>;
-template class NodeSequence<sofa::core::objectmodel::BaseObject,true>;
+template class NodeSequence<sofa::core::objectmodel::BaseComponent,true>;
 template class NodeSequence<sofa::core::BehaviorModel>;
 template class NodeSequence<sofa::core::BaseMapping>;
 template class NodeSequence<sofa::core::behavior::OdeSolver>;
@@ -1065,10 +1921,11 @@ template class NodeSequence<sofa::core::visual::Shader>;
 template class NodeSequence<sofa::core::visual::VisualModel>;
 template class NodeSequence<sofa::core::visual::VisualManager>;
 template class NodeSequence<sofa::core::CollisionModel>;
-template class NodeSequence<sofa::core::objectmodel::BaseObject>;
+template class NodeSequence<sofa::core::objectmodel::BaseComponent>;
 
 template class NodeSingle<sofa::core::behavior::BaseAnimationLoop>;
 template class NodeSingle<sofa::core::visual::VisualLoop>;
+template class NodeSingle<sofa::core::visual::BaseVisualStyle>;
 template class NodeSingle<sofa::core::topology::Topology>;
 template class NodeSingle<sofa::core::topology::BaseMeshTopology>;
 template class NodeSingle<sofa::core::BaseState>;

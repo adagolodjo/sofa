@@ -24,20 +24,14 @@
 * in the messaging.h file.
 ******************************************************************************/
 
-#include "Message.h"
-#include "MessageFormatter.h"
-#include "DefaultStyleMessageFormatter.h"
-#include "FileMessageHandler.h"
-#include "Messaging.h"
+#include <sofa/helper/logging/Message.h>
+#include <sofa/helper/logging/MessageFormatter.h>
+#include <sofa/helper/logging/DefaultStyleMessageFormatter.h>
+#include <sofa/helper/logging/FileMessageHandler.h>
+#include <sofa/helper/logging/Messaging.h>
 
 
-namespace sofa
-{
-
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 FileMessageHandler::FileMessageHandler(const char* filename,MessageFormatter *formatter)
@@ -45,7 +39,7 @@ FileMessageHandler::FileMessageHandler(const char* filename,MessageFormatter *fo
     m_formatter = (formatter==nullptr?&DefaultStyleMessageFormatter::getInstance():formatter);
     m_outFile.open(filename,std::ios_base::out | std::ios_base::trunc);
     if (!m_outFile.is_open())
-        msg_error("FileMessageHandler") << "Could not open outpout log file: " << filename;
+        msg_error("FileMessageHandler") << "Could not open output log file: " << filename;
 }
 
 FileMessageHandler::~FileMessageHandler()
@@ -71,7 +65,5 @@ bool FileMessageHandler::isValid()
 }
 
 
-} // logging
-} // helper
-} // sofa
+}
 

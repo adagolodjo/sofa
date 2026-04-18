@@ -20,6 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
+#include <sofa/component/solidmechanics/fem/elastic/BaseLinearElasticityFEMForceField.h>
 #include <sofa/component/solidmechanics/fem/elastic/fwd.h>
 
 #include <sofa/core/behavior/ForceField.h>
@@ -31,6 +32,7 @@
 #include <sofa/helper/OptionsGroup.h>
 
 #include <sofa/helper/ColorMap.h>
+#include <sofa/simulation/task/ParallelForEach.h>
 
 // corotational tetrahedron from
 // @InProceedings{NPF05,
@@ -51,7 +53,7 @@ namespace sofa::component::solidmechanics::fem::elastic
 template<class DataTypes>
 class TetrahedronFEMForceField;
 
-/// This class can be overridden if needed for additionnal storage within template specializations.
+/// This class can be overridden if needed for additional storage within template specializations.
 template<class DataTypes>
 class TetrahedronFEMForceFieldInternalData
 {
@@ -59,11 +61,11 @@ public:
     typedef TetrahedronFEMForceField<DataTypes> Main;
     void initPtrData(Main * m)
     {
-        m->_gatherPt.beginEdit()->setNames(1," ");
-        m->_gatherPt.endEdit();
+        auto gatherPt = sofa::helper::getWriteOnlyAccessor(m->d_gatherPt);
+        auto gatherBsize = sofa::helper::getWriteOnlyAccessor(m->d_gatherBsize);
 
-        m->_gatherBsize.beginEdit()->setNames(1," ");
-        m->_gatherBsize.endEdit();
+        gatherPt.wref().setNames({" "});
+        gatherBsize.wref().setNames({" "});
     }
 };
 
@@ -72,22 +74,22 @@ public:
 *   Corotational methods are based on a rotation from world-space to material-space.
 */
 template<class DataTypes>
-class TetrahedronFEMForceField : public core::behavior::ForceField<DataTypes>, public sofa::core::behavior::RotationFinder<DataTypes>
+class TetrahedronFEMForceField : public BaseLinearElasticityFEMForceField<DataTypes>, public sofa::core::behavior::RotationFinder<DataTypes>
 {
 public:
-    SOFA_CLASS2(SOFA_TEMPLATE(TetrahedronFEMForceField, DataTypes), SOFA_TEMPLATE(core::behavior::ForceField, DataTypes), SOFA_TEMPLATE(core::behavior::RotationFinder, DataTypes));
+    SOFA_CLASS2(SOFA_TEMPLATE(TetrahedronFEMForceField, DataTypes), SOFA_TEMPLATE(BaseLinearElasticityFEMForceField, DataTypes), SOFA_TEMPLATE(core::behavior::RotationFinder, DataTypes));
 
     typedef typename core::behavior::ForceField<DataTypes> InheritForceField;
-    typedef typename DataTypes::VecCoord VecCoord;
-    typedef typename DataTypes::VecDeriv VecDeriv;
-    typedef typename DataTypes::VecReal VecReal;
-    typedef VecCoord Vector;
-    typedef typename DataTypes::Coord Coord;
-    typedef typename DataTypes::Deriv Deriv;
-    typedef typename Coord::value_type Real;
+    using VecCoord = VecCoord_t<DataTypes>;
+    using VecDeriv = VecDeriv_t<DataTypes>;
+    using VecReal = VecReal_t<DataTypes>;
+    using Coord = Coord_t<DataTypes>;
+    using Deriv = Deriv_t<DataTypes>;
+    using Real = Real_t<DataTypes>;
+    using DataVecDeriv = DataVecDeriv_t<DataTypes>;
+    using DataVecCoord = DataVecCoord_t<DataTypes>;
 
-    typedef core::objectmodel::Data<VecDeriv>    DataVecDeriv;
-    typedef core::objectmodel::Data<VecCoord>    DataVecCoord;
+    using Vector = VecCoord;
 
     typedef core::topology::BaseMeshTopology::Tetra Element;
     typedef core::topology::BaseMeshTopology::SeqTetrahedra VecElement;
@@ -154,7 +156,6 @@ protected:
 
     SReal m_potentialEnergy;
 
-    core::topology::BaseMeshTopology* m_topology;
     const VecElement *_indexedElements;
     bool needUpdateTopology;
 
@@ -168,6 +169,9 @@ protected:
     type::fixed_array<Coord, 4> InvalidCoords;
     MaterialStiffness InvalidMaterialStiffness;
     StrainDisplacement InvalidStrainDisplacement;
+
+    std::vector< sofa::type::Vec3 > m_renderedPoints;
+    std::vector< sofa::type::RGBAColor > m_renderedColors;
 
 public:
     // get the volume of the mesh
@@ -183,28 +187,25 @@ public:
     type::vector< Mat33 > m_rotations;
     const type::vector<Mat33>& getRotations() override;
 
-    Data< VecCoord > _initialPoints; ///< the initial positions of the points
+    Data< VecCoord > d_initialPoints; ///< Initial Position
     int method;
-    Data<std::string> f_method; ///< the computation method of the displacements
 
-    Data<Real> _poissonRatio; ///< FEM Poisson Ratio [0,0.5[
-    Data<VecReal > _youngModulus; ///< FEM Young Modulus
-    Data<VecReal> _localStiffnessFactor; ///< Allow specification of different stiffness per element. If there are N element and M values are specified, the youngModulus factor for element i would be localStiffnessFactor[i*M/N]
-    Data<bool> _updateStiffnessMatrix;
-    Data<bool> _assembling;
+    Data<std::string> d_method; ///< "small", "large" (by QR), "polar" or "svd" displacements
 
+    Data<VecReal> d_localStiffnessFactor; ///< Allow specification of different stiffness per element. If there are N element and M values are specified, the youngModulus factor for element i would be localStiffnessFactor[i*M/N]
+    Data<bool> d_updateStiffnessMatrix;
+    Data<bool> d_assembling;
 
     /// @name Plasticity such as "Interactive Virtual Materials", Muller & Gross, GI 2004
     /// @{
-    Data<Real> _plasticMaxThreshold;
-    Data<Real> _plasticYieldThreshold; ///< Plastic Yield Threshold (2-norm of the strain)
-    Data<Real> _plasticCreep; ///< this parameters is different from the article, here it includes the multiplication by dt
+    Data<Real> d_plasticMaxThreshold;
+    Data<Real> d_plasticYieldThreshold; ///< Plastic Yield Threshold (2-norm of the strain)
+    Data<Real> d_plasticCreep; ///< Plastic Creep Factor * dt [0,1]. Warning this factor depends on dt.
     /// @}
 
-
-    Data< sofa::helper::OptionsGroup > _gatherPt; ///< use in GPU version
-    Data< sofa::helper::OptionsGroup > _gatherBsize; ///< use in GPU version
-    Data< bool > drawHeterogeneousTetra; ///< Draw Heterogeneous Tetra in different color
+    Data< sofa::helper::OptionsGroup > d_gatherPt; ///< number of dof accumulated per threads during the gather operation (Only use in GPU version)
+    Data< sofa::helper::OptionsGroup > d_gatherBsize; ///< number of dof accumulated per threads during the gather operation (Only use in GPU version)
+    Data< bool > d_drawHeterogeneousTetra; ///< Draw Heterogeneous Tetra in different color
 
     Real minYoung, maxYoung;
 
@@ -217,20 +218,25 @@ public:
 
     Real prevMaxStress;
 
-    Data<int> _computeVonMisesStress; ///< compute and display von Mises stress: 0: no computations, 1: using corotational strain, 2: using full Green strain
-    Data<type::vector<Real> > _vonMisesPerElement; ///< von Mises Stress per element
-    Data<type::vector<Real> > _vonMisesPerNode; ///< von Mises Stress per node
-    Data<type::vector<type::Vec4f> > _vonMisesStressColors; ///< Vector of colors describing the VonMises stress
-    
-    Data<std::string> _showStressColorMap; ///< Color map used to show stress values
-    Data<float> _showStressAlpha; ///< Alpha for vonMises visualisation
-    Data<bool> _showVonMisesStressPerNode; ///< draw points showing vonMises stress interpolated in nodes
-    Data<bool> _showVonMisesStressPerElement; ///< draw triangles showing vonMises stress interpolated in elements
+    Data<int> d_computeVonMisesStress; ///< compute and display von Mises stress: 0: no computations, 1: using corotational strain, 2: using full Green strain. Set listening=1
+    Data<type::vector<Real> > d_vonMisesPerElement; ///< von Mises Stress per element
+    Data<type::vector<Real> > d_vonMisesPerNode; ///< von Mises Stress per node
+    Data<type::vector<type::RGBAColor> > d_vonMisesStressColors; ///< Vector of colors describing the VonMises stress
 
-    Data<bool>  _updateStiffness; ///< udpate structures (precomputed in init) using stiffness parameters in each iteration (set listening=1)
+    Real m_minVonMisesPerNode;
+    Real m_maxVonMisesPerNode;
 
-    /// Link to be set to the topology container in the component graph. 
-    SingleLink<TetrahedronFEMForceField<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH|BaseLink::FLAG_STRONGLINK> l_topology;
+    Data<std::string> d_showStressColorMap; ///< Color map used to show stress values
+    Data<float> d_showStressAlpha; ///< Alpha for vonMises visualisation
+    Data<bool> d_showVonMisesStressPerNode; ///< draw points showing vonMises stress interpolated in nodes
+    Data<bool> d_showVonMisesStressPerNodeColorMap; ///< draw elements showing vonMises stress interpolated in nodes
+    Data<bool> d_showVonMisesStressPerElement; ///< draw triangles showing vonMises stress interpolated in elements
+
+    Data<Real> d_showElementGapScale; ///< draw gap between elements (when showWireFrame is disabled) [0,1]: 0: no gap, 1: no element
+
+    Data<bool>  d_updateStiffness; ///< update structures (precomputed in init) using stiffness parameters in each iteration (set listening=1)
+
+    using Inherit1::l_topology;
 
     type::vector<type::Vec<6,Real> > elemDisplacements;
 
@@ -241,9 +247,7 @@ protected:
     ~TetrahedronFEMForceField() override;
 
 public:
-    void setPoissonRatio(Real val) { this->_poissonRatio.setValue(val); }
-    void setYoungModulus(Real val) ;
-    void setComputeGlobalMatrix(bool val) { this->_assembling.setValue(val); }
+    void setComputeGlobalMatrix(bool val) { this->d_assembling.setValue(val); }
 
     //for tetra mapping, should be removed in future
     const Transformation& getActualTetraRotation(Index index);
@@ -259,7 +263,7 @@ public:
     void setMethod(std::string methodName);
     void setMethod(int val);
 
-    void setUpdateStiffnessMatrix(bool val) { this->_updateStiffnessMatrix.setValue(val); }
+    void setUpdateStiffnessMatrix(bool val) { this->d_updateStiffnessMatrix.setValue(val); }
 
     void reset() override;
     void init() override;
@@ -273,8 +277,10 @@ public:
     // getPotentialEnergy is implemented for small method
     SReal getPotentialEnergy(const core::MechanicalParams*, const DataVecCoord&   x) const override;
 
+    using Inherit1::addKToMatrix;
     void addKToMatrix(sofa::linearalgebra::BaseMatrix *m, SReal kFactor, unsigned int &offset) override;
-    void addKToMatrix(const core::MechanicalParams* /*mparams*/, const sofa::core::behavior::MultiMatrixAccessor* /*matrix*/ ) override;
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix) override;
+    void buildDampingMatrix(core::behavior::DampingMatrix* /*matrix*/) final;
 
     void draw(const core::visual::VisualParams* vparams) override;
 
@@ -283,8 +289,6 @@ public:
 
     // Getting the stiffness matrix of index i
     void getElementStiffnessMatrix(Real* stiffness, Index nodeIdx);
-    void getElementStiffnessMatrix(Real* stiffness, Tetrahedron& te);
-    virtual void computeMaterialStiffness(MaterialStiffness& materialMatrix, Index&a, Index&b, Index&c, Index&d);
 
 protected:
     void computeStrainDisplacement( StrainDisplacement &J, Coord a, Coord b, Coord c, Coord d );
@@ -327,6 +331,20 @@ protected:
 
     void computeVonMisesStress();
     bool isComputeVonMisesStressMethodSet();
+    void computeMinMaxFromYoungsModulus();
+    virtual void drawTrianglesFromTetrahedra(const core::visual::VisualParams* vparams,
+                                     bool showVonMisesStressPerElement,
+                                     bool drawVonMisesStress, const VecCoord& x,
+                                     const VecReal& youngModulus,
+                                     bool heterogeneous, Real minVM, Real maxVM,
+                                     helper::ReadAccessor<Data<type::vector<Real>>> vM);
+    virtual void drawTrianglesFromRangeOfTetrahedra(const simulation::Range<VecElement::const_iterator>& range,
+                                 const core::visual::VisualParams* vparams,
+                                 bool showVonMisesStressPerElement,
+                                 bool drawVonMisesStress, bool showWireFrame, const VecCoord& x,
+                                 const VecReal& youngModulus,
+                                 bool heterogeneous, Real minVM, Real maxVM,
+                                 helper::ReadAccessor<Data<type::vector<Real>>> vM);
     void handleEvent(core::objectmodel::Event *event) override;
 };
 

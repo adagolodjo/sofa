@@ -27,9 +27,10 @@
 #include <sofa/core/BehaviorModel.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 
-#include <sofa/component/collision/geometry/SphereModel.h>
-#include <sofa/component/collision/geometry/PointModel.h>
-#include <sofa/component/collision/geometry/TriangleModel.h>
+#include <sofa/component/collision/geometry/SphereCollisionModel.h>
+#include <sofa/component/collision/geometry/PointCollisionModel.h>
+#include <sofa/component/collision/geometry/LineCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
 
 #include <sofa/type/Vec.h>
 #include <sofa/defaulttype/VecTypes.h>
@@ -54,8 +55,8 @@ public:
 
     /** Handles Cutting (activated only for a triangular topology)
      *
-     * Only one model is given. This function perform incision beetween input point and stocked
-     * informations. If it is the first point of the incision, these informations are stocked.
+     * Only one model is given. This function perform incision between input point and stocked
+     * information. If it is the first point of the incision, these information are stocked.
      * i.e element index and picked point coordinates.
      *
      * \sa incisionTriangleSetTopology
@@ -136,11 +137,15 @@ private:
 
     Index removeItemsFromTriangleModel(sofa::component::collision::geometry::TriangleCollisionModel<sofa::defaulttype::Vec3Types>* model, const type::vector<Index>& indices) const;
     Index removeItemsFromPointModel(sofa::component::collision::geometry::PointCollisionModel<sofa::defaulttype::Vec3Types>* model, const type::vector<Index>& indices) const;
+    /** \brief Method to remove topological elements from a Topology linked to a Line collision model. Only Edge Topology  is supported.
+    *  \param indices : list of element indices to remove (unique check is done internally)
+    */
+    Index removeItemsFromLineModel(sofa::component::collision::geometry::LineCollisionModel<sofa::defaulttype::Vec3Types>* model, const type::vector<Index>& indices) const;
     Index removeItemsFromSphereModel(sofa::component::collision::geometry::SphereCollisionModel<sofa::defaulttype::Vec3Types>* model, const type::vector<Index>& indices) const;
 
 
 private:
-    /// Global variables to register intermediate informations for point to point incision.(incision along one segment in a triangular mesh)
+    /// Global variables to register intermediate information for point to point incision.(incision along one segment in a triangular mesh)
     struct Incision
     {
         /// Temporary point index for successive incisions

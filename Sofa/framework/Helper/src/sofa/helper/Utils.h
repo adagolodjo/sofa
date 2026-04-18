@@ -27,9 +27,8 @@
 #include <string>
 #include <map>
 
-namespace sofa
-{
-namespace helper
+
+namespace sofa::helper
 {
 
 /// @brief Contains possibly useful functions, that don't fit anywhere else.
@@ -37,21 +36,6 @@ class SOFA_HELPER_API Utils
 {
 public:
 
-/// @brief Convert a string to a wstring.
-///
-/// @return The converted string on success, or a empty string on failure.
-static std::wstring widenString(const std::string& s);
-
-/// @brief Convert a wstring to a string.
-///
-/// @return The converted string on success, or a empty string on failure.
-static std::string narrowString(const std::wstring& ws);
-
-/// @brief Convert a string to lower case.
-static std::string downcaseString(const std::string& s);
-
-/// @brief Convert a string to upper case.
-static std::string upcaseString(const std::string& s);
 
 #if defined WIN32
 
@@ -72,6 +56,19 @@ static const std::string& getExecutablePath();
 /// @brief Get the path to the directory of the executable that is currently running.
 static const std::string& getExecutableDirectory();
 
+/// @brief Get the path to the current user home directory.
+static const std::string& getUserHomeDirectory();
+
+/// @brief Get the path to the SOFA data directory into the current user home directory.
+static const std::string& getSofaDataDirectory();
+
+/// @brief Get the path to the current user local config directory.
+static const std::string& getUserLocalDirectory();
+
+/// @brief Get the path to the SOFA directory into the current user local config directory.
+static const std::string& getSofaUserLocalDirectory();
+
+
 /// @brief Get the path to the "root" path of Sofa (i.e. the build directory or
 /// the installation prefix).
 ///
@@ -79,6 +76,9 @@ static const std::string& getExecutableDirectory();
 /// distributed with SOFA
 /// @return The ABSOLUTE path of Sofa build dir (or install dir)
 static const std::string& getSofaPathPrefix();
+
+/// @brief Set a custom path to be used by getSofaPathPrefix()
+static void setSofaCustomPathPrefix(const std::string& path);
 
 /// @brief Construct a path based on the build dir path of Sofa
 ///
@@ -96,8 +96,7 @@ static std::map<std::string, std::string> readBasicIniFile(const std::string& pa
 };
 
 
-} // namespace helper
-} // namespace sofa
+} // namespace sofa::helper
 
 
 #endif

@@ -61,12 +61,12 @@ void HexahedronCompositeFEMMapping<BasicMapping>::init()
 
 
     for(unsigned i=0; i<(unsigned)this->toModel->getSize(); ++i)
-        _p0.push_back( this->toModel->read(core::ConstVecCoordId::position())->getValue()[i] );
+        _p0.push_back( this->toModel->read(core::vec_id::read_access::position)->getValue()[i] );
 
     for(unsigned i=0; i<(unsigned)this->fromModel->getSize(); ++i) // par construction de la sparse grid, pas de rotation initiale
-        _qCoarse0.push_back( this->fromModel->read(core::ConstVecCoordId::position())->getValue()[i] );
+        _qCoarse0.push_back( this->fromModel->read(core::vec_id::read_access::position)->getValue()[i] );
 
-    InCoord translation0 = this->fromModel->read(core::ConstVecCoordId::position())->getValue()[0] - _sparseGrid->getPointPos(0);
+    InCoord translation0 = this->fromModel->read(core::vec_id::read_access::position)->getValue()[0] - _sparseGrid->getPointPos(0);
 
     for(Size i=0; i<_finestSparseGrid->getNbPoints(); ++i)
         _qFine0.push_back( _finestSparseGrid->getPointPos(i)+translation0 );
@@ -147,7 +147,7 @@ void HexahedronCompositeFEMMapping<BasicMapping>::init()
 
         for(int w=0; w<8; ++w)
         {
-            Weight W;
+            Weight W(type::NOINIT);
             W[0] = _forcefield->_finalWeights[i].second[ w*3   ];
             W[1] = _forcefield->_finalWeights[i].second[ w*3+1 ];
             W[2] = _forcefield->_finalWeights[i].second[ w*3+2 ];
@@ -169,7 +169,7 @@ void HexahedronCompositeFEMMapping<BasicMapping>::init()
 //
 //
 // 		for(int j=0;j<8;++j)
-// 			if( fabs( (*it).second[0][j*3] ) > 1.0e-5 || fabs( (*it).second[1][j*3+1] ) > 1.0e-5 || fabs( (*it).second[2][j*3+2] ) > 1.0e-5 )
+// 			if( fabs( (*it).second(0,j*3) ) > 1.0e-5 || fabs( (*it).second(1,j*3+1) ) > 1.0e-5 || fabs( (*it).second(2,j*3+2) ) > 1.0e-5 )
 //
 //
 // 	}
@@ -190,8 +190,8 @@ void HexahedronCompositeFEMMapping<BasicMapping>::apply( const sofa::core::Mecha
     const InVecCoord& in = inData.getValue();
 
     // les deplacements des noeuds grossiers
-    type::vector< sofa::type::Vec< 24 >  > coarseDisplacements( _sparseGrid->getNbHexahedra() );
-    for(auto i = 0; i<_sparseGrid->getNbHexahedra(); ++i)
+    type::vector< sofa::type::Vec< 24, SReal >  > coarseDisplacements( _sparseGrid->getNbHexahedra() );
+    for(sofa::Size i = 0; i<_sparseGrid->getNbHexahedra(); ++i)
     {
         const SparseGridTopologyT::Hexa& hexa = _sparseGrid->getHexahedron(i);
 // 		InCoord translation = computeTranslation( hexa, i );
@@ -226,7 +226,7 @@ void HexahedronCompositeFEMMapping<BasicMapping>::apply( const sofa::core::Mecha
 // 		type::Quat<Real> meanRotation;
         for(std::map< int, Weight >::iterator it = _finestWeights[i].begin(); it!=_finestWeights[i].end(); ++it)
         {
-// 			meanRotation += _rotations[ _finestWeights[i][j].first ];
+// 			meanRotation += _rotations[ _finestWeights(i,j).first ];
             Transformation& rotation = _rotations[(*it).first ];
 
             _qFine[i] += rotation.multTranspose( _qFine0[i] + (*it).second * coarseDisplacements[ (*it).first ] );
@@ -269,8 +269,8 @@ void HexahedronCompositeFEMMapping<BasicMapping>::applyJ( const sofa::core::Mech
     const InVecDeriv& in = inData.getValue();
 
     // les deplacements des noeuds grossiers
-    type::vector< sofa::type::Vec< 24 >  > coarseDisplacements( _sparseGrid->getNbHexahedra() );
-    for(auto i=0; i<_sparseGrid->getNbHexahedra(); ++i)
+    type::vector< sofa::type::Vec< 24, SReal >  > coarseDisplacements( _sparseGrid->getNbHexahedra() );
+    for(sofa::Size i=0; i<_sparseGrid->getNbHexahedra(); ++i)
     {
         const SparseGridTopologyT::Hexa& hexa = _sparseGrid->getHexahedron(i);
 
@@ -348,7 +348,7 @@ void HexahedronCompositeFEMMapping<BasicMapping>::applyJT( const sofa::core::Mec
         {
             Transformation& rotation = _rotations[ (*it).first];
 
-            sofa::type::Vec< 24 > dfplat = (*it).second.multTranspose( rotation * fineForces[i] ) / _finestWeights[i].size();
+            const sofa::type::Vec< 24, SReal > dfplat = (*it).second.multTranspose( rotation * fineForces[i] ) / _finestWeights[i].size();
 
             const SparseGridTopologyT::Hexa& hexa = _sparseGrid->getHexahedron( (*it).first );
             for(int w=0; w<8; ++w)
@@ -368,8 +368,8 @@ void HexahedronCompositeFEMMapping<BasicMapping>::draw(const core::visual::Visua
 {
     if (!vparams->displayFlags().getShowMappings()) return;
 
-    std::vector< sofa::type::Vector3 > points;
-    sofa::type::Vector3 point;
+    std::vector< sofa::type::Vec3 > points;
+    sofa::type::Vec3 point;
 
     for(unsigned int i=0; i<_qFine.size(); i++)
     {

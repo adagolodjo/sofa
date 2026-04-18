@@ -23,7 +23,7 @@
 #include <sofa/component/engine/select/config.h>
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/defaulttype/RigidTypes.h>
@@ -42,8 +42,8 @@ public:
     SOFA_CLASS(SOFA_TEMPLATE(IndicesFromValues,T),core::DataEngine);
     typedef T Value;
     typedef sofa::type::vector<T> VecValue;
-    typedef unsigned int Index;
-    typedef sofa::type::vector<Index> VecIndex;
+
+    typedef sofa::type::vector<sofa::Index> VecIndex;
 
 protected:
 
@@ -63,15 +63,9 @@ public:
     core::objectmodel::Data<VecIndex> f_otherIndices; ///< Output indices of the other values, (NOT the given ones) searched in global
     core::objectmodel::Data<bool> f_recursiveSearch; ///< if set to true, output are indices of the "global" data matching with one of the values
 
-    /// Implementing the GetCustomTemplateName is mandatory to have a custom template name paremters
-    /// instead of the default one generated automatically by the SOFA_CLASS() macro.
-    static std::string GetCustomTemplateName()
-    {
-        return sofa::defaulttype::DataTypeName<T>::name();
-    }
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_INDICESFROMVALUES_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_INDICESFROMVALUES_CPP)
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<std::string>;
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<int>;
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<unsigned int>;
@@ -79,14 +73,14 @@ extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues< type::
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues< type::fixed_array<unsigned int, 3> >;
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues< type::fixed_array<unsigned int, 4> >;
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues< type::fixed_array<unsigned int, 8> >;
-extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<double>;
-extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<type::Vec2d>;
-extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<type::Vec3d>;
+extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<SReal>;
+extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<type::Vec2>;
+extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<type::Vec3>;
 // extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<defaulttype::Rigid2Types::Coord>;
 // extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<defaulttype::Rigid2Types::Deriv>;
 // extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<defaulttype::Rigid3Types::Coord>;
 // extern template class SOFA_COMPONENT_ENGINE_SELECT_API IndicesFromValues<defaulttype::Rigid3Types::Deriv>;
- 
+
 #endif
 
 } //namespace sofa::component::engine::select

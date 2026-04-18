@@ -1,6 +1,6 @@
 /******************************************************************************
-*       SOFA, Simulation-Framework Architecture, development version     *
-*                (c) 2006-2017 INRIA, USTL, UJF, CNRS, MGH                    *
+*                 SOFA, Simulation Open-Framework Architecture                *
+*                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
 * under the terms of the GNU Lesser General Public License as published by    *
@@ -61,7 +61,7 @@ using sofa::helper::logging::MainPerComponentLoggingMessageHandler ;
 #include <sofa/core/logging/RichConsoleStyleMessageFormatter.h>
 using sofa::helper::logging::RichConsoleStyleMessageFormatter ;
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/ObjectFactory.h>
 
 //TODO(dmarchal): replace that with the LoggingMessageHandler
@@ -72,6 +72,8 @@ public:
     void process(Message& m) override{
         m_messages.push_back(m);
     }
+
+    std::string getName() const override { return "MyMessageHandler" ; }
 
     size_t numMessages(){
         return m_messages.size() ;
@@ -89,6 +91,7 @@ TEST(LoggingTest, noHandler)
 {
     // This test does not test anything, except the absence of crash
     MessageDispatcher::clearHandlers() ;
+    ASSERT_EQ(MessageDispatcher::getHandlers().size(), 0);
 
     msg_info("") << " info message with conversion" << 1.5 << "\n" ;
     msg_deprecated("") << " deprecated message with conversion" << 1.5 << "\n" ;
@@ -134,6 +137,20 @@ TEST(LoggingTest, duplicatedHandler)
     EXPECT_TRUE( h.numMessages() == 4u) ;
 }
 
+TEST(LoggingTest, rmHandler)
+{
+    MessageDispatcher::clearHandlers();
+
+    MyMessageHandler h;
+
+    // First add is expected to return the handler ID.
+    EXPECT_TRUE(MessageDispatcher::addHandler(&h) == 0);
+
+    EXPECT_EQ(MessageDispatcher::rmHandler(&h), -1);
+
+    EXPECT_EQ(MessageDispatcher::getHandlers().size(), 0);
+}
+
 void f1()
 {
     for(unsigned int i=0;i<100000;i++){
@@ -165,12 +182,6 @@ void f3()
 
 TEST(LoggingTest, threadingTests)
 {
-    if(!SOFA_WITH_THREADING){
-        /// This cout shouldn't be using the msg_* API.
-        std::cout << "Test canceled because sofa is not compiled with SOFA_WITH_THREADING option." << std::endl ;
-        return ;
-    }
-
     MessageDispatcher::clearHandlers() ;
 
     CountingMessageHandler& mh = MainCountingMessageHandler::getInstance();
@@ -249,21 +260,13 @@ TEST(LoggingTest, emptyMessage)
 #include <string>
 #include <sofa/core/objectmodel/Data.h>
 
-class MyComponent : public sofa::core::objectmodel::BaseObject
+class MyComponent : public sofa::core::objectmodel::BaseComponent
 {
 public:
 
     MyComponent()
     {
 
-    }
-
-    void emitSerrSoutMessages(){
-        f_printLog.setValue(true); // to print sout
-        serr<<"regular serr"<<sendl;
-        sout<<"regular sout"<<sendl;
-        serr<<SOFA_FILE_INFO<<"serr with fileinfo"<<sendl;
-        sout<<SOFA_FILE_INFO<<"sout with fileinfo"<<sendl;
     }
 
     void emitMessages(){
@@ -273,90 +276,6 @@ public:
     }
 };
 
-
-
-
-TEST(LoggingTest, checkBaseObjectSerr)
-{
-    MessageDispatcher::clearHandlers() ;
-    MyMessageHandler h;
-    MessageDispatcher::addHandler(&h) ;
-
-
-    MyComponent c;
-
-    c.emitSerrSoutMessages();
-    /// the constructor of MyComponent is sending 4 messages
-    EXPECT_EQ( h.numMessages(), 4u ) ;
-
-    c.serr<<"regular external serr"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, 0 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, sofa::helper::logging::s_unknownFile ) );
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Warning );
-    EXPECT_EQ( h.lastMessage().context(), sofa::helper::logging::Message::Runtime );
-
-    c.serr<<sofa::helper::logging::Message::Error<<"external serr as Error"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, 0 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, sofa::helper::logging::s_unknownFile ) );
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Error );
-    EXPECT_EQ( h.lastMessage().context(), sofa::helper::logging::Message::Runtime );
-
-    c.sout<<"regular external sout"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, 0 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, sofa::helper::logging::s_unknownFile ) );
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Info );
-    EXPECT_EQ( h.lastMessage().context(), sofa::helper::logging::Message::Runtime );
-
-    c.sout<<sofa::helper::logging::Message::Error<<"external sout as Error"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, 0 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, sofa::helper::logging::s_unknownFile ) );
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Error );
-    EXPECT_EQ( h.lastMessage().context(), sofa::helper::logging::Message::Runtime );
-
-
-    c.serr<<SOFA_FILE_INFO<<"external serr with fileinfo"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, __LINE__-1 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, __FILE__ ) );
-
-    c.sout<<SOFA_FILE_INFO<<"external sout with fileinfo"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, __LINE__-1 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, __FILE__ ) );
-
-    c.serr<<SOFA_FILE_INFO<<sofa::helper::logging::Message::Error<<"external serr as Error with fileinfo"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, __LINE__-1 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, __FILE__ ) );
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Error );
-
-    c.sout<<sofa::helper::logging::Message::Error<<SOFA_FILE_INFO<<"external sout as Error with fileinfo"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, __LINE__-1 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, __FILE__ ) );
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Error );
-    EXPECT_EQ( h.lastMessage().context(), sofa::helper::logging::Message::Runtime );
-
-    c.serr<<"serr with sendl that comes in a second time";
-    c.serr<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, 0 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, sofa::helper::logging::s_unknownFile ) );
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Warning );
-
-    c.serr<<"\n serr with \n end of "<<std::endl<<" lines"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().fileInfo()->line, 0 );
-    EXPECT_TRUE( !strcmp( h.lastMessage().fileInfo()->filename, sofa::helper::logging::s_unknownFile ) );
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Warning );
-
-    c.serr<<sofa::helper::logging::Message::Dev<<sofa::helper::logging::Message::Error<<"external Dev serr"<<c.sendl;
-    EXPECT_EQ( h.lastMessage().type(), sofa::helper::logging::Message::Error );
-    EXPECT_EQ( h.lastMessage().context(), sofa::helper::logging::Message::Dev );
-
-
-    EXPECT_EQ( h.numMessages(), 15u ) ;
-
-    // an empty message should not be processed
-    c.serr<<c.sendl;
-
-    EXPECT_EQ( h.numMessages(), 15u ) ;
-
-}
 
 TEST(LoggingTest, checkBaseObjectMsgAPI)
 {
@@ -443,33 +362,6 @@ TEST(LoggingTest, checkBaseObjectQueueSize)
     EXPECT_EQ(c.getLoggedMessages().size(), 100u);
 }
 
-TEST(LoggingTest, checkBaseObjectSoutSerr)
-{
-    /// We install the handler that copy the message into the component.
-    MessageDispatcher::clearHandlers() ;
-    MessageDispatcher::addHandler(&MainPerComponentLoggingMessageHandler::getInstance()) ;
-
-    MyComponent c;
-    c.emitSerrSoutMessages();
-
-    /// Well serr message are routed through warning while
-    /// Sout are routed to the Info ones.
-    EXPECT_TRUE(c.getLoggedMessagesAsString({Message::Error}).empty());
-    EXPECT_TRUE(c.getLoggedMessagesAsString({Message::Fatal}).empty());
-    EXPECT_FALSE(c.getLoggedMessagesAsString({Message::Warning}).empty());
-    EXPECT_FALSE(c.getLoggedMessagesAsString({Message::Error,
-                                              Message::Warning,
-                                              Message::Fatal}).empty());
-
-    EXPECT_TRUE(c.getLoggedMessagesAsString({Message::Deprecated}).empty());
-    EXPECT_TRUE(c.getLoggedMessagesAsString({Message::Advice}).empty());
-    EXPECT_FALSE(c.getLoggedMessagesAsString({Message::Info}).empty());
-    EXPECT_FALSE(c.getLoggedMessagesAsString({Message::Info,
-                                              Message::Deprecated,
-                                              Message::Advice}).empty());
-
-}
-
 
 #undef MESSAGING_H
 #ifndef WITH_SOFA_DEVTOOLS
@@ -541,8 +433,8 @@ TEST(LoggingTest, checkCountingMessageHandler)
     MessageDispatcher::clearHandlers() ;
     MessageDispatcher::addHandler( &m );
 
-    std::vector<Message::Type> errortypes = {Message::Error, Message::Warning, Message::Info,
-                                             Message::Advice, Message::Deprecated, Message::Fatal} ;
+    const std::vector<Message::Type> errortypes = {Message::Error, Message::Warning, Message::Info,
+                                                   Message::Advice, Message::Deprecated, Message::Fatal} ;
 
     for(auto& type : errortypes)
     {
@@ -578,8 +470,8 @@ TEST(LoggingTest, checkRoutingMessageHandler)
     MessageDispatcher::clearHandlers() ;
     MessageDispatcher::addHandler( &m );
 
-    std::vector<Message::Type> errortypes = {Message::Error, Message::Warning, Message::Info,
-                                             Message::Advice, Message::Deprecated, Message::Fatal} ;
+    const std::vector<Message::Type> errortypes = {Message::Error, Message::Warning, Message::Info,
+                                                   Message::Advice, Message::Deprecated, Message::Fatal} ;
 
     RichConsoleStyleMessageFormatter* fmt = &RichConsoleStyleMessageFormatter::getInstance();
     ConsoleMessageHandler* consolehandler = new ConsoleMessageHandler(fmt) ;

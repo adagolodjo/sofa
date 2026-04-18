@@ -34,16 +34,11 @@
 #include <set>
 #include <boost/shared_ptr.hpp>
 
-#include "ComponentInfo.h"
-#include "FileInfo.h"
+#include <sofa/helper/logging/ComponentInfo.h>
+#include <sofa/helper/logging/FileInfo.h>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 /// A message is the core object of the msg_* API.
@@ -106,9 +101,6 @@ template<> SOFA_HELPER_API Message& Message::operator<<(const FileInfo::SPtr &fi
 SOFA_HELPER_API std::ostream& operator<< (std::ostream&, const Message&) ;
 SOFA_HELPER_API const std::string toString(const Message::Type type) ;
 
-} // logging
-} // helper
-} // sofa
-
+}
 
 #endif // MESSAGE_H

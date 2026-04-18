@@ -23,6 +23,7 @@
 #define SOFA_HELPER_SYSTEM_FILEREPOSITORY_H
 
 #include <sofa/helper/config.h>
+#include <sofa/helper/logging/Messaging.h>
 
 #include <string>
 #include <vector>
@@ -30,13 +31,8 @@
 #include <map>
 #include <list>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace system
+namespace sofa::helper::system
 {
 
 /// Helper class to find files in a list of directories.
@@ -83,14 +79,14 @@ public:
 
     /**
      * Initialize the set of paths using the environment variable specified by the parameter envVar, the relative path
-     * specified by the parameter relativePath and the ini files and respective keys specified by the paramter iniFilesAndKeys.
+     * specified by the parameter relativePath and the ini files and respective keys specified by the parameter iniFilesAndKeys.
      */
     FileRepository(const char* envVar, const char* relativePath, const fileKeysMap& iniFilesAndKeys)
     : FileRepository(envVar, {relativePath?std::string(relativePath):""}, iniFilesAndKeys) {}
 
     /**
      * Initialize the set of paths using the environment variable specified by the parameter envVar, the relative paths
-     * specified by the parameter paths and the ini files and respective keys specified by the paramter iniFilesAndKeys.
+     * specified by the parameter paths and the ini files and respective keys specified by the parameter iniFilesAndKeys.
      */
     FileRepository(const char* envVar, const std::vector<std::string> & paths, const fileKeysMap& iniFilesAndKeys);
 
@@ -117,9 +113,6 @@ public:
 
     /// Returns a string such as refPath + string = path if path contains refPath.
     /// Otherwise returns path.
-    /// On WIN32 the implementation was also returning the path in lower case. This behavior is now
-    /// deprecated and should be remove the 2018-05-01. Until this date new implementation can be
-    /// used by setting doLowerCaseOnWin32=false;
     static std::string relativeToPath(std::string path, std::string refPath);
 
     const std::vector< std::string > &getPaths() const {return vpath;}
@@ -142,18 +135,25 @@ public:
         findFile(filename, basedir, errlog);
         return filename;
     }
-
+    
     /// Find file using the stored set of paths.
     /// @param basefile override current directory by using the parent directory of the given file
     /// @param filename requested file as input, resolved file path as output
     /// @return true if the file was found in one of the directories, false otherwise
     bool findFileFromFile(std::string& filename, const std::string& basefile, std::ostream* errlog=&std::cerr);
 
+    /// Find all files in the repository under the given path.
+    /// @param path Path in vpath to search into.
+    /// @param files Output vector of found files.
+    /// @param extensions Extension filter (e.g. ".txt"), empty string means no filter.
+    /// @param recursive Indicates whether to search recursively into sub-directories.
+    void findAllFilesInRepository(const std::string& path, std::vector<std::string>& files, const std::vector<std::string> &extensions, bool recursive=true);
+
     /// Print the list of path to std::cout
     void print();
 
 
-    /// OS-dependant character separing entries in list of paths.
+    /// OS-dependant character separating entries in list of paths.
     static char entrySeparator()
     {
 #ifdef WIN32
@@ -173,7 +173,10 @@ public:
         return _flux;
     }
 
-    void displayPaths() const {std::cout<<(*this)<<std::endl;}
+    void displayPaths() const 
+    { 
+        msg_info("FileRepository") << (*this);
+    }
 
     const std::string getTempPath() const;
 
@@ -194,10 +197,7 @@ protected:
 extern SOFA_HELPER_API FileRepository DataRepository; ///< Default repository
 extern SOFA_HELPER_API FileRepository PluginRepository; ///< Default repository
 
-} // namespace system
+} // namespace sofa::helper::system
 
-} // namespace helper
-
-} // namespace sofa
 
 #endif

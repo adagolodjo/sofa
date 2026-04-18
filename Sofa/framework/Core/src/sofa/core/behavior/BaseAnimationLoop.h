@@ -21,7 +21,8 @@
 ******************************************************************************/
 #pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
+#include <sofa/core/objectmodel/BaseNode.h>
 
 namespace sofa::core::behavior
 {
@@ -33,16 +34,19 @@ namespace sofa::core::behavior
  *  This class can optionally replace the default computation scheme of computing
  *  collisions then doing an integration step.
  *
- *  Note that it is in a preliminary stage, hence its fonctionnalities and API will
+ *  Note that it is in a preliminary stage, hence its functionalities and API will
  *  certainly change soon.
  *
  */
-class SOFA_CORE_API BaseAnimationLoop : public virtual objectmodel::BaseObject
+class SOFA_CORE_API BaseAnimationLoop : public virtual objectmodel::BaseComponent
 {
 
 public:
-    SOFA_ABSTRACT_CLASS(BaseAnimationLoop, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(BaseAnimationLoop, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(BaseAnimationLoop)
+
+    // the node where the loop will start processing.
+    SingleLink<BaseAnimationLoop, core::objectmodel::BaseNode, BaseLink::FLAG_STOREPATH> l_node;
 
 protected:
     BaseAnimationLoop();
@@ -54,13 +58,15 @@ protected:
 
     /// Save the initial state for later uses in reset()
     void storeResetState() override;
-	
-	
+
+
 private:
-	BaseAnimationLoop(const BaseAnimationLoop& n) = delete ;
-	BaseAnimationLoop& operator=(const BaseAnimationLoop& n) = delete ;
+    BaseAnimationLoop(const BaseAnimationLoop& n) = delete ;
+    BaseAnimationLoop& operator=(const BaseAnimationLoop& n) = delete ;
 
 public:
+    void init() override;
+
     /// Main computation method.
     ///
     /// Specify and execute all computations for computing a timestep, such
@@ -72,6 +78,8 @@ public:
 
     bool insertInNode( objectmodel::BaseNode* node ) override;
     bool removeInNode( objectmodel::BaseNode* node ) override;
+
+    Data<bool> d_computeBoundingBox; ///< If true, compute the global bounding box of the scene at each time step. Used mostly for rendering.
 
 };
 

@@ -62,10 +62,11 @@ public:
 protected:
     LinearSolverConstraintCorrection(sofa::core::behavior::MechanicalState<DataTypes> *mm = nullptr);
 
-    virtual ~LinearSolverConstraintCorrection();
+    ~LinearSolverConstraintCorrection() override;
 public:
     void init() override;
 
+    void addRegularization(linearalgebra::BaseMatrix* W);
 
     void addComplianceInConstraintSpace(const sofa::core::ConstraintParams *cparams, linearalgebra::BaseMatrix* W) override;
 
@@ -79,7 +80,8 @@ public:
 
     void applyVelocityCorrection(const sofa::core::ConstraintParams *cparams, Data< VecDeriv>& v, Data< VecDeriv>& dv, const Data< VecDeriv >& f) override;
 
-    void rebuildSystem(double massFactor, double forceFactor) override;
+    void rebuildSystem(SReal massFactor, SReal forceFactor) override;
+
 
     /// @name Deprecated API
     /// @{
@@ -94,32 +96,34 @@ public:
     /// @{
 
     Data< bool > wire_optimization; ///< constraints are reordered along a wire-like topology (from tip to base)
-    Data< type::vector< std::string > >  solverName; ///< name of the constraint solver
+    Data< SReal > d_regularizationTerm; ///< add regularization*Id to W when solving for constraints
+    SingleLink<LinearSolverConstraintCorrection, sofa::core::behavior::LinearSolver, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_linearSolver; ///< Link towards the linear solver used to compute the compliance matrix, requiring the inverse of the linear system matrix
+    SingleLink<LinearSolverConstraintCorrection, sofa::core::behavior::OdeSolver, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_ODESolver; ///< Link towards the ODE solver used to recover the integration factors
 
     void verify_constraints();
 
     bool hasConstraintNumber(int index) override;  // virtual ???
 
-    void resetForUnbuiltResolution(double * f, std::list<unsigned int>& renumbering) override;
+    void resetForUnbuiltResolution(SReal* f, std::list<unsigned int>& renumbering) override;
 
-    void addConstraintDisplacement(double *d, int begin,int end) override;
+    void addConstraintDisplacement(SReal*d, int begin,int end) override;
 
-    void setConstraintDForce(double *df, int begin, int end, bool update) override;
+    void setConstraintDForce(SReal*df, int begin, int end, bool update) override;
 
     void getBlockDiagonalCompliance(linearalgebra::BaseMatrix* W, int begin, int end) override;
 
 protected:
-
-    sofa::core::behavior::OdeSolver* odesolver;
-    std::vector<sofa::core::behavior::LinearSolver*> linearsolvers;
-
-    linearalgebra::SparseMatrix<SReal> J; ///< constraint matrix
-    linearalgebra::FullVector<SReal> F; ///< forces computed from the constraints
+    linearalgebra::SparseMatrix<Real> m_constraintJacobian;
 
     /**
-    * @brief Compute the compliance matrix
+    * @brief Convert the constraint matrix
     */
-    virtual void computeJ(sofa::linearalgebra::BaseMatrix* W, const MatrixDeriv& j);
+    void convertConstraintMatrix(sofa::SignedIndex numberOfConstraints, const MatrixDeriv& inputConstraintMatrix);
+
+    virtual void computeJ(sofa::linearalgebra::BaseMatrix* W, const MatrixDeriv& j)
+    {
+        convertConstraintMatrix(W->rowSize(), j);
+    }
 
 
     ////////////////////////// Inherited attributes ////////////////////////////
@@ -138,16 +142,15 @@ private:
     linearalgebra::BaseMatrix* systemMatrix_buf;
     linearalgebra::BaseVector* systemRHVector_buf;
     linearalgebra::BaseVector* systemLHVector_buf;
-
+    linearalgebra::FullVector<Real>* systemLHVector_buf_fullvector { nullptr };
 
     // par un vecteur de listes precaclues pour chaque contrainte
     std::vector< ListIndex > Vec_I_list_dof;   // vecteur donnant la liste des indices des dofs par block de contrainte
     int last_force, last_disp; //last_force indice du dof le plus petit portant la force/le dpt qui a ?t? modifi? pour la derni?re fois (wire optimisation only?)
     bool _new_force; // if true, a "new" force was added in setConstraintDForce which is not yet integrated by a new computation in addConstraintDisplacements
-
 };
 
-#if  !defined(SOFA_COMPONENT_CONSTRAINT_LINEARSOLVERCONSTRAINTCORRECTION_CPP)
+#if !defined(SOFA_COMPONENT_CONSTRAINT_LINEARSOLVERCONSTRAINTCORRECTION_CPP)
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API LinearSolverConstraintCorrection<sofa::defaulttype::Vec3Types>;
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API LinearSolverConstraintCorrection<sofa::defaulttype::Vec2Types>;
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API LinearSolverConstraintCorrection<sofa::defaulttype::Vec1Types>;

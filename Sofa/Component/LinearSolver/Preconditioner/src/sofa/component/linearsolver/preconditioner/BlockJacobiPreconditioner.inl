@@ -26,7 +26,7 @@
 #include <sofa/linearalgebra/SparseMatrix.h>
 #include <sofa/core/ObjectFactory.h>
 #include <iostream>
-#include "sofa/helper/system/thread/CTime.h"
+#include <sofa/helper/system/thread/CTime.h>
 #include <sofa/core/objectmodel/BaseContext.h>
 #include <sofa/core/behavior/LinearSolver.h>
 #include <cmath>
@@ -51,6 +51,19 @@ void BlockJacobiPreconditioner<TMatrix,TVector>::invert(Matrix& M)
 {
     M.invert();
     msg_info() << M;
+}
+
+template <class TMatrix, class TVector>
+void BlockJacobiPreconditioner<TMatrix, TVector>::parse(
+    core::objectmodel::BaseObjectDescription* arg)
+{
+    if (arg->getAttribute("verbose"))
+    {
+        msg_warning() << "Attribute 'verbose' has no use in this component. "
+                         "To disable this warning, remove the attribute from the scene.";
+    }
+
+    Inherit::parse(arg);
 }
 
 } // namespace sofa::component::linearsolver::preconditioner

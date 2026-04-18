@@ -26,10 +26,13 @@
 namespace sofa::component::engine::select
 {
 
-int MeshBoundaryROIClass = core::RegisterObject("Outputs indices of boundary vertices of a triangle/quad mesh")
-        .add< MeshBoundaryROI >(true);
+void registerMeshBoundaryROI(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Outputs indices of boundary vertices of a triangle/quad mesh")
+        .add< MeshBoundaryROI >());
+}
 
-MeshBoundaryROI::MeshBoundaryROI(): Inherited()
+MeshBoundaryROI::MeshBoundaryROI(): Inherit1()
                                     , d_triangles(initData(&d_triangles,"triangles","input triangles"))
                                     , d_quads(initData(&d_quads,"quads","input quads"))
                                     , d_inputROI(initData(&d_inputROI,"inputROI","optional subset of the input mesh"))
@@ -43,6 +46,40 @@ MeshBoundaryROI::MeshBoundaryROI(): Inherited()
 
 void MeshBoundaryROI::init()
 {
+    Inherit1::init();
+
+    if (!d_triangles.isSet() || !d_quads.isSet() )
+    {
+        msg_info(this) << "No topology given. Searching for a BaseMeshTopology in the current context.\n";
+        core::topology::BaseMeshTopology* topology = nullptr;
+        this->getContext()->get(topology, core::objectmodel::BaseContext::Local);
+
+        if (topology)
+        {
+            if (!d_triangles.isSet())
+            {
+                if (core::BaseData* tparent = topology->findData("triangles"))
+                {
+                    d_triangles.setParent(tparent);
+                    d_triangles.setReadOnly(true);
+                }
+            }
+            if (!d_quads.isSet())
+            {
+                if (core::BaseData* tparent = topology->findData("quads"))
+                {
+                    d_quads.setParent(tparent);
+                    d_quads.setReadOnly(true);
+                }
+            }
+        }
+    }
+
+    if (!d_triangles.isSet() && !d_quads.isSet())
+    {
+        msg_warning() << "No topology given. No mesh to process.\n";
+    }
+
     setDirtyValue();
 }
 
@@ -60,26 +97,26 @@ void MeshBoundaryROI::doUpdate()
     indices.clear();
 
     std::map<PointPair, unsigned int> edgeCount;
-    for(size_t i=0;i<triangles.size();i++)
+    for(const auto& triangle : triangles)
     {
-        if(inROI(triangles[i][0]) && inROI(triangles[i][1]) && inROI(triangles[i][2]))
+        if(inROI(triangle[0]) && inROI(triangle[1]) && inROI(triangle[2]))
         {
             for(unsigned int j=0;j<3;j++)
             {
-                PointPair edge(triangles[i][j],triangles[i][(j==2)?0:j+1]);
+                PointPair edge(triangle[j],triangle[(j==2)?0:j+1]);
                 // increment the number of elements (triangles) associated to the edge.
                 this->countEdge(edgeCount,edge);
             }
         }
     }
     
-    for(size_t i=0;i<quads.size();i++)
+    for(const auto& quad : quads)
     {
-        if(inROI(quads[i][0]) && inROI(quads[i][1]) && inROI(quads[i][2]) && inROI(quads[i][3]))
+        if(inROI(quad[0]) && inROI(quad[1]) && inROI(quad[2]) && inROI(quad[3]))
         {
             for(unsigned int j=0;j<4;j++)
             {
-                PointPair edge(quads[i][j],quads[i][(j==3)?0:j+1]);
+                PointPair edge(quad[j],quad[(j==3)?0:j+1]);
                 // increment the number of elements (quad) associated to the edge.
                 this->countEdge(edgeCount,edge);
             }
@@ -87,13 +124,13 @@ void MeshBoundaryROI::doUpdate()
     }
 
     std::set<PointID> indexset; // enforce uniqueness since SetIndex is not a set..
-    for(auto it=edgeCount.begin();it!=edgeCount.end();++it)
+    for(const auto & [pointPair, count] : edgeCount)
     {
         // consider edge only if it is on the boundary
-        if(it->second==1)
+        if (count == 1)
         {
-            indexset.insert(it->first.first);
-            indexset.insert(it->first.second);
+            indexset.insert(pointPair.first);
+            indexset.insert(pointPair.second);
         }
     }
     indices.wref().insert(indices.end(), indexset.begin(), indexset.end());

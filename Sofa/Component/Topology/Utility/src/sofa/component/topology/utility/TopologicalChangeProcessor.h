@@ -27,8 +27,7 @@
 #include <sofa/simulation/AnimateBeginEvent.h>
 #include <sofa/simulation/AnimateEndEvent.h>
 
-
-#include <SofaBaseTopology/TriangleSetGeometryAlgorithms.h>
+#include <sofa/component/topology/container/dynamic/TriangleSetGeometryAlgorithms.h>
 
 #if SOFAMISCTOPOLOGY_HAVE_ZLIB
 #include <zlib.h>
@@ -46,37 +45,37 @@ class TriangleIncisionInformation;
  *
  * SIMPLE METHOD FOR THE MOMENT. DON'T HANDLE MULTIPLE TOPOLOGIES
 */
-class SOFA_COMPONENT_TOPOLOGY_UTILITY_API TopologicalChangeProcessor: public core::objectmodel::BaseObject
+class SOFA_COMPONENT_TOPOLOGY_UTILITY_API TopologicalChangeProcessor: public core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(TopologicalChangeProcessor,core::objectmodel::BaseObject);
+    SOFA_CLASS(TopologicalChangeProcessor,core::objectmodel::BaseComponent);
 
     using Index = sofa::Index;
 
-    sofa::core::objectmodel::DataFileName m_filename;
-    Data < type::vector< type::vector<Index> > > m_listChanges; ///< 0 for adding, 1 for removing, 2 for cutting and associated indices.
+    sofa::core::objectmodel::DataFileName d_filename;
+    Data < type::vector< type::vector<Index> > > d_listChanges; ///< 0 for adding, 1 for removing, 2 for cutting and associated indices.
 
     // Parameters for time
-    Data < double > m_interval; ///< time duration between 2 actions
-    Data < double > m_shift; ///< shift between times in the file and times when they will be read
-    Data < bool > m_loop; ///< set to 'true' to re-read the file when reaching the end
+    Data < double > d_interval; ///< time duration between 2 actions
+    Data < double > d_shift; ///< shift between times in the file and times when they will be read
+    Data < bool > d_loop; ///< set to 'true' to re-read the file when reaching the end
 
     // Inputs for operations on Data
-    Data <bool> m_useDataInputs; ///< If true, will perform operation using Data input lists rather than text file.
-    Data <double> m_timeToRemove; ///< If using option useDataInputs, time at which will be done the operations. Possibility to use the interval Data also.
-    Data <sofa::type::vector<Index> > m_pointsToRemove; ///< List of point IDs to be removed.
-    Data <sofa::type::vector<Index> > m_edgesToRemove; ///< List of edge IDs to be removed.
-    Data <sofa::type::vector<Index> > m_trianglesToRemove; ///< List of triangle IDs to be removed.
-    Data <sofa::type::vector<Index> > m_quadsToRemove; ///< List of quad IDs to be removed.
-    Data <sofa::type::vector<Index> > m_tetrahedraToRemove; ///< List of tetrahedron IDs to be removed.
-    Data <sofa::type::vector<Index> > m_hexahedraToRemove; ///< List of hexahedron IDs to be removed.
+    Data <bool> d_useDataInputs; ///< If true, will perform operation using Data input lists rather than text file.
+    Data <double> d_timeToRemove; ///< If using option useDataInputs, time at which will be done the operations. Possibility to use the interval Data also.
+    Data <sofa::type::vector<Index> > d_pointsToRemove; ///< List of point IDs to be removed.
+    Data <sofa::type::vector<Index> > d_edgesToRemove; ///< List of edge IDs to be removed.
+    Data <sofa::type::vector<Index> > d_trianglesToRemove; ///< List of triangle IDs to be removed.
+    Data <sofa::type::vector<Index> > d_quadsToRemove; ///< List of quad IDs to be removed.
+    Data <sofa::type::vector<Index> > d_tetrahedraToRemove; ///< List of tetrahedron IDs to be removed.
+    Data <sofa::type::vector<Index> > d_hexahedraToRemove; ///< List of hexahedron IDs to be removed.
 
-    Data <bool> m_saveIndicesAtInit; ///< set to 'true' to save the incision to do in the init to incise even after a movement
+    Data <bool> d_saveIndicesAtInit; ///< set to 'true' to save the incision to do in the init to incise even after a movement
 
-    Data<SReal>  m_epsilonSnapPath; ///< epsilon snap path
-    Data<SReal>  m_epsilonSnapBorder; ///< epsilon snap path
+    Data<SReal>  d_epsilonSnapPath; ///< epsilon snap path
+    Data<SReal>  d_epsilonSnapBorder; ///< epsilon snap path
 
-    Data<bool>  m_draw; ///< draw information
+    Data<bool>  d_draw; ///< draw information
 
     /// Link to be set to the topology container in the component graph.
     SingleLink<TopologicalChangeProcessor, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
@@ -128,7 +127,7 @@ public:
             return false;
         }
 
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
     void draw(const core::visual::VisualParams* vparams) override;
@@ -139,7 +138,7 @@ protected:
 
     std::vector<SReal> getValuesInLine(std::string line, size_t nbElements);
 
-    void findElementIndex(type::Vector3 coord, Index& triangleIndex, Index oldTriangleIndex);
+    void findElementIndex(type::Vec3 coord, Index& triangleIndex, Index oldTriangleIndex);
     void saveIndices();//only for incision
     void inciseWithSavedIndices();
 
@@ -153,10 +152,10 @@ public:
     using Index = sofa::Index;
 
     std::vector<Index>      triangleIndices;
-    std::vector<type::Vector3>                barycentricCoordinates;
+    std::vector<type::Vec3>                barycentricCoordinates;
     SReal                                           timeToIncise;
 
-    std::vector<type::Vector3>                coordinates;
+    std::vector<type::Vec3>                coordinates;
 
     void display()
     {
@@ -177,9 +176,9 @@ public:
     }
 
 
-    std::vector<type::Vector3> computeCoordinates(core::topology::BaseMeshTopology *topology)
+    std::vector<type::Vec3> computeCoordinates(core::topology::BaseMeshTopology *topology)
     {
-        sofa::component::topology::TriangleSetGeometryAlgorithms<defaulttype::Vec3Types>* triangleGeo;
+        sofa::component::topology::container::dynamic::TriangleSetGeometryAlgorithms<defaulttype::Vec3Types>* triangleGeo;
         topology->getContext()->get(triangleGeo);
 
         coordinates.clear();

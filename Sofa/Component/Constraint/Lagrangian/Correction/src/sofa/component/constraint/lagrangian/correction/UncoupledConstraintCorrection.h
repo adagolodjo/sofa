@@ -99,25 +99,23 @@ public:
 
     bool hasConstraintNumber(int index) override;  // virtual ???
 
-    void resetForUnbuiltResolution(double * f, std::list<unsigned int>& /*renumbering*/) override;
+    void resetForUnbuiltResolution(SReal* f, std::list<unsigned int>& /*renumbering*/) override;
 
-    void addConstraintDisplacement(double *d, int begin,int end) override;
+    void addConstraintDisplacement(SReal* d, int begin,int end) override;
 
-    void setConstraintDForce(double *df, int begin, int end, bool update) override;
+    void setConstraintDForce(SReal* df, int begin, int end, bool update) override;
 
     void getBlockDiagonalCompliance(linearalgebra::BaseMatrix* W, int begin, int end) override;
 
     /// @}
 
-    core::topology::PointData< VecReal > compliance; ///< Rigid compliance value: 1st value for translations, 6 others for upper-triangular part of symmetric 3x3 rotation compliance matrix
 
-    Data< Real > defaultCompliance; ///< Default compliance value for new dof or if all should have the same (in which case compliance vector should be empty)
+    core::topology::PointData< VecReal > d_compliance; ///< Compliance value on each dof. If Rigid compliance (7 values): 1st value for translations, 6 others for upper-triangular part of symmetric 3x3 rotation compliance matrix
 
-    Data<bool> f_verbose; ///< Dump the constraint matrix at each iteration
-
+    Data< Real > d_defaultCompliance; ///< Default compliance value for new dof or if all should have the same (in which case compliance vector should be empty)
+    Data<bool> d_verbose; ///< Dump the constraint matrix at each iteration
     Data< Real > d_correctionVelocityFactor; ///< Factor applied to the constraint forces when correcting the velocities
     Data< Real > d_correctionPositionFactor; ///< Factor applied to the constraint forces when correcting the positions
-
     Data < bool > d_useOdeSolverIntegrationFactors; ///< Use odeSolver integration factors instead of correctionVelocityFactor and correctionPositionFactor
                                                     
     /// Link to be set to the topology container in the component graph.
@@ -146,7 +144,7 @@ template<>
 void UncoupledConstraintCorrection< sofa::defaulttype::Rigid3Types >::getComplianceMatrix(sofa::linearalgebra::BaseMatrix * /*m*/) const;
 
 
-#if  !defined(SOFA_COMPONENT_CONSTRAINTSET_UNCOUPLEDCONSTRAINTCORRECTION_CPP)
+#if !defined(SOFA_COMPONENT_CONSTRAINTSET_UNCOUPLEDCONSTRAINTCORRECTION_CPP)
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API UncoupledConstraintCorrection<defaulttype::Vec3Types>;
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API UncoupledConstraintCorrection<defaulttype::Vec2Types>;
 extern template class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_CORRECTION_API UncoupledConstraintCorrection<defaulttype::Vec1Types>;

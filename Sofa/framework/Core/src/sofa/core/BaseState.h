@@ -19,18 +19,12 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_BASESTATE_H
-#define SOFA_CORE_BASESTATE_H
-
-#include <sofa/core/objectmodel/BaseObject.h>
+#pragma once
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/VecId.h>
 
-namespace sofa
+namespace sofa::core
 {
-
-namespace core
-{
-
 /**
  *  \brief Component storing position and velocity vectors.
  *
@@ -39,18 +33,18 @@ namespace core
  *  MechanicalState (storing other mechanical data) or MappedModel (if no
  *  mechanical data is used, such as for VisualModel).
  */
-class SOFA_CORE_API BaseState : public virtual objectmodel::BaseObject
+class SOFA_CORE_API BaseState : public virtual objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(BaseState, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(BaseState, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(BaseState)
 protected:
     BaseState() {}
     ~BaseState() override {}
 	
 private:
-	BaseState(const BaseState& n) ;
-	BaseState& operator=(const BaseState& n) ;
+    BaseState(const BaseState& n) = delete;
+    BaseState& operator=(const BaseState& n) = delete;
 public:
     /// Current size of all stored vectors
     virtual Size getSize() const = 0;
@@ -70,10 +64,13 @@ public:
     bool insertInNode( objectmodel::BaseNode* node ) override;
     bool removeInNode( objectmodel::BaseNode* node ) override;
 
+    /// The given VecDerivId is appended to a list representing all the forces containers
+    /// It is useful to be able to compute the accumulation of all forces (for example the ones
+    /// coming from force fields and the ones coming from lagrangian constraints).
+    virtual void addToTotalForces(core::ConstVecDerivId forceId);
+
+    virtual void removeFromTotalForces(core::ConstVecDerivId forceId);
 };
 
-} // namespace core
+} // namespace sofa::core
 
-} // namespace sofa
-
-#endif

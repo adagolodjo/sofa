@@ -97,8 +97,8 @@ public:
 
     /// Dynamic Topology API
     /// @{
-    /// Method called by component Init method. Will create all the topology neighboorhood buffers.
-    void initTopology();
+    /// Method called by component Init method. Will create all the topology neighborhood buffers.
+    void computeCrossElementBuffers() override;
 
     /** \brief Checks if the topology is coherent
      *
@@ -123,7 +123,7 @@ public:
     Size getNumberOfElements() const override;
 
 
-    /** \brief Returns the number of connected components from the graph containing all edges and give, for each vertex, which component it belongs to  (use BOOST GRAPH LIBRAIRY)
+    /** \brief Returns the number of connected components from the graph containing all edges and give, for each vertex, which component it belongs to  (use BOOST GRAPH LIBRARY)
      *
      * @param components the array containing the optimal vertex permutation according to the Reverse CuthillMckee algorithm
      * @return The number of components connected together.
@@ -172,9 +172,12 @@ public:
     /// @}
 
     /** \brief Returns the type of the topology */
-    sofa::core::topology::TopologyElementType getTopologyType() const override {return sofa::core::topology::TopologyElementType::EDGE;}
+    sofa::geometry::ElementType getTopologyType() const override {return sofa::geometry::ElementType::EDGE;}
 
     bool linkTopologyHandlerToData(core::topology::TopologyHandler* topologyHandler, sofa::geometry::ElementType elementType) override;
+    
+    bool unlinkTopologyHandlerToData(core::topology::TopologyHandler* topologyHandler, sofa::geometry::ElementType elementType) override;
+
 protected:
 
     /** \brief Creates the EdgeSet array.
@@ -223,10 +226,7 @@ protected:
 public:
     /** The array that stores the set of edges in the edge set */
     Data< sofa::type::vector<Edge> > d_edge; ///< List of edge indices
-
-    Data <bool> m_checkConnexity; ///< It true, will check the connexity of the mesh.
-
-
+    Data <bool> d_checkConnexity; ///< It true, will check the connexity of the mesh.
 };
 
 } //namespace sofa::component::topology::container::dynamic

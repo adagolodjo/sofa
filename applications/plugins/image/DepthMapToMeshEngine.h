@@ -25,7 +25,7 @@
 #include <image/config.h>
 #include "ImageTypes.h"
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/core/visual/VisualParams.h>
 
@@ -108,7 +108,7 @@ public:
         , texImage(initData(&texImage,TextureTypes(),"texImage",""))
         , position(initData(&position,SeqPositions(),"position","output positions"))
         , texCoord(initData(&texCoord,SeqTexCoords(),"texCoord","output texture coordinates"))
-        , texOffset(initData(&texOffset,TexCoord(0.0,0.0),"texOffset","texture offsets (in [0,1])"))
+        , texOffset(initData(&texOffset,TexCoord({0.0,0.0}),"texOffset","texture offsets (in [0,1])"))
         , triangles(initData(&triangles,SeqTriangles(),"triangles","output triangles"))
         , time((unsigned int)0)
 #if IMAGE_HAVE_SOFA_GL == 1

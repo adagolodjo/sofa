@@ -1,7 +1,7 @@
 #ifndef CONTOURIMAGETOOLBOXACTION_H
 #define CONTOURIMAGETOOLBOXACTION_H
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 #include <QPushButton>
 #include <QSpinBox>
@@ -26,8 +26,6 @@ class SOFA_IMAGE_GUI_API ContourImageToolBoxNoTemplated;
 }}}
 
 namespace sofa
-{
-namespace gui
 {
 namespace qt
 {
@@ -89,7 +87,6 @@ private:
     
 };
 
-}
 }
 }
 

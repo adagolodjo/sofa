@@ -28,7 +28,7 @@
 namespace sofa::component::topology::container::grid
 {
 
-/// a SparseGridTopology where each resulting cube contains only one independant connexe component (nodes can be multiplied by using virtual nodes)
+/// a SparseGridTopology where each resulting cube contains only one independent connexe component (nodes can be multiplied by using virtual nodes)
 class SOFA_COMPONENT_TOPOLOGY_CONTAINER_GRID_API SparseGridRamificationTopology : public SparseGridTopology
 {
 public:
@@ -41,31 +41,26 @@ public:
 
     /// return the cube containing the given point (or -1 if not found),
     /// as well as deplacements from its first corner in terms of dx, dy, dz (i.e. barycentric coordinates).
-    Index findCube(const Vector3 &pos, SReal &fx, SReal &fy, SReal &fz) override;
-// 				virtual int findCube(const Vector3 &pos);
+    Index findCube(const type::Vec3 &pos, SReal &fx, SReal &fy, SReal &fz) override;
 
     /// return the cube containing the given point (or -1 if not found),
     /// as well as deplacements from its first corner in terms of dx, dy, dz (i.e. barycentric coordinates).
-    Index findNearestCube(const Vector3& pos, SReal& fx, SReal &fy, SReal &fz) override;
-// 				virtual int findNearestCube(const Vector3& pos);
+    Index findNearestCube(const type::Vec3& pos, SReal& fx, SReal &fy, SReal &fz) override;
 
-
-    /// one per connexion, in order to compute findCube by beginning by the finnest and by going up until the coarsest parent
+    /// one per connection, in order to compute findCube by beginning by the finnest and by going up until the coarsest parent
     void findCoarsestParents();
-
 
     /// when linking similar particules between neighbors, propagate changes to all the sames particles
     void changeIndices(Index oldidx, Index newidx);
-
 
     /// surcharge of functions defined in SparseGridTopology
     void buildAsFinest() override;
     void buildFromFiner() override;
     void buildVirtualFinerLevels() override;
 
-    /// find the connexion graph between the finest hexahedra
+    /// find the connection graph between the finest hexahedra
     void findConnexionsAtFinestLevel();
-    /// Once the finest connectivity is computed, some nodes can be dobled
+    /// Once the finest connectivity is computed, some nodes can be doubled
     void buildRamifiedFinestLevel();
     /// do 2 neighbors cubes share triangles ?
     bool sharingTriangle(helper::io::Mesh* mesh, Index cubeIdx, Index neighborIdx, unsigned where);
@@ -81,10 +76,10 @@ public:
     enum {UP,DOWN,RIGHT,LEFT,BEFORE,BEHIND,NUM_CONNECTED_NODES};
 
     // Does the connectivity test have to be done at the finest level? (more precise but slow)
-    Data<bool> _finestConnectivity; ///< Test for connectivity at the finest level? (more precise but slower by testing all intersections between the model mesh and the faces between boundary cubes)
+    Data<bool> d_finestConnectivity; ///< Test for connectivity at the finest level? (more precise but slower by testing all intersections between the model mesh and the faces between boundary cubes)
 
 
-    /// a connexion corresponds to a connexe component in each regular hexa (each non-void hexa has at less one connexion)
+    /// a connection corresponds to a connexe component in each regular hexa (each non-void hexa has at less one connection)
     struct Connexion
     {
         Connexion():_parent(nullptr), _coarsestParent(0), _hexaIdx(0), _nonRamifiedHexaIdx(0), _tmp(0) {};
@@ -102,10 +97,10 @@ public:
 
         int _tmp; // warning: useful to several algos (as a temporary variable) but it is not an identification number
 
-        /// each similar connexion will have a number (saved in _tmp), this number must be given to all connected connexions)
+        /// each similar connection will have a number (saved in _tmp), this number must be given to all connected connexions)
         void propagateConnexionNumberToNeighbors( int connexionNumber, const type::vector<Connexion*>& allFineConnexions )
         {
-            if (_tmp!=-1) return; // already in an existing connexion number
+            if (_tmp!=-1) return; // already in an existing connection number
 
             _tmp = connexionNumber;
             for(int i=0; i<NUM_CONNECTED_NODES; ++i)
@@ -122,7 +117,7 @@ protected:
 
     std::map<int, std::pair<type::vector<Connexion*>,int> > _mapHexa_Connexion; // a hexa idx -> the corresponding connexion
 
-    bool intersectionSegmentTriangle(Vector3 s0, Vector3 s1, Vector3 t0, Vector3 t1, Vector3 t2);
+    bool intersectionSegmentTriangle(type::Vec3 s0, type::Vec3 s1, type::Vec3 t0, type::Vec3 t1, type::Vec3 t2);
 
 public :
 

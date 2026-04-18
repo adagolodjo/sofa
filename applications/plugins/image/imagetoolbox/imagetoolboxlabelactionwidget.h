@@ -1,7 +1,7 @@
 #ifndef IMAGETOOLBOXLABELACTIONWIDGET_H
 #define IMAGETOOLBOXLABELACTIONWIDGET_H
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 #include <QVBoxLayout>
 #include <QComboBox>
@@ -12,8 +12,6 @@
 #include "labelimagetoolboxaction.h"
 
 namespace sofa
-{
-namespace gui
 {
 namespace qt
 {
@@ -33,7 +31,7 @@ Q_OBJECT
     QString currentVal;
     
     typedef sofa::component::engine::LabelImageToolBox Label;
-    typedef sofa::gui::qt::LabelImageToolBoxAction LabelAction;
+    typedef sofa::qt::LabelImageToolBoxAction LabelAction;
     typedef type::vector<Label*> VecLabel;
     typedef type::vector<LabelAction*> VecLabelAction;
     
@@ -244,7 +242,6 @@ signals:
     //void updateImage();
 };
 
-}
 }
 }
 

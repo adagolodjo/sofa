@@ -23,9 +23,9 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 
-#include <image/image_gui/config.h>
-#include <sofa/gui/qt/DataWidget.h>
-#include <sofa/gui/qt/SimpleDataWidget.h>
+#include <image_gui/config.h>
+#include <sofa/qt/DataWidget.h>
+#include <sofa/qt/SimpleDataWidget.h>
 
 #include <QLabel>
 #include <QImage>
@@ -36,7 +36,7 @@
 
 #include <image/ImageTypes.h>
 #include "imagetoolboxdata.h"
-#include "../image_gui/ImagePlaneWidget.h"
+#include <image_gui/ImagePlaneWidget.h>
 
 #include <sofa/type/vector.h>
 #include <sofa/core/objectmodel/BaseData.h>
@@ -44,8 +44,6 @@
 #include <sofa/helper/rmath.h>
 
 namespace sofa
-{
-namespace gui
 {
 namespace qt
 {
@@ -87,7 +85,7 @@ public:
         QObject::connect(slider,SIGNAL(valueChanged(int)),this,SIGNAL(valueChanged()));
 
         QHBoxLayout *layout = new QHBoxLayout(this);
-        layout->setMargin(0);
+        layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(10);
         //layout->add(toggle);
         layout->addWidget(slider);
@@ -140,7 +138,7 @@ class SOFA_IMAGE_GUI_API ImageToolBoxCentralWidget: public QWidget
     Q_OBJECT
 
 public slots:
-    virtual void handleSliderPolicies()=0; // needed for synchronization of slider visiblity
+    virtual void handleSliderPolicies()=0; // needed for synchronization of slider visibility
     virtual void setVisibleXY(bool)=0;
     virtual void setVisibleXZ(bool)=0;
     virtual void setVisibleZY(bool)=0;
@@ -420,7 +418,7 @@ public:
     }
 };
 
-}}}
+}}
 
 
 #endif // IMAGETOOLBOXCENTRALWIDGET_H

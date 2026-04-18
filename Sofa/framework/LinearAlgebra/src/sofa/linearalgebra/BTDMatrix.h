@@ -23,8 +23,9 @@
 #include <sofa/linearalgebra/config.h>
 
 #include <sofa/linearalgebra/BaseMatrix.h>
-#include <sofa/linearalgebra/BlocFullMatrix.h>
+#include <sofa/linearalgebra/BlockFullMatrix.h>
 #include <sofa/linearalgebra/FullVector.h>
+#include <sofa/linearalgebra/matrix_bloc_traits.h>
 
 namespace sofa::linearalgebra
 {
@@ -52,11 +53,10 @@ public:
             type::Mat<BSIZE,BSIZE,Real> r;
             for (Index i=0; i<BSIZE; i++)
                 for (Index j=0; j<BSIZE; j++)
-                    r[i][j]=-m[j][i];
+                    r(i,j)=-m(j,i);
             return r;
         }
     };
-    using TransposedBloc SOFA_ATTRIBUTE_DEPRECATED__BLOCK_RENAMING_2404() = TransposedBlock;
 
     class Block : public type::Mat<BSIZE,BSIZE,Real>
     {
@@ -67,9 +67,9 @@ public:
         {
             this->clear();
         }
-        const T& element(Index i, Index j) const { return (*this)[i][j]; }
-        void set(Index i, Index j, const T& v) { (*this)[i][j] = v; }
-        void add(Index i, Index j, const T& v) { (*this)[i][j] += v; }
+        const T& element(Index i, Index j) const { return (*this)(i,j); }
+        void set(Index i, Index j, const T& v) { (*this)(i,j) = v; }
+        void add(Index i, Index j, const T& v) { (*this)(i,j) += v; }
         void operator=(const type::Mat<BSIZE,BSIZE,Real>& v)
         {
             type::Mat<BSIZE,BSIZE,Real>::operator=(v);
@@ -79,7 +79,7 @@ public:
             type::Mat<BSIZE,BSIZE,Real> r;
             for (Index i=0; i<BSIZE; i++)
                 for (Index j=0; j<BSIZE; j++)
-                    r[i][j]=-(*this)[i][j];
+                    r(i,j)=-(*this)(i,j);
             return r;
         }
         type::Mat<BSIZE,BSIZE,Real> operator-(const type::Mat<BSIZE,BSIZE,Real>& m) const
@@ -92,15 +92,11 @@ public:
         }
         type::Mat<BSIZE,BSIZE,Real> operator*(const type::Mat<BSIZE,BSIZE,Real>& m)
         {
-            return type::Mat<BSIZE,BSIZE,Real>::operator*(m);
-        }
-        type::Mat<BSIZE,BSIZE,Real> operator*(const Block& m)
-        {
-            return type::Mat<BSIZE,BSIZE,Real>::operator*(m);
+            return sofa::type::operator*(*this, m);
         }
         type::Mat<BSIZE,BSIZE,Real> operator*(const TransposedBlock& mt)
         {
-            return type::Mat<BSIZE,BSIZE,Real>::operator*(mt.m.transposed());
+            return operator*(mt.m.transposed());
         }
         TransposedBlock t() const
         {
@@ -115,14 +111,16 @@ public:
             return r;
         }
     };
-    using Bloc SOFA_ATTRIBUTE_DEPRECATED__BLOCK_RENAMING_2404() = Block;
 
     typedef Block SubMatrixType;
     typedef sofa::type::Mat<N,N,Real> BlockType;
-    using BlocType SOFA_ATTRIBUTE_DEPRECATED__BLOCK_RENAMING_2404() = BlockType;
-    typedef BlocFullMatrix<N, T> InvMatrixType;
-    // return the dimension of submatrices when requesting a given size
-    static Index getSubMatrixDim(Index) { return BSIZE; }
+    typedef BlockFullMatrix<N, T> InvMatrixType;
+
+    // return the dimension of submatrices
+    constexpr static Index getSubMatrixDim()
+    {
+        return BSIZE;
+    }
 
 protected:
     Block* data;
@@ -179,7 +177,14 @@ public:
 
     void set(Index i, Index j, double v) override;
 
+    using BaseMatrix::add;
     void add(Index i, Index j, double v) override;
+
+    /**
+     * Accumulation specialized on contributions of the same size than the blocks.
+     */
+    template <std::size_t M = N, std::enable_if_t<(M > 3), int> = 0>
+    void add(Index row, Index col, const type::Mat<BSIZE, BSIZE, Real>& v);
 
     void clear(Index i, Index j) override;
 
@@ -197,8 +202,8 @@ public:
         FullVector<Real2> res(rowSize());
         for (Index bi=0; bi<nBRow; ++bi)
         {
-            Index b0 = (bi > 0) ? 0 : 1;
-            Index b1 = ((bi < nBRow - 1) ? 3 : 2);
+            const Index b0 = (bi > 0) ? 0 : 1;
+            const Index b1 = ((bi < nBRow - 1) ? 3 : 2);
             for (Index i=0; i<BSIZE; ++i)
             {
                 Real r = 0;
@@ -206,7 +211,7 @@ public:
                 {
                     for (Index j=0; j<BSIZE; ++j)
                     {
-                        r += data[bi*3+bj][i][j] * v[(bi + bj - 1)*BSIZE + j];
+                        r += data(bi*3+bj,i,j) * v[(bi + bj - 1)*BSIZE + j];
                     }
                 }
                 res[bi*BSIZE + i] = r;
@@ -215,7 +220,45 @@ public:
         return res;
     }
 
-    static const char* Name();
+    static const char* Name()
+    {
+        static std::string name { "BTDMatrix" + std::to_string(N) + matrix_bloc_traits<T, Index>::Name() };
+        return name.c_str();
+    }
 };
+
+
+template <std::size_t N, typename T>
+template <std::size_t M, std::enable_if_t<(M > 3), int>>
+void BTDMatrix<N, T>::add(Index row, Index col,
+    const type::Mat<BSIZE, BSIZE, Real>& v)
+{
+    if (row % BSIZE == 0 && col % BSIZE == 0)
+    {
+        const Index bi = row / BSIZE;
+        const Index bj = col / BSIZE;
+        const Index bindex = bj - bi + 1;
+        if (bindex >= 3)
+        {
+            return;
+        }
+        data[bi * 3 + bindex] += v;
+    }
+    else
+    {
+        for (sofa::Index i = 0; i < BSIZE; ++i)
+        {
+            for (sofa::Index j = 0; j < BSIZE; ++j)
+            {
+                this->add(row + i, col + j, v(i, j));
+            }
+        }
+    }
+}
+
+
+#if !defined(SOFA_LINEARALGEBRA_BTDMATRIX_CPP)
+extern template class SOFA_LINEARALGEBRA_API linearalgebra::BTDMatrix<6, SReal>;
+#endif
 
 } // namespace sofa::linearalgebra

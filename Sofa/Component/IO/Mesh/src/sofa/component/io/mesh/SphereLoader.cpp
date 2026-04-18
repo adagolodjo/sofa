@@ -34,8 +34,11 @@ using namespace sofa::type;
 namespace sofa::component::io::mesh
 {
 
-int SphereLoaderClass = core::RegisterObject("Loader for sphere model description files")
-        .add<SphereLoader>();
+void registerSphereLoader(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Loader for sphere model description files.")
+        .add< SphereLoader >());
+}
 
 SphereLoader::SphereLoader()
     :BaseLoader(),
@@ -85,7 +88,7 @@ void SphereLoader::applyTransform()
                 msg_warning() << "Data scale should not be set to zero";
             }
         }
-        Matrix4 transformation = Matrix4::transformTranslation(translation) *
+        const Matrix4 transformation = Matrix4::transformTranslation(translation) *
             Matrix4::transformRotation(type::Quat< SReal >::createQuaterFromEuler(rotation * M_PI / 180.0)) *
             Matrix4::transformScale(scale);
 
@@ -129,8 +132,6 @@ bool SphereLoader::load()
         return false;
     }
 
-    int totalNumSpheres=0;
-
     // Check first line
     if (fgets(cmd, 7, file) == nullptr || !strcmp(cmd,SPH_FORMAT))
     {
@@ -157,9 +158,8 @@ bool SphereLoader::load()
             if (fscanf(file, "%d %lf %lf %lf %lf\n",
                     &index, &cx, &cy, &cz, &r) == EOF)
                 msg_error("SphereLoader") << "Problem while loading. fscanf function has encountered an error." ;
-            my_positions.push_back(Vector3((SReal)cx,(SReal)cy,(SReal)cz));
+            my_positions.push_back(Vec3((SReal)cx,(SReal)cy,(SReal)cz));
             my_radius.push_back((SReal)r);
-            ++totalNumSpheres;
         }
         else if (cmd[0]=='#')
         {

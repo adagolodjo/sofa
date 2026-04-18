@@ -26,7 +26,7 @@
 
 #include <sofa/type/Vec.h>
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/behavior/MechanicalState.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/defaulttype/VecTypes.h>
@@ -90,7 +90,7 @@ protected:
     bool testDistance(Coord p);
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_RANDOMPOINTDISTRIBUTIONINSURFACE_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_RANDOMPOINTDISTRIBUTIONINSURFACE_CPP)
 extern template class SOFA_COMPONENT_ENGINE_GENERATE_API RandomPointDistributionInSurface<defaulttype::Vec3Types>;
 #endif
 

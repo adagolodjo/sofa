@@ -70,7 +70,7 @@ SubsetTopology<DataTypes>::SubsetTopology()
     , p_drawEdges( initData(&p_drawEdges,false,"drawEdges","Draw Edges") )
     , p_drawTriangles( initData(&p_drawTriangles,false,"drawTriangle","Draw Triangles") )
     , p_drawTetrahedra( initData(&p_drawTetrahedra,false,"drawTetrahedra","Draw Tetrahedra") )
-    , _drawSize( initData(&_drawSize,0.0,"drawSize","rendering size for box and topological elements") )
+    , _drawSize( initData(&_drawSize,1.0,"drawSize","rendering size for box and topological elements") )
 {
     boxes.beginEdit()->push_back(Vec6(0,0,0,1,1,1));
     boxes.endEdit();
@@ -784,7 +784,7 @@ void SubsetTopology<DataTypes>::draw(const core::visual::VisualParams* vparams)
     if (!vparams->displayFlags().getShowBehaviorModels())
         return;
 
-    vparams->drawTool()->saveLastState();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
     const VecCoord* x0 = &f_X0.getValue();
     constexpr const sofa::type::RGBAColor& color = sofa::type::RGBAColor::cyan();
@@ -796,14 +796,14 @@ void SubsetTopology<DataTypes>::draw(const core::visual::VisualParams* vparams)
         for (unsigned int bi=0; bi<vb.size(); ++bi)
         {
             const Vec6& b=vb[bi];
-            const sofa::type::Vector3 minBBox(b[0], b[1], b[2]);
-            const sofa::type::Vector3 maxBBox(b[3], b[4], b[5]);
+            const sofa::type::Vec3 minBBox(b[0], b[1], b[2]);
+            const sofa::type::Vec3 maxBBox(b[3], b[4], b[5]);
             vparams->drawTool()->setMaterial(color);
             vparams->drawTool()->drawBoundingBox(minBBox, maxBBox, 1.0);
         }
     }
 
-    std::vector<sofa::type::Vector3> vertices;
+    std::vector<sofa::type::Vec3> vertices;
     vparams->drawTool()->disableLighting();
 
     if( p_drawPoints.getValue())
@@ -820,7 +820,7 @@ void SubsetTopology<DataTypes>::draw(const core::visual::VisualParams* vparams)
     {
         vertices.clear();
         ///draw edges in boxes
-        helper::ReadAccessor< Data<type::vector<Edge> > > edgesInROI = f_edgesInROI;
+        const helper::ReadAccessor< Data<type::vector<Edge> > > edgesInROI = f_edgesInROI;
         for (unsigned int i=0; i<edgesInROI.size() ; ++i)
         {
             Edge e = edgesInROI[i];
@@ -835,7 +835,7 @@ void SubsetTopology<DataTypes>::draw(const core::visual::VisualParams* vparams)
     {
         vertices.clear();
         ///draw triangles in boxes
-        helper::ReadAccessor< Data<type::vector<Triangle> > > trianglesInROI = f_trianglesInROI;
+        const helper::ReadAccessor< Data<type::vector<Triangle> > > trianglesInROI = f_trianglesInROI;
         for (unsigned int i=0; i<trianglesInROI.size() ; ++i)
         {
             Triangle t = trianglesInROI[i];
@@ -851,7 +851,7 @@ void SubsetTopology<DataTypes>::draw(const core::visual::VisualParams* vparams)
     {
         vertices.clear();
         ///draw tetrahedra in boxes
-        helper::ReadAccessor< Data<type::vector<Tetra> > > tetrahedraInROI = f_tetrahedraInROI;
+        const helper::ReadAccessor< Data<type::vector<Tetra> > > tetrahedraInROI = f_tetrahedraInROI;
         for (unsigned int i=0; i<tetrahedraInROI.size() ; ++i)
         {
             Tetra t = tetrahedraInROI[i];
@@ -868,7 +868,7 @@ void SubsetTopology<DataTypes>::draw(const core::visual::VisualParams* vparams)
         }
         vparams->drawTool()->drawLines(vertices, 1.0, color);
     }
-    vparams->drawTool()->restoreLastState();
+
 }
 
 template <class DataTypes>
@@ -878,22 +878,14 @@ void SubsetTopology<DataTypes>::computeBBox(const core::ExecParams*  params , bo
     SOFA_UNUSED(onlyVisible);
 
     const type::vector<Vec6>& vb=boxes.getValue();
-    const Real max_real = std::numeric_limits<Real>::max();
-    const Real min_real = std::numeric_limits<Real>::lowest();
-    Real maxBBox[3] = {min_real,min_real,min_real};
-    Real minBBox[3] = {max_real,max_real,max_real};
-
-    for (unsigned int bi=0; bi<vb.size(); ++bi)
+    type::BoundingBox bbox;
+    for (const auto& b : vb)
     {
-        const Vec6& b=vb[bi];
-        if (b[0] < minBBox[0]) minBBox[0] = b[0];
-        if (b[1] < minBBox[1]) minBBox[1] = b[1];
-        if (b[2] < minBBox[2]) minBBox[2] = b[2];
-        if (b[3] > maxBBox[0]) maxBBox[0] = b[3];
-        if (b[4] > maxBBox[1]) maxBBox[1] = b[4];
-        if (b[5] > maxBBox[2]) maxBBox[2] = b[5];
+        bbox.include(type::Vec3{b[0], b[1], b[2]});
+        bbox.include(type::Vec3{b[3], b[4], b[5]});
     }
-    this->f_bbox.setValue(sofa::type::TBoundingBox<Real>(minBBox,maxBBox));
+
+    this->f_bbox.setValue(bbox);
 }
 
 } //namespace sofa::component::engine::select

@@ -22,13 +22,14 @@
 #pragma once
 
 #include <sofa/core/config.h>
+#include <sofa/core/behavior/fwd.h>
 #include <sofa/core/behavior/StateAccessor.h>
 #include <sofa/core/MultiVecId.h>
 
-namespace sofa::core::behavior { class MultiMatrixAccessor; }
-
-namespace sofa::core::behavior
-{
+namespace sofa::core::behavior {
+class DampingMatrix;
+class StiffnessMatrix;
+class MultiMatrixAccessor;
 
 /**
  *  \brief Component computing forces within simulated bodies.
@@ -53,12 +54,12 @@ public:
 protected:
     BaseForceField();
     ~BaseForceField() override = default;
-	
-private:
-	BaseForceField(const BaseForceField& n) = delete;
-	BaseForceField& operator=(const BaseForceField& n) = delete;
 
-	
+private:
+    BaseForceField(const BaseForceField& n) = delete;
+    BaseForceField& operator=(const BaseForceField& n) = delete;
+
+
 public:
     /// @name Vector operations
     /// @{
@@ -134,7 +135,7 @@ public:
     /// \brief Get the potential energy associated to this ForceField during the
     /// last call of addForce( const MechanicalParams* mparams );
     ///
-    /// Used to extimate the total energy of the system by some
+    /// Used to estimate the total energy of the system by some
     /// post-stabilization techniques.
     virtual SReal getPotentialEnergy( const MechanicalParams* mparams = mechanicalparams::defaultInstance() ) const=0;
     /// @}
@@ -166,38 +167,9 @@ public:
     virtual void addMBKToMatrix(const MechanicalParams* mparams, const sofa::core::behavior::MultiMatrixAccessor* matrix );
     ////virtual void addMBKToMatrix(sofa::linearalgebra::BaseMatrix * matrix, SReal mFact, SReal bFact, SReal kFact, unsigned int &offset);
 
-    /// @}
+    virtual void buildStiffnessMatrix(StiffnessMatrix* matrix);
 
-
-
-    /** @name API to consider the ForceField as a constraint as in the "Compliant formulation"
-     * See [M Tournier, M Nesme, B Gilles, F Faure, Stable Constrained Dynamics, Siggraph 2015] for more details.
-     * Each ForceField may be processed either as a traditional force function, or as a compliance (provided that its stiffness matrix is invertible).
-     * If isCompliance==false then the ForceField is handled as a traditional force function.
-     * In this case, the stiffness matrix is used to set up the implicit equation matrix, while addForce is used to set up the right-hand term as usual.
-     * If isCompliance==true, the ForceField is handled as a compliance and getComplianceMatrix must return a non-null pointer for assembled solver and/or
-     * must implement addClambda for a graph-scattered (unassembled) implementation.
-     */
-    /// @{
-
-    /// Considered as compliance, else considered as stiffness (default to false)
-    Data< bool > isCompliance;
-
-    /// Return a pointer to the compliance matrix C
-    /// \f$ C = K^{-1} \f$
-    virtual const sofa::linearalgebra::BaseMatrix* getComplianceMatrix(const MechanicalParams*) { return nullptr; }
-
-    /// \brief Accumulate the contribution of the C compliant matrix multiplied
-    /// by the given Lagrange multipliers lambda vector with the given cFactor coefficient.
-    ///
-    /// This method computes
-    /// \f[
-    ///            res += cFactor C \lambda
-    /// \f]
-    /// where C is the Compliant matrix (inverse of the Stiffness matrix \f$ K \f$:
-    /// \f$ C = K^{-1} \f$)
-    ///
-    virtual void addClambda(const MechanicalParams* /*mparams*/, MultiVecDerivId /*resId*/, MultiVecDerivId /*lambdaId*/, SReal /*cFactor*/ ){}
+    virtual void buildDampingMatrix(DampingMatrix* matrix);
 
     /// @}
 

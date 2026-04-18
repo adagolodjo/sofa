@@ -74,8 +74,7 @@ public:
     Index getFromIndex(Index ind) override;
 
 protected:
-    Data<bool> flipNormals; ///< Flip Normal ? (Inverse point order when creating triangle)
-
+    Data<bool> d_flipNormals; ///< Flip Normal ? (Inverse point order when creating triangle)
 };
 
 } //namespace sofa::component::topology::mapping

@@ -27,7 +27,7 @@
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/defaulttype/RigidTypes.h>
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/behavior/MechanicalState.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/core/loader/MeshLoader.h>
@@ -88,7 +88,7 @@ public:
             }
         }
 
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
 protected:
@@ -102,11 +102,11 @@ protected:
 
 public:
     //Input
-    Data< type::vector<Vec10> > planes; ///< Plane defined by 3 points and a depth distance
+    Data< type::vector<Vec10> > planes; ///< List of planes defined by 3 points and a depth distance
     Data<VecCoord> f_X0; ///< Rest position coordinates of the degrees of freedom
     Data<type::vector<Edge> > f_edges; ///< Edge Topology
     Data<type::vector<Triangle> > f_triangles; ///< Triangle Topology
-    Data<type::vector<Tetra> > f_tetrahedra; ///< NOT YET
+    Data<type::vector<Tetra> > f_tetrahedra; ///< Tetrahedron Topology
     Data<bool> f_computeEdges; ///< If true, will compute edge list and index list inside the ROI.
     Data<bool> f_computeTriangles; ///< If true, will compute triangle list and index list inside the ROI.
     Data<bool> f_computeTetrahedra; ///< If true, will compute tetrahedra list and index list inside the ROI.
@@ -135,7 +135,7 @@ private:
     Real width, length, depth;
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_PLANEROI_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_PLANEROI_CPP)
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API PlaneROI<defaulttype::Vec3Types>;
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API PlaneROI<defaulttype::Rigid3Types>;
  

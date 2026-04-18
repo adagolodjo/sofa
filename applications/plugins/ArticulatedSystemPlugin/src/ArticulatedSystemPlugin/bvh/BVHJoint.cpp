@@ -48,9 +48,15 @@ BVHJoint::BVHJoint(const char *_name, bool _endSite, BVHJoint *_parent)
     id = lastId++;
 
     if (!endSite)
-        strcpy(name,_name);
+    {
+        strncpy(name, _name, sizeof(name) - 1);
+        name[sizeof(name) - 1] = '\0';
+    }
     else
-        strcpy(name,"End Site");
+    {
+        strncpy(name, "End Site", sizeof(name) - 1);
+        name[sizeof(name) - 1] = '\0';
+    }
 }
 
 BVHJoint::~BVHJoint()
@@ -73,7 +79,7 @@ void BVHJoint::initMotion(double fTime, unsigned int fCount)
 
 void BVHJoint::display(int frameNum)
 {
-    auto drawtool = core::visual::VisualParams::defaultInstance()->drawTool();
+    const auto drawtool = core::visual::VisualParams::defaultInstance()->drawTool();
 
     drawtool->pushMatrix();
     drawtool->disableLighting();
@@ -130,7 +136,7 @@ void BVHJoint::display(int frameNum)
 
 void BVHJoint::displayInGlobalFrame(void)
 {
-    auto drawtool = core::visual::VisualParams::defaultInstance()->drawTool();
+    const auto drawtool = core::visual::VisualParams::defaultInstance()->drawTool();
 
     drawtool->pushMatrix();
     drawtool->translate(0.0f, 0.0f, -4.0f);
@@ -192,6 +198,11 @@ int BVHJoint::getNumSegments(char *s)
 void BVHJoint::dump(char *fName, char *rootJointName)
 {
     FILE *f = fopen(fName,"w+");
+    if (f == nullptr)
+    {
+        msg_error("BVHJoint") << "Failed to open file for writing: " << fName;
+        return;
+    }
 
     fprintf(f,"Catheter_Name Walk\n\n");
     fprintf(f,"Number_of_Nodes %d\n", getNumJoints(rootJointName));

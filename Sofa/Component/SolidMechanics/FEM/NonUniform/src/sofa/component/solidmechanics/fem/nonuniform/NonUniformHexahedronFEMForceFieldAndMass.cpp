@@ -21,7 +21,7 @@
 ******************************************************************************/
 #define SOFA_COMPONENT_FORCEFIELD_NONUNIFORMHEXAHEDRONFEMFORCEFIELDANDMASS_CPP
 
-#include "NonUniformHexahedronFEMForceFieldAndMass.inl"
+#include <sofa/component/solidmechanics/fem/nonuniform/NonUniformHexahedronFEMForceFieldAndMass.inl>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/core/ObjectFactory.h>
 
@@ -31,12 +31,11 @@ using namespace sofa::core;
 namespace sofa::component::solidmechanics::fem::nonuniform
 {
 
-
-// Register in the Factory
-int NonUniformHexahedronFEMForceFieldAndMassClass = RegisterObject("Non uniform Hexahedral finite elements")
-        .add< NonUniformHexahedronFEMForceFieldAndMass<Vec3Types> >()
-
-        ;
+void registerNonUniformHexahedronFEMForceFieldAndMass(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Non uniform Hexahedral finite elements.")
+        .add< NonUniformHexahedronFEMForceFieldAndMass<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_SOLIDMECHANICS_FEM_NONUNIFORM_API NonUniformHexahedronFEMForceFieldAndMass<Vec3Types>;
 

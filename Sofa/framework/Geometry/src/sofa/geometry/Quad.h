@@ -22,7 +22,7 @@
 #pragma once
 
 #include <sofa/geometry/config.h>
-
+#include <sofa/geometry/ElementType.h>
 #include <sofa/geometry/Triangle.h>
 
 namespace sofa::geometry
@@ -30,7 +30,8 @@ namespace sofa::geometry
 
 struct Quad
 {
-    static const sofa::Size NumberOfNodes = 4;
+    static constexpr sofa::Size NumberOfNodes = 4;
+    static constexpr ElementType Element_type = ElementType::QUAD;
 
     Quad() = delete;
 

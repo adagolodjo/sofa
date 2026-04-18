@@ -24,11 +24,12 @@
 
 #include <sofa/core/behavior/ConstraintSolver.h>
 
-#include <sofa/simulation/MechanicalVisitor.h>
+#include <sofa/component/constraint/lagrangian/solver/visitors/MechanicalGetConstraintViolationVisitor.h>
 
 #include <sofa/linearalgebra/FullMatrix.h>
 
 #include <sofa/core/ConstraintParams.h>
+#include <sofa/core/behavior/BaseConstraintCorrection.h>
 
 namespace sofa::component::constraint::lagrangian::solver
 {
@@ -37,8 +38,16 @@ namespace sofa::component::constraint::lagrangian::solver
 class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_SOLVER_API ConstraintProblem
 {
 public:
+    // The compliance matrix projected in the constraint space
+    // If J is the jacobian matrix of the constraints and A is the mechanical matrix of the system,
+    // then W = J A^{-1} J^T
     sofa::linearalgebra::LPtrFullMatrix<SReal> W;
-    sofa::linearalgebra::FullVector<SReal> dFree, f;
+
+    // The constraint values of the "free motion" state
+    sofa::linearalgebra::FullVector<SReal> dFree;
+
+    // The lambda values from the Lagrange multipliers
+    sofa::linearalgebra::FullVector<SReal> f;
 
     ConstraintProblem();
     virtual ~ConstraintProblem();
@@ -47,70 +56,76 @@ public:
     int maxIterations;
 
     virtual void clear(int nbConstraints);
-    int getDimension()	{ return dimension; }
-    SReal** getW()		{ return W.lptr(); }
-    SReal* getDfree()	{ return dFree.ptr(); }
-    SReal* getF()		{ return f.ptr(); }
+
+    // Returns the number of scalar constraints, or equivalently the number of Lagrange multipliers
+    int getDimension() const { return dimension; }
+    void setDimension(int dim) { dimension = dim; }
+
+    SReal** getW() { return W.lptr(); }
+    SReal* getDfree() { return dFree.ptr(); }
+    SReal* getF() { return f.ptr(); }
 
     virtual void solveTimed(SReal tolerance, int maxIt, SReal timeout) = 0;
 
-    unsigned int getProblemId();
+    unsigned getProblemId() const;
 
 protected:
     int dimension;
-    unsigned int problemId;
+    unsigned problemId;
 };
 
 
 class SOFA_COMPONENT_CONSTRAINT_LAGRANGIAN_SOLVER_API ConstraintSolverImpl : public sofa::core::behavior::ConstraintSolver
 {
 public:
-    SOFA_CLASS(ConstraintSolverImpl, sofa::core::behavior::ConstraintSolver);
+    SOFA_ABSTRACT_CLASS(ConstraintSolverImpl, sofa::core::behavior::ConstraintSolver)
+
+    ConstraintSolverImpl();
+    ~ConstraintSolverImpl() override;
+
+    void init() override;
+    void cleanup() override;
 
     virtual ConstraintProblem* getConstraintProblem() = 0;
 
     /// Do not use the following LCPs until the next call to this function.
-    /// This is used to prevent concurent access to the LCP when using a LCPForceFeedback through an haptic thread.
-    virtual void lockConstraintProblem(sofa::core::objectmodel::BaseObject* from, ConstraintProblem* p1, ConstraintProblem* p2=nullptr) = 0;
-};
+    /// This is used to prevent concurrent access to the LCP when using a LCPForceFeedback through an haptic thread.
+    virtual void lockConstraintProblem(sofa::core::objectmodel::BaseComponent* from, ConstraintProblem* p1, ConstraintProblem* p2=nullptr) = 0;
+
+    void removeConstraintCorrection(core::behavior::BaseConstraintCorrection *s) override;
+
+    MultiLink< ConstraintSolverImpl,
+        core::behavior::BaseConstraintCorrection,
+        BaseLink::FLAG_STOREPATH> l_constraintCorrections;
+
+protected:
+
+    void postBuildSystem(const core::ConstraintParams* cParams) override;
+    void postSolveSystem(const core::ConstraintParams* cParams) override;
+
+    void clearConstraintCorrections();
 
 
+    /// Calls the method resetConstraint on all the mechanical states and BaseConstraintSet
+    /// In the case of a MechanicalObject, it clears the constraint jacobian matrix
+    void resetConstraints(const core::ConstraintParams* cParams);
 
-/// Gets the vector of constraint violation values
-class MechanicalGetConstraintViolationVisitor : public simulation::BaseMechanicalVisitor
-{
-public:
+    /// Call the method buildConstraintMatrix on all the BaseConstraintSet
+    void buildLocalConstraintMatrix(const core::ConstraintParams* cparams, unsigned int &constraintId);
 
-    MechanicalGetConstraintViolationVisitor(const core::ConstraintParams* params, sofa::linearalgebra::BaseVector *v)
-        : simulation::BaseMechanicalVisitor(params)
-        , cparams(params)
-        , m_v(v)
-    {}
+    /// Calls the method applyJT on all the mappings to project the mapped
+    /// constraint matrices on the main constraint matrix
+    void accumulateMatrixDeriv(const core::ConstraintParams* cparams);
 
-    Result fwdConstraintSet(simulation::Node* node, core::behavior::BaseConstraintSet* c) override
-    {
-        ctime_t t0 = begin(node, c);
-        c->getConstraintViolation(cparams, m_v);
-        end(node, c, t0);
-        return RESULT_CONTINUE;
-    }
+    /// Reset and build the constraint matrix, including the projection from
+    /// the mapped DoFs
+    /// \return The number of constraints, i.e. the size of the constraint matrix
+    unsigned int buildConstraintMatrix(const core::ConstraintParams* cparams);
 
-    /// This visitor must go through all mechanical mappings, even if isMechanical flag is disabled
-    bool stopAtMechanicalMapping(simulation::Node* /*node*/, core::BaseMapping* /*map*/) override
-    {
-        return false; // !map->isMechanical();
-    }
+    void applyProjectiveConstraintOnConstraintMatrix(const core::ConstraintParams* cparams);
 
-    /// Return a class name for this visitor
-    /// Only used for debugging / profiling purposes
-    const char* getClassName() const override { return "MechanicalGetConstraintViolationVisitor";}
+    void getConstraintViolation(const core::ConstraintParams* cparams, sofa::linearalgebra::BaseVector *v);
 
-private:
-    /// Constraint parameters
-    const sofa::core::ConstraintParams *cparams;
-
-    /// Vector for constraint values
-    sofa::linearalgebra::BaseVector* m_v;
 };
 
 } //namespace sofa::component::constraint::lagrangian::solver

@@ -21,7 +21,7 @@
 ******************************************************************************/
 #pragma once
 
-#include <sofa/core/behavior/BaseConstraint.h>
+#include <sofa/core/behavior/BaseLagrangianConstraint.h>
 #include <sofa/core/behavior/StateAccessor.h>
 
 namespace sofa::core::behavior
@@ -34,10 +34,10 @@ namespace sofa::core::behavior
  *  bodies given their current positions and velocities.
  *
  */
-class SOFA_CORE_API BaseInteractionConstraint : public BaseConstraint, public virtual StateAccessor
+class SOFA_CORE_API BaseInteractionConstraint : public BaseLagrangianConstraint, public virtual StateAccessor
 {
 public:
-    SOFA_ABSTRACT_CLASS2(BaseInteractionConstraint, BaseConstraint, StateAccessor);
+    SOFA_ABSTRACT_CLASS2(BaseInteractionConstraint, BaseLagrangianConstraint, StateAccessor);
     SOFA_BASE_CAST_IMPLEMENTATION(BaseInteractionConstraint)
 
     /// Get the first MechanicalState
@@ -47,15 +47,25 @@ public:
     /// Get the first MechanicalState
     /// \todo Rename to getMechState2()
     virtual BaseMechanicalState* getMechModel2() { return l_mechanicalStates[1]; }
-	
+
+    virtual type::vector<std::string> getBaseConstraintIdentifiers() override final
+    {
+        type::vector<std::string> ids = getInteractionIdentifiers();
+        ids.push_back("Interaction");
+        return ids;
+    }
+
 protected:
     BaseInteractionConstraint() {}
     ~BaseInteractionConstraint()override {}
-	
+
+    virtual type::vector<std::string> getInteractionIdentifiers(){ return {}; }
+
+
 private:
-	BaseInteractionConstraint(const BaseInteractionConstraint& n) = delete ;
-	BaseInteractionConstraint& operator=(const BaseInteractionConstraint& n) = delete ;
-	
+    BaseInteractionConstraint(const BaseInteractionConstraint& n) = delete ;
+    BaseInteractionConstraint& operator=(const BaseInteractionConstraint& n) = delete ;
+
 };
 
 } // namespace sofa::core::behavior

@@ -14,8 +14,7 @@
 #include <sofa/helper/rmath.h>
 
 #include <sofa/defaulttype/DataTypeInfo.h>
-#include <SofaBaseVisual/VisualModelImpl.h>
-
+#include <sofa/component/visual/VisualModelImpl.h>
 
 namespace sofa
 {
@@ -230,7 +229,7 @@ public:
         return res;
     }
 
-    // returns an image corresponing to a plane indexed by "coord" along "axis" and inside a bounding box
+    // returns an image corresponding to a plane indexed by "coord" along "axis" and inside a bounding box
     cimg_library::CImg<T> get_plane(const unsigned int coord,const unsigned int axis,const type::Mat<2,3,unsigned int>& ROI,const unsigned int t=0, const bool mergeChannels=false) const
     {
         if(mergeChannels)    return get_plane(coord,axis,ROI,t,false).norm();
@@ -245,7 +244,7 @@ public:
     // returns a binary image cutting through 3D input meshes, corresponding to a plane indexed by "coord" along "axis" and inside a bounding box
     // positions are in image coordinates
     template<typename Real>
-    cimg_library::CImg<bool> get_slicedModels(const unsigned int coord,const unsigned int axis,const type::Mat<2,3,unsigned int>& ROI,const type::vector<type::Vec<3,Real> >& position, const type::vector< sofa::component::visualmodel::VisualModelImpl::VisualTriangle >& triangles, const type::vector< sofa::component::visualmodel::VisualModelImpl::VisualQuad >& quads) const
+    cimg_library::CImg<bool> get_slicedModels(const unsigned int coord,const unsigned int axis,const type::Mat<2,3,unsigned int>& ROI,const type::vector<type::Vec<3,Real> >& position, const type::vector< sofa::component::visual::VisualModelImpl::VisualTriangle >& triangles, const type::vector< sofa::component::visual::VisualModelImpl::VisualQuad >& quads) const
     {
         const unsigned int dim[3]= {ROI[1][0]-ROI[0][0]+1,ROI[1][1]-ROI[0][1]+1,ROI[1][2]-ROI[0][2]+1};
         cimg_library::CImg<bool> ret;
@@ -572,7 +571,7 @@ public:
 };
 
 template<class TDataType>
-struct ImageTypeInfo : public BaseImageTypeInfo
+struct  ImageTypeInfo : public BaseImageTypeInfo
 {
     typedef TDataType DataType;
     typedef typename DataType::T BaseType;
@@ -582,7 +581,7 @@ struct ImageTypeInfo : public BaseImageTypeInfo
 
     enum { ValidInfo       = BaseTypeInfo::ValidInfo       }; ///< 1 if this type has valid infos
     enum { FixedSize       = 1                             }; ///< 1 if this type has a fixed size  -> always 1 Image
-    enum { ZeroConstructor = 0                             }; ///< 1 if the constructor is equivalent to setting memory to 0  -> I guess so, a default Image is initialzed with nothing
+    enum { ZeroConstructor = 0                             }; ///< 1 if the constructor is equivalent to setting memory to 0  -> I guess so, a default Image is initialized with nothing
     enum { SimpleCopy      = 0                             }; ///< 1 if copying the data can be done with a memcpy
     enum { SimpleLayout    = 0                             }; ///< 1 if the layout in memory is simply N values of the same base type
     enum { Integer         = 0                             }; ///< 1 if this type uses integer values

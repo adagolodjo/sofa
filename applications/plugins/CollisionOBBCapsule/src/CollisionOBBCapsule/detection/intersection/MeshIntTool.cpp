@@ -30,24 +30,24 @@ using namespace sofa::core::collision;
 
 
 template COLLISIONOBBCAPSULE_API int MeshIntTool::computeIntersection(geometry::TCapsule<Vec3Types>& cap, Point& pnt,SReal alarmDist,SReal contactDist,OutputVector* contacts);
-template COLLISIONOBBCAPSULE_API int MeshIntTool::doCapPointInt(geometry::TCapsule<Vec3Types>& cap, const Vector3& q,SReal alarmDist,SReal contactDist,OutputVector* contacts);
+template COLLISIONOBBCAPSULE_API int MeshIntTool::doCapPointInt(geometry::TCapsule<Vec3Types>& cap, const type::Vec3& q,SReal alarmDist,SReal contactDist,OutputVector* contacts);
 template COLLISIONOBBCAPSULE_API int MeshIntTool::computeIntersection(geometry::TCapsule<Vec3Types>& cap, Line& lin,SReal alarmDist,SReal contactDist,OutputVector* contacts);
-template COLLISIONOBBCAPSULE_API int MeshIntTool::doCapLineInt(geometry::TCapsule<Vec3Types>& cap,const Vector3 & q1,const Vector3 & q2,SReal alarmDist,SReal contactDist,OutputVector* contacts,bool ignore_p1,bool ignore_p2);
+template COLLISIONOBBCAPSULE_API int MeshIntTool::doCapLineInt(geometry::TCapsule<Vec3Types>& cap,const type::Vec3 & q1,const type::Vec3 & q2,SReal alarmDist,SReal contactDist,OutputVector* contacts,bool ignore_p1,bool ignore_p2);
 template COLLISIONOBBCAPSULE_API int MeshIntTool::computeIntersection(geometry::TCapsule<Vec3Types>& cap, Triangle& tri,SReal alarmDist,SReal contactDist,OutputVector* contacts);
 
 template COLLISIONOBBCAPSULE_API int MeshIntTool::computeIntersection(geometry::TCapsule<Rigid3Types>& cap, Point& pnt,SReal alarmDist,SReal contactDist,OutputVector* contacts);
-template COLLISIONOBBCAPSULE_API int MeshIntTool::doCapPointInt(geometry::TCapsule<Rigid3Types>& cap, const Vector3& q,SReal alarmDist,SReal contactDist,OutputVector* contacts);
+template COLLISIONOBBCAPSULE_API int MeshIntTool::doCapPointInt(geometry::TCapsule<Rigid3Types>& cap, const type::Vec3& q,SReal alarmDist,SReal contactDist,OutputVector* contacts);
 template COLLISIONOBBCAPSULE_API int MeshIntTool::computeIntersection(geometry::TCapsule<Rigid3Types>& cap, Line& lin,SReal alarmDist,SReal contactDist,OutputVector* contacts);
-template COLLISIONOBBCAPSULE_API int MeshIntTool::doCapLineInt(geometry::TCapsule<Rigid3Types>& cap,const Vector3 & q1,const Vector3 & q2,SReal alarmDist,SReal contactDist,OutputVector* contacts,bool ignore_p1,bool ignore_p2);
+template COLLISIONOBBCAPSULE_API int MeshIntTool::doCapLineInt(geometry::TCapsule<Rigid3Types>& cap,const type::Vec3 & q1,const type::Vec3 & q2,SReal alarmDist,SReal contactDist,OutputVector* contacts,bool ignore_p1,bool ignore_p2);
 template COLLISIONOBBCAPSULE_API int MeshIntTool::computeIntersection(geometry::TCapsule<Rigid3Types>& cap, Triangle& tri,SReal alarmDist,SReal contactDist,OutputVector* contacts);
 
-int MeshIntTool::doCapLineInt(const Vector3 & p1,const Vector3 & p2,SReal cap_rad,
-                         const Vector3 & q1, const Vector3 & q2,SReal alarmDist,SReal contactDist,OutputVector *contacts, bool ignore_p1, bool ignore_p2){
-    const Vector3 AB = p2-p1;//capsule segment
-    const Vector3 CD = q2-q1;//line segment
-    const Vector3 AC = q1-p1;
+int MeshIntTool::doCapLineInt(const type::Vec3 & p1,const type::Vec3 & p2,SReal cap_rad,
+                         const type::Vec3 & q1, const type::Vec3 & q2,SReal alarmDist,SReal contactDist,OutputVector *contacts, bool ignore_p1, bool ignore_p2){
+    const type::Vec3 AB = p2-p1;//capsule segment
+    const type::Vec3 CD = q2-q1;//line segment
+    const type::Vec3 AC = q1-p1;
     Matrix2 A;
-    Vector2 b;
+    Vec2 b;
     A[0][0] = AB*AB;
     A[1][1] = CD*CD;
     A[0][1] = A[1][0] = -CD*AB;
@@ -75,18 +75,18 @@ int MeshIntTool::doCapLineInt(const Vector3 & p1,const Vector3 & p2,SReal cap_ra
     }
     else{//Segments on a same plane. Here the idea to find the nearest points
         //is to project segment apexes on the other segment.
-        //Visual example with semgents AB and CD :
+        //Visual example with segments AB and CD :
         //            A----------------B
         //                     C----------------D
         //After projection :
         //            A--------c-------B
         //                     C-------b--------D
-        //So the nearest points are p and q which are respecively in the middle of cB and Cb:
+        //So the nearest points are p and q which are respectively in the middle of cB and Cb:
         //            A--------c---p---B
         //                     C---q---b--------D
 
-        Vector3 AD = q2 - p1;
-        Vector3 CB = p2 - q1;
+        type::Vec3 AD = q2 - p1;
+        type::Vec3 CB = p2 - q1;
 
         SReal AB_norm2 = AB.norm2();
         SReal CD_norm2 = CD.norm2();
@@ -166,7 +166,7 @@ int MeshIntTool::doCapLineInt(const Vector3 & p1,const Vector3 & p2,SReal cap_ra
         return 0;
 
     SReal enough_to_touch = alarmDist + cap_rad;
-    Vector3 p,q,pq;
+    type::Vec3 p,q,pq;
     p = p1 + AB * alpha;
     q = q1 + CD * beta;
     pq = q-p;
@@ -188,15 +188,15 @@ int MeshIntTool::doCapLineInt(const Vector3 & p1,const Vector3 & p2,SReal cap_ra
 }
 
 
-int MeshIntTool::doIntersectionTrianglePoint(SReal dist2, int flags, const Vector3& p1, const Vector3& p2, const Vector3& p3,const Vector3& q, OutputVector* contacts,bool swapElems)
+int MeshIntTool::doIntersectionTrianglePoint(SReal dist2, int flags, const type::Vec3& p1, const type::Vec3& p2, const type::Vec3& p3,const type::Vec3& q, OutputVector* contacts,bool swapElems)
 {
     using sofa::component::collision::geometry::TriangleCollisionModel;
 
-    const Vector3 AB = p2-p1;
-    const Vector3 AC = p3-p1;
-    const Vector3 AQ = q -p1;
+    const type::Vec3 AB = p2-p1;
+    const type::Vec3 AC = p3-p1;
+    const type::Vec3 AQ = q -p1;
     Matrix2 A;
-    Vector2 b;
+    Vec2 b;
     A[0][0] = AB*AB;
     A[1][1] = AC*AC;
     A[0][1] = A[1][0] = AB*AC;
@@ -266,7 +266,7 @@ int MeshIntTool::doIntersectionTrianglePoint(SReal dist2, int flags, const Vecto
         }
     }
 
-    Vector3 p, pq;
+    type::Vec3 p, pq;
     p = p1 + AB * alpha + AC * beta;
     pq = q-p;
     if (pq.norm2() >= dist2)
@@ -289,7 +289,7 @@ int MeshIntTool::doIntersectionTrianglePoint(SReal dist2, int flags, const Vecto
     detection->value = detection->normal.norm();
     detection->normal /= detection->value;
 
-    ///!\ CAUTION : uninitialized fields detection->elem and detection->id and detection->value, you have to substract contactDist
+    ///!\ CAUTION : uninitialized fields detection->elem and detection->id and detection->value, you have to subtract contactDist
 
     return 1;
 }
@@ -325,15 +325,15 @@ int MeshIntTool::computeIntersection(Triangle& tri,int flags,OBB & obb,SReal ala
     return 0;
 }
 
-int MeshIntTool::projectPointOnTriangle(int flags, const Vector3& p1, const Vector3& p2, const Vector3& p3, Vector3 & to_be_projected)
+int MeshIntTool::projectPointOnTriangle(int flags, const type::Vec3& p1, const type::Vec3& p2, const type::Vec3& p3, type::Vec3 & to_be_projected)
 {
     using sofa::component::collision::geometry::TriangleCollisionModel;
 
-    const Vector3 AB = p2-p1;
-    const Vector3 AC = p3-p1;
-    const Vector3 AQ = to_be_projected -p1;
+    const type::Vec3 AB = p2-p1;
+    const type::Vec3 AC = p3-p1;
+    const type::Vec3 AQ = to_be_projected -p1;
     Matrix2 A;
-    Vector2 b;
+    Vec2 b;
     A[0][0] = AB*AB;
     A[1][1] = AC*AC;
     A[0][1] = A[1][0] = AB*AC;
@@ -408,22 +408,19 @@ int MeshIntTool::projectPointOnTriangle(int flags, const Vector3& p1, const Vect
     return 1;
 }
 
-void MeshIntTool::triangleBaryCoords(const Vector3& to_be_projected,const Vector3& p1, const Vector3& p2, const Vector3& p3,SReal & alpha,SReal & beta){
-    const Vector3 AB = p2-p1;
-    const Vector3 AC = p3-p1;
-    const Vector3 AQ = to_be_projected -p1;
+void MeshIntTool::triangleBaryCoords(const type::Vec3& to_be_projected,const type::Vec3& p1, const type::Vec3& p2, const type::Vec3& p3,SReal & alpha,SReal & beta){
+    const type::Vec3 AB = p2-p1;
+    const type::Vec3 AC = p3-p1;
+    const type::Vec3 AQ = to_be_projected -p1;
     Matrix2 A;
-    Vector2 b;
+    Vec2 b;
     A[0][0] = AB*AB;
     A[1][1] = AC*AC;
     A[0][1] = A[1][0] = AB*AC;
     b[0] = AQ*AB;
     b[1] = AQ*AC;
     const SReal det = type::determinant(A);
-
-    alpha = 0.5;
-    beta = 0.5;
-
+  
     alpha = (b[0]*A[1][1] - b[1]*A[0][1])/det;
     beta  = (b[1]*A[0][0] - b[0]*A[1][0])/det;
     if (alpha < 0 || beta < 0 || alpha + beta > 1)

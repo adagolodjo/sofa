@@ -19,18 +19,11 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_VISUAL_VISUALLOOP_H
-#define SOFA_CORE_VISUAL_VISUALLOOP_H
+#pragma once
 
 #include <sofa/core/visual/VisualModel.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace visual
+namespace sofa::core::visual
 {
 
 class VisualParams;
@@ -51,10 +44,10 @@ protected:
     ~VisualLoop() override { }
 public:
     /// Initialize the textures
-    virtual void initStep(sofa::core::ExecParams* /*params*/) {}
+    virtual void initStep(sofa::core::visual::VisualParams* /*vparams*/) {}
 
     /// Update the Visual Models: triggers the Mappings
-    virtual void updateStep(sofa::core::ExecParams* /*params*/) {}
+    virtual void updateStep(sofa::core::visual::VisualParams* /*vparams*/) {}
 
     /// Update contexts. Required before drawing the scene if root flags are modified.
     virtual void updateContextStep(sofa::core::visual::VisualParams* /*vparams*/) {}
@@ -68,11 +61,4 @@ public:
     bool insertInNode( objectmodel::BaseNode* node ) override;
     bool removeInNode( objectmodel::BaseNode* node ) override;
 };
-
-} // namespace visual
-
-} // namespace core
-
-} // namespace sofa
-
-#endif /* SOFA_CORE_VISUAL_VISUALLOOP_H */
+} // namespace sofa::core::visual

@@ -23,13 +23,13 @@
 
 #include <sofa/core/objectmodel/Data.h>
 
-namespace sofa
-{
+#include <sofa/type/hardening.h>
 
-namespace core
-{
+#include <cstdlib>
+#include <cerrno>
 
-namespace objectmodel
+
+namespace sofa::core::objectmodel
 {
 
 /// Specialization for reading strings
@@ -52,7 +52,17 @@ bool SOFA_CORE_API Data<bool>::read( const std::string& str )
     else if (str[0] == 'F' || str[0] == 'f')
         val = false;
     else if ((str[0] >= '0' && str[0] <= '9') || str[0] == '-')
-        val = (atoi(str.c_str()) != 0);
+    {
+        int parsed{};
+        if(sofa::type::hardening::safeStrToInt(str, parsed))
+        {
+            val = (parsed != 0);
+        }
+        else
+        {
+            return false;
+        }
+    }
     else
         return false;
     setValue(val);
@@ -64,10 +74,6 @@ template class SOFA_CORE_API Data< sofa::type::vector<std::string> >;
 template class SOFA_CORE_API Data< bool >;
 template class SOFA_CORE_API Data< sofa::type::vector<Index> >;
 
-} // objectmodel
-
-} // core
-
-} // sofa
+}
 
 

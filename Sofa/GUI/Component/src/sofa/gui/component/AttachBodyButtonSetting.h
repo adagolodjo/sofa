@@ -33,13 +33,15 @@ class SOFA_GUI_COMPONENT_API AttachBodyButtonSetting: public sofa::component::se
 {
 public:
     SOFA_CLASS(AttachBodyButtonSetting, sofa::component::setting::MouseButtonSetting);
+
 protected:
     AttachBodyButtonSetting();
+
 public:
     std::string getOperationType() override {return "Attach";}
-    Data<SReal> stiffness; ///< Stiffness of the spring to attach a particule
-    Data<SReal> arrowSize; ///< Size of the drawn spring: if >0 an arrow will be drawn
-    Data<SReal> showFactorSize; ///< Show factor size of the JointSpringForcefield  when interacting with rigids
+    Data<SReal> d_stiffness; ///< Stiffness of the spring to attach a particule
+    Data<SReal> d_arrowSize; ///< Size of the drawn spring: if >0 an arrow will be drawn
+    Data<SReal> d_showFactorSize; ///< Show factor size of the JointSpringForcefield  when interacting with rigids
 };
 
 } // namespace sofa::gui::component

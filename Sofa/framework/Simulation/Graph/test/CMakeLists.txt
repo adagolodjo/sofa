@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(Sofa.Simulation.Graph_test)
 
 set(HEADER_FILES
@@ -6,11 +6,8 @@ set(HEADER_FILES
 )
 
 set(SOURCE_FILES
-    DAG_test.cpp
-    DAGNode_test.cpp
     MutationListener_test.cpp
     Node_test.cpp
-    SimpleApi_test.cpp
     Simulation_test.cpp
     Link_test.cpp
     )

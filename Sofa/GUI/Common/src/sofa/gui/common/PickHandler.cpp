@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -53,6 +53,7 @@ PickHandler::PickHandler(double defaultLength):
     mouseNode(nullptr),
     mouseContainer(nullptr),
     mouseCollision(nullptr),
+    interaction(nullptr),
     renderCallback(nullptr),
     pickingMethod(RAY_CASTING),
     m_defaultLength(defaultLength)
@@ -164,14 +165,18 @@ void PickHandler::unload()
 
 Operation *PickHandler::changeOperation(sofa::component::setting::MouseButtonSetting* setting)
 {
-    if (operations[setting->button.getValue().getSelectedId()])
+    if (operations[setting->d_button.getValue().getSelectedId()])
     {
-        delete operations[setting->button.getValue().getSelectedId()];
-        operations[setting->button.getValue().getSelectedId()] = nullptr;
+        delete operations[setting->d_button.getValue().getSelectedId()];
+        operations[setting->d_button.getValue().getSelectedId()] = nullptr;
     }
-    Operation *mouseOp=OperationFactory::Instanciate(setting->getOperationType());
-    mouseOp->configure(this,setting);
-    operations[setting->button.getValue().getSelectedId()]=mouseOp;
+    Operation *mouseOp=OperationFactory::Instantiate(setting->getOperationType());
+    if (mouseOp)
+    {
+        mouseOp->configure(this,setting);
+        operations[setting->d_button.getValue().getSelectedId()]=mouseOp;
+    }
+
     return mouseOp;
 }
 
@@ -182,7 +187,7 @@ Operation *PickHandler::changeOperation(MOUSE_BUTTON button, const std::string &
         delete operations[button];
         operations[button] = nullptr;
     }
-    Operation *mouseOp=OperationFactory::Instanciate(op);
+    Operation *mouseOp=OperationFactory::Instantiate(op);
     mouseOp->configure(this,button);
     operations[button]=mouseOp;
     return mouseOp;
@@ -275,14 +280,14 @@ void PickHandler::setCompatibleInteractor()
 }
 
 
-void PickHandler::updateRay(const sofa::type::Vector3 &position,const sofa::type::Vector3 &orientation)
+void PickHandler::updateRay(const sofa::type::Vec3 &position,const sofa::type::Vec3 &orientation)
 {
     if (!interactorInUse || !mouseCollision) return;
 
     mouseCollision->getRay(0).setOrigin( position+orientation*interaction->mouseInteractor->getDistanceFromMouse() );
     mouseCollision->getRay(0).setDirection( orientation );
-    MechanicalPropagateOnlyPositionVisitor(sofa::core::mechanicalparams::defaultInstance(), 0, sofa::core::VecCoordId::position()).execute(mouseCollision->getContext());
-    MechanicalPropagateOnlyPositionVisitor(sofa::core::mechanicalparams::defaultInstance(), 0, sofa::core::VecCoordId::freePosition()).execute(mouseCollision->getContext());
+    MechanicalPropagateOnlyPositionVisitor(sofa::core::mechanicalparams::defaultInstance(), 0, sofa::core::vec_id::write_access::position).execute(mouseCollision->getContext());
+    MechanicalPropagateOnlyPositionVisitor(sofa::core::mechanicalparams::defaultInstance(), 0, sofa::core::vec_id::write_access::freePosition).execute(mouseCollision->getContext());
 
     if (needToCastRay())
     {
@@ -354,7 +359,7 @@ BodyPicked PickHandler::findCollision()
     case RAY_CASTING:
         if (useCollisions)
         {
-            BodyPicked picked = findCollisionUsingPipeline();
+            const BodyPicked picked = findCollisionUsingPipeline();
             if (picked.body) 
                 result = picked;
             else 
@@ -381,9 +386,9 @@ BodyPicked PickHandler::findCollisionUsingPipeline()
         return result;
     }
 
-    const type::Vector3& origin          = mouseCollision->getRay(0).origin();
-    const type::Vector3& direction       = mouseCollision->getRay(0).direction();
-    const double& maxLength              = mouseCollision->getRay(0).l();
+    const type::Vec3 origin          = mouseCollision->getRay(0).origin();
+    const type::Vec3 direction       = mouseCollision->getRay(0).direction();
+    const double maxLength           = mouseCollision->getRay(0).l();
     
     const auto &contacts = mouseCollision->getContacts();
     for (auto it=contacts.cbegin(); it != contacts.cend(); ++it)
@@ -434,24 +439,24 @@ BodyPicked PickHandler::findCollisionUsingPipeline()
 
 BodyPicked PickHandler::findCollisionUsingBruteForce()
 {
-    const type::Vector3& origin          = mouseCollision->getRay(0).origin();
-    const type::Vector3& direction       = mouseCollision->getRay(0).direction();
-    const double& maxLength                     = mouseCollision->getRay(0).l();
+    const type::Vec3 origin          = mouseCollision->getRay(0).origin();
+    const type::Vec3 direction       = mouseCollision->getRay(0).direction();
+    const double maxLength           = mouseCollision->getRay(0).l();
 
     return findCollisionUsingBruteForce(origin, direction, maxLength, mouseNode->getRoot());
 }
 
 BodyPicked PickHandler::findCollisionUsingColourCoding()
 {
-    const type::Vector3& origin          = mouseCollision->getRay(0).origin();
-    const type::Vector3& direction       = mouseCollision->getRay(0).direction();
+    const type::Vec3 origin          = mouseCollision->getRay(0).origin();
+    const type::Vec3 direction       = mouseCollision->getRay(0).direction();
 
     return findCollisionUsingColourCoding(origin, direction);
 
 }
 
-BodyPicked PickHandler::findCollisionUsingBruteForce(const type::Vector3& origin,
-        const type::Vector3& direction,
+BodyPicked PickHandler::findCollisionUsingBruteForce(const type::Vec3& origin,
+        const type::Vec3& direction,
         double maxLength, core::objectmodel::BaseNode* rootNode)
 {
     BodyPicked result;
@@ -470,13 +475,13 @@ BodyPicked PickHandler::findCollisionUsingBruteForce(const type::Vector3& origin
 }
 
 //WARNING: do not use this method with Ogre
-BodyPicked PickHandler::findCollisionUsingColourCoding(const type::Vector3& origin,
-        const type::Vector3& direction)
+BodyPicked PickHandler::findCollisionUsingColourCoding(const type::Vec3& origin,
+        const type::Vec3& direction)
 {
     SOFA_UNUSED(origin);
     SOFA_UNUSED(direction);
 
-    BodyPicked result;
+    const BodyPicked result;
 
     msg_error("PickHandler") << "findCollisionUsingColourCoding not implemented!";
 

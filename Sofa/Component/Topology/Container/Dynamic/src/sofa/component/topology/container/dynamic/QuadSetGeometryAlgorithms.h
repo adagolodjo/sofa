@@ -99,10 +99,6 @@ public:
 
     bool isPointInQuad(const QuadID ind_q, const sofa::type::Vec<3,Real>& p) const;
 
-    /** \brief Write the current mesh into a msh file
-    */
-    void writeMSHfile(const char *filename) const;
-
     void draw(const core::visual::VisualParams* vparams) override;
 
 protected:
@@ -110,6 +106,7 @@ protected:
     Data<bool> _drawQuads; ///< if true, draw the quads in the topology
     Data<sofa::type::RGBAColor> _drawColor; ///< RGB code color used to draw quads.
 
+    bool mustComputeBBox() const override;
 };
 
 template<class Coord>
@@ -129,7 +126,7 @@ inline Real areaProduct(const type::Vec<2,Real>& a, const type::Vec<2,Real>& b )
 template< class Real>
 inline Real areaProduct(const type::Vec<1,Real>& , const type::Vec<1,Real>&  );
 
-#if  !defined(SOFA_COMPONENT_TOPOLOGY_QUADSETGEOMETRYALGORITHMS_CPP)
+#if !defined(SOFA_COMPONENT_TOPOLOGY_QUADSETGEOMETRYALGORITHMS_CPP)
 extern template class SOFA_COMPONENT_TOPOLOGY_CONTAINER_DYNAMIC_API QuadSetGeometryAlgorithms<defaulttype::Vec3Types>;
 extern template class SOFA_COMPONENT_TOPOLOGY_CONTAINER_DYNAMIC_API QuadSetGeometryAlgorithms<defaulttype::Vec2Types>;
 

@@ -19,7 +19,7 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "PipeProcess.h"
+#include <sofa/helper/system/PipeProcess.h>
 
 #ifdef WIN32
 #include <windows.h>
@@ -56,13 +56,7 @@ typedef int socket_t;
 
 #include <sofa/helper/logging/Messaging.h>
 
-namespace sofa
-{
-
-namespace helper
-{
-
-namespace system
+namespace sofa::helper::system
 {
 
 PipeProcess::PipeProcess()
@@ -362,7 +356,5 @@ bool PipeProcess::executeProcess(const std::string &command,  const std::vector<
     }
 }
 
-}
-}
 }
 

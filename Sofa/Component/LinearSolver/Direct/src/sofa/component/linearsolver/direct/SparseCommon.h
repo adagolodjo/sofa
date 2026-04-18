@@ -24,11 +24,6 @@
 
 #include <sofa/component/linearsolver/direct/config.h>
 #include <sofa/component/linearsolver/iterative/MatrixLinearSolver.h>
-#include <csparse.h>
-
-extern "C" {
-#include <metis.h>
-}
 
 namespace sofa::component::linearsolver::direct
 {
@@ -42,10 +37,6 @@ xadj[i+1]-xadj[i] is the number of neighbors of the i-th node
 adj[xadj[i]] is the first neighbor of the i-th node
 
 **/
-void csrToAdj(int n, int * M_colptr, int * M_rowind, type::vector<int>& adj, type::vector<int>& xadj, type::vector<int>& t_adj, type::vector<int>& t_xadj, type::vector<int>& tran_countvec ); 
-
-// compute the fill reducing permutation via METIS
-void fillReducingPermutation(const cs &A,int * perm,int * invperm); 
 
 // compare the shape of two matrix given in CSR format, return false if the matrices have the same shape and return true if their shapes are different
 inline bool compareMatrixShape(int s_M, int * M_colptr,int * M_rowind, int s_P, int * P_colptr,int * P_rowind) {

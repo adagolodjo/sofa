@@ -19,18 +19,11 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_VISUAL_SHADER_H
-#define SOFA_CORE_VISUAL_SHADER_H
+#pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace visual
+namespace sofa::core::visual
 {
 
 /**
@@ -39,10 +32,10 @@ namespace visual
  *
  *
  */
-class SOFA_CORE_API Shader : public virtual objectmodel::BaseObject
+class SOFA_CORE_API Shader : public virtual objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(Shader, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(Shader, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(Shader)
 protected:
     Shader() {}
@@ -50,8 +43,8 @@ protected:
     ~Shader() override { }
 	
 private:
-    Shader(const Shader& n);
-    Shader& operator=(const Shader& n);
+    Shader(const Shader& n) = delete;
+    Shader& operator=(const Shader& n) = delete;
 	
 public:
     /// Start the shader
@@ -69,10 +62,10 @@ public:
 /**
  *  \brief A basic interface to define an element to be used with a Shader.
  */
-class SOFA_CORE_API ShaderElement: public virtual objectmodel::BaseObject
+class SOFA_CORE_API ShaderElement: public virtual objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(ShaderElement, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(ShaderElement, objectmodel::BaseComponent);
     enum ShaderElementType { SE_NONE = 0, SE_TEXTURE, SE_MACRO, SE_VARIABLE, SE_ATTRIBUTE };
 protected:
     ShaderElement() {}
@@ -80,8 +73,8 @@ protected:
     ~ShaderElement() override { }
 	
 private:
-    ShaderElement(const ShaderElement& n);
-    ShaderElement& operator=(const ShaderElement& n);
+    ShaderElement(const ShaderElement& n) = delete;
+    ShaderElement& operator=(const ShaderElement& n) = delete;
 	
 public:
     /// Returns the type of shader element (texture, macro, variable, or attribute)
@@ -97,11 +90,4 @@ public:
     // For attributes : return the number of values
     virtual int getSETotalSize() { return 0; }
 };
-
-} // namespace visual
-
-} // namespace core
-
-} // namespace sofa
-
-#endif //SOFA_CORE_VISUAL_SHADER_H
+} // namespace sofa::core::visual

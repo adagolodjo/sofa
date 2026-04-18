@@ -81,7 +81,7 @@ public:
 
     Data< double > scale; ///< Default scale applied to the Leap Motion Coordinates. 
     Data< Vec3d > translation; ///< Position of the tool/hand in the Leap Motion reference frame
-    Data< sofa::type::Vector3 > rotation; ///< Rotation of the DOFs of the hand
+    Data< sofa::type::Vec3 > rotation; ///< Rotation of the DOFs of the hand
     Data< Rigid3dTypes::Coord > handPalmCoordinate; ///< Coordinate of the hand detected by the Leap Motion
     Data< Vec3d > sphereCenter; ///< Center of the sphere of the hand detected by the Leap Motion
     Data< double > sphereRadius; ///< Radius of the sphere of the hand detected by the Leap Motion
@@ -89,7 +89,7 @@ public:
     Data< int > gestureType; ///< Type of the current gesture detected by the Leap Motion
     Data< Vec3d > gesturePosition; ///< Position of the current gesture detected by the Leap Motion
     Data< Vec3d > gestureDirection; ///< Direction of the current gesture detected by the Leap Motion
-    Data< int > scrollDirection; ///< Enter 0 if no scrolling (1 if scoll increases the value, 2 if scroll decreases it)
+    Data< int > scrollDirection; ///< Enter 0 if no scrolling (1 if scroll increases the value, 2 if scroll decreases it)
     Data< bool > displayHand; ///< display the hand detected by the Leap Motion
     Data< double > speed;
 
@@ -97,7 +97,6 @@ public:
     virtual ~LeapMotionDriver();
 
     void init();
-    void bwdInit();
     void reset();
     void reinit();
 

@@ -23,7 +23,7 @@
 #include <sofa/component/engine/transform/config.h>
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 
@@ -72,7 +72,7 @@ protected:
     sofa::core::topology::BaseMeshTopology* m_topology;
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_SMOOTHMESHENGINE_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_SMOOTHMESHENGINE_CPP)
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API SmoothMeshEngine<defaulttype::Vec3Types>;
 #endif
 

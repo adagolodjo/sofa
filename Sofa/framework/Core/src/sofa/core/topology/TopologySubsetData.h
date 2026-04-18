@@ -36,15 +36,15 @@ namespace sofa::core::topology
 * This class is a wrapper of class type::vector that is made to take care transparently of all topology changes that might
 * happen (non exhaustive list: elements added, removed, fused, renumbered).
 */
-template< class TopologyElementType, class VecT>
-class TopologySubsetData : public sofa::core::topology::TopologyData<TopologyElementType, VecT>
+template< class ElementType, class VecT>
+class TopologySubsetData : public sofa::core::topology::TopologyData<ElementType, VecT>
 {
 public:
     typedef VecT container_type;
     typedef typename container_type::value_type value_type;
 
-    typedef core::topology::TopologyElementInfo<TopologyElementType> ElementInfo;
-    typedef core::topology::TopologyChangeElementInfo<TopologyElementType> ChangeElementInfo;
+    typedef geometry::ElementInfo<ElementType> ElementInfo;
+    typedef core::topology::TopologyChangeElementInfo<ElementType> ChangeElementInfo;
     typedef typename ChangeElementInfo::AncestorElem    AncestorElem;
 
     /// Default Constructor to init Data
@@ -60,7 +60,11 @@ public:
     * By default @sa m_addNewElements is set to false. 
     * @param {bool} to change m_addNewElements value. 
     */
-    void supportNewTopologyElements(bool value) { m_addNewElements = true; }
+    void supportNewTopologyElements(bool value)
+    {
+        SOFA_UNUSED(value);
+        m_addNewElements = true;
+    }
     
     /// Getter to the option @sa m_addNewElements
     bool isNewTopologyElementsSupported() const { return m_addNewElements; }
@@ -70,7 +74,13 @@ public:
     * @param {Index} element index of the full Data vector to find in the vector map
     * @return {Index} position of the element in the vector map. return sofa::InvalidID if not found.
     */
-    virtual Index indexOfElement(Index index);
+    virtual Index indexOfElement(Index index) const;
+
+    /** Method to return the indices position of all the occurrence of the element inside the vector map @sa m_map2Elements
+    * @param {Index} element index of the full Data vector to find in the vector map
+    * @return {type::vector<Index>} positions of all the occurrence of the element in the vector map. return empty vector if not found.
+    */
+    virtual const type::vector<Index> indicesOfElement(Index index) const;
 
     /// Swaps values of this subsetmap at indices i1 and i2. (only if i1 and i2 < subset size())
     void swap(Index i1, Index i2) override;
@@ -85,17 +95,17 @@ public:
         const sofa::type::vector< sofa::type::vector< SReal > >& coefs);
 
     virtual void add(sofa::Size nbElements,
-        const sofa::type::vector< TopologyElementType >& elems,
+        const sofa::type::vector< ElementType >& elems,
         const sofa::type::vector< sofa::type::vector< Index > >& ancestors,
         const sofa::type::vector< sofa::type::vector< SReal > >& coefs);
 
     void add(const sofa::type::vector<Index>& index,
-        const sofa::type::vector< TopologyElementType >& elems,
+        const sofa::type::vector< ElementType >& elems,
         const sofa::type::vector< sofa::type::vector< Index > >& ancestors,
         const sofa::type::vector< sofa::type::vector< SReal > >& coefs,
         const sofa::type::vector< AncestorElem >& ancestorElems) override;
 
-    /// Remove the data using a set of indices. Will remove only the data contains by this subset.
+    /// Remove elems with inputted indices. Will remove only the data contains by this subset.
     void remove(const sofa::type::vector<Index>& index) override;
 
     /// Reorder the values. TODO epernod 2021-05-24: check if needed and implement it if needed.
@@ -109,7 +119,7 @@ public:
     /// Add Element after a displacement of vertices, ie. add element based on previous position topology revision.
     /// TODO epernod 2021-05-24: check if needed and implement it if needed.
     void addOnMovedPosition(const sofa::type::vector<Index>& indexList,
-        const sofa::type::vector< TopologyElementType >& elems) override;
+        const sofa::type::vector< ElementType >& elems) override;
 
     /// Remove Element after a displacement of vertices, ie. add element based on previous position topology revision.
     /// TODO epernod 2021-05-24: check if needed and implement it if needed.
@@ -118,8 +128,8 @@ public:
 protected:
     /**
     * Internal method called at the end of @sa swap method to apply internal mechanism, such as map swap.
-    * @param i1 First element index to be swaped.
-    * @param i2 Second element index to be swaped with first one.
+    * @param i1 First element index to be swapped.
+    * @param i2 Second element index to be swapped with first one.
     */
     virtual void swapPostProcess(Index i1, Index i2);
 
@@ -127,7 +137,7 @@ protected:
     * Internal method called at the end of @sa remove method to apply internal mechanism, such as updating the map size
     * @param nbElements Number of element removed.
     */
-    virtual void removePostProcess(sofa::Size nbElements);
+    virtual void removePostProcess(sofa::Index elemId);
 
     /**
     * Internal method called at the end of @sa add method to apply internal mechanism, such as updating the map size.
@@ -145,7 +155,7 @@ protected:
     /// same size as this SubsetData but contains id of element link to each data[]
     sofa::type::vector<Index> m_map2Elements;
 
-    /** Boolen to allow this TopologySubsetData to add new elements. If true, for every new Element added in the topology container
+    /** Boolean to allow this TopologySubsetData to add new elements. If true, for every new Element added in the topology container
     * linked by this TopologyData, the index of the new element will be added into this TopologySubsetData.
     */
     bool m_addNewElements = false;

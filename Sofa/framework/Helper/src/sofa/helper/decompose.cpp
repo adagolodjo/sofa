@@ -20,17 +20,15 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_HELPER_DECOMPOSE_CPP
-#include "decompose.inl"
+#include <sofa/helper/decompose.inl>
 
-namespace sofa
-{
 
-namespace helper
+namespace sofa::helper
 {
 
 template class SOFA_HELPER_API Decompose<double>;
 template class SOFA_HELPER_API Decompose<float>;
 
-} // namespace helper
+} // namespace sofa::helper
 
-} // namespace sofa
+

@@ -29,7 +29,6 @@
 
 #include <sofa/core/BaseMapping.h>
 
-
 namespace sofa::component::topology::mapping
 {
 
@@ -54,11 +53,6 @@ protected:
     */
     Hexa2TetraTopologicalMapping();
 
-    /** \brief Destructor.
-    *
-    * Does nothing.
-    */
-    ~Hexa2TetraTopologicalMapping() override;
 public:
     /** \brief Initializes the target BaseTopology from the source BaseTopology.
     */
@@ -75,8 +69,7 @@ public:
 
     Index getFromIndex(Index ind) override;
 
-    sofa::core::objectmodel::Data<bool> swapping; ///< Boolean enabling to swapp hexa-edges  in order to avoid bias effect
-
+    sofa::core::objectmodel::Data<bool> d_swapping; ///< Boolean enabling to swapp hexa-edges  in order to avoid bias effect
 };
 
 } //namespace sofa::component::topology::mapping

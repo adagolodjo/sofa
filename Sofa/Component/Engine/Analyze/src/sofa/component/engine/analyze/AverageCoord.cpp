@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_AverageCoord_CPP
-#include "AverageCoord.inl"
+#include <sofa/component/engine/analyze/AverageCoord.inl>
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/defaulttype/RigidTypes.h>
@@ -30,14 +30,14 @@ namespace sofa::component::engine::analyze
 
 using namespace sofa::defaulttype;
 
-int AverageCoordClass = core::RegisterObject("Compute the average of coordinates")
+void registerAverageCoord(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Compute the average of coordinates.")
         .add< AverageCoord<Vec2Types> >()
         .add< AverageCoord<Vec3Types> >()
         .add< AverageCoord<Rigid2Types> >()
-        .add< AverageCoord<Rigid3Types> >()
- 
-        ;
-
+        .add< AverageCoord<Rigid3Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_ANALYZE_API AverageCoord<Vec2Types>;
 template class SOFA_COMPONENT_ENGINE_ANALYZE_API AverageCoord<Rigid2Types>;

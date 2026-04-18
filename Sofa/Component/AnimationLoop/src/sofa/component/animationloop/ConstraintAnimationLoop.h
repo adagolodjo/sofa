@@ -22,118 +22,63 @@
 #pragma once
 #include <sofa/component/animationloop/config.h>
 
+SOFA_HEADER_DEPRECATED_NOT_REPLACED("v26.06", "v26.12")
+
 
 #include <sofa/helper/map.h>
+#include <sofa/linearalgebra/FullMatrix.h>
 #include <sofa/core/MultiVecId.h>
 #include <sofa/core/VecId.h>
 #include <sofa/core/behavior/BaseConstraintCorrection.h>
 #include <sofa/core/behavior/OdeSolver.h>
+#include <sofa/core/ConstraintParams.h>
 #include <sofa/core/fwd.h>
-#include <sofa/linearalgebra/FullMatrix.h>
 
 #include <sofa/simulation/CollisionAnimationLoop.h>
 #include <sofa/simulation/MechanicalVisitor.h>
-#include <sofa/core/ConstraintParams.h>
 #include <sofa/simulation/fwd.h>
 
 #include <vector>
 
+namespace sofa::simulation::mechanicalvisitor
+{
+    class MechanicalAccumulateMatrixDeriv;
+    class MechanicalBuildConstraintMatrix;
+}
+
+namespace sofa::component::constraint::lagrangian::solver
+{
+    class MechanicalGetConstraintResolutionVisitor;
+}
+
 namespace sofa::component::animationloop
 {
-
-class SOFA_COMPONENT_ANIMATIONLOOP_API MechanicalGetConstraintResolutionVisitor : public simulation::BaseMechanicalVisitor
-{
-public:
-    MechanicalGetConstraintResolutionVisitor(const core::ConstraintParams* params, std::vector<core::behavior::ConstraintResolution*>& res, unsigned int offset)
-        : simulation::BaseMechanicalVisitor(params), _res(res),_offset(offset), _cparams(params)
-    {}
-
-    Result fwdConstraintSet(simulation::Node* node, core::behavior::BaseConstraintSet* cSet) override;
-    // This visitor must go through all mechanical mappings, even if isMechanical flag is disabled
-    bool stopAtMechanicalMapping(simulation::Node* /*node*/, core::BaseMapping* /*map*/) override;
-
-private:
-    std::vector<core::behavior::ConstraintResolution*>& _res;
-    unsigned int _offset;
-    const sofa::core::ConstraintParams *_cparams;
-};
-
-
-class SOFA_COMPONENT_ANIMATIONLOOP_API MechanicalSetConstraint : public simulation::BaseMechanicalVisitor
-{
-public:
-    MechanicalSetConstraint(const core::ConstraintParams* _cparams, core::MultiMatrixDerivId _res, unsigned int &_contactId)
-        : simulation::BaseMechanicalVisitor(_cparams)
-        , res(_res)
-        , contactId(_contactId)
-        , cparams(_cparams)
-    {}
-
-    Result fwdConstraintSet(simulation::Node* node, core::behavior::BaseConstraintSet* c) override;
-    /// Return a class name for this visitor
-    /// Only used for debugging / profiling purposes
-    const char* getClassName() const override;
-    bool isThreadSafe() const override;
-    // This visitor must go through all mechanical mappings, even if isMechanical flag is disabled
-    bool stopAtMechanicalMapping(simulation::Node* /*node*/, core::BaseMapping* /*map*/) override;
-
-protected:
-
-    sofa::core::MultiMatrixDerivId res;
-    unsigned int &contactId;
-    const sofa::core::ConstraintParams *cparams;
-};
-
-
-class SOFA_COMPONENT_ANIMATIONLOOP_API MechanicalAccumulateConstraint2 : public simulation::BaseMechanicalVisitor
-{
-public:
-    MechanicalAccumulateConstraint2(const core::ConstraintParams* _cparams, core::MultiMatrixDerivId _res)
-        : simulation::BaseMechanicalVisitor(_cparams)
-        , res(_res)
-        , cparams(_cparams)
-    {}
-
-    void bwdMechanicalMapping(simulation::Node* node, core::BaseMapping* map) override;
-    /// Return a class name for this visitor
-    /// Only used for debugging / profiling purposes
-    const char* getClassName() const override;
-
-    bool isThreadSafe() const override;
-    // This visitor must go through all mechanical mappings, even if isMechanical flag is disabled
-    bool stopAtMechanicalMapping(simulation::Node* /*node*/, core::BaseMapping* /*map*/) override;
-
-protected:
-    core::MultiMatrixDerivId res;
-    const sofa::core::ConstraintParams *cparams;
-};
-
 
 class SOFA_COMPONENT_ANIMATIONLOOP_API ConstraintProblem
 {
 protected:
-    sofa::linearalgebra::LPtrFullMatrix<double> _W;
-    sofa::linearalgebra::FullVector<double> _dFree, _force, _d, _df;// cf. These Duriez + _df for scheme correction
+    sofa::linearalgebra::LPtrFullMatrix<SReal> _W;
+    sofa::linearalgebra::FullVector<SReal> _dFree, _force, _d, _df;// cf. These Duriez + _df for scheme correction
     std::vector<core::behavior::ConstraintResolution*> _constraintsResolutions;
-    double _tol;
+    SReal _tol;
     int _dim;
     sofa::helper::system::thread::CTime *_timer;
 
 public:
     ConstraintProblem(bool printLog=false);
     virtual ~ConstraintProblem();
-    virtual void clear(int dim, const double &tol);
+    virtual void clear(int dim, const SReal &tol);
 
     inline int getSize(void) {return _dim;}
-    inline sofa::linearalgebra::LPtrFullMatrix<double>* getW(void) {return &_W;}
-    inline sofa::linearalgebra::FullVector<double>* getDfree(void) {return &_dFree;}
-    inline sofa::linearalgebra::FullVector<double>* getD(void) {return &_d;}
-    inline sofa::linearalgebra::FullVector<double>* getF(void) {return &_force;}
-    inline sofa::linearalgebra::FullVector<double>* getdF(void) {return &_df;}
+    inline sofa::linearalgebra::LPtrFullMatrix<SReal>* getW(void) {return &_W;}
+    inline sofa::linearalgebra::FullVector<SReal>* getDfree(void) {return &_dFree;}
+    inline sofa::linearalgebra::FullVector<SReal>* getD(void) {return &_d;}
+    inline sofa::linearalgebra::FullVector<SReal>* getF(void) {return &_force;}
+    inline sofa::linearalgebra::FullVector<SReal>* getdF(void) {return &_df;}
     inline std::vector<core::behavior::ConstraintResolution*>& getConstraintResolutions(void) {return _constraintsResolutions;}
-    inline double *getTolerance(void) {return &_tol;}
+    inline SReal *getTolerance(void) {return &_tol;}
 
-    void gaussSeidelConstraintTimed(double &timeout, int numItMax);
+    void gaussSeidelConstraintTimed(SReal &timeout, int numItMax);
 };
 
 
@@ -146,7 +91,7 @@ public:
 
     SOFA_CLASS(ConstraintAnimationLoop, sofa::simulation::CollisionAnimationLoop);
 protected:
-    ConstraintAnimationLoop(simulation::Node* gnode = nullptr);
+    ConstraintAnimationLoop();
     ~ConstraintAnimationLoop() override;
 public:
 
@@ -154,34 +99,23 @@ public:
     void init() override;
 
     Data<bool> d_displayTime; ///< Display time for each important step of ConstraintAnimationLoop.
-    Data<double> d_tol; ///< Tolerance of the Gauss-Seidel
+    Data<SReal> d_tol; ///< Tolerance of the Gauss-Seidel
     Data<int> d_maxIt; ///< Maximum number of iterations of the Gauss-Seidel
     Data<bool> d_doCollisionsFirst; ///< Compute the collisions first (to support penality-based contacts)
-    Data<bool> d_doubleBuffer; ///< Buffer the constraint problem in a double buffer to be accessible with an other thread
+    Data<bool> d_doubleBuffer; ///< Double the buffer dedicated to the constraint problem to make it accessible to another thread
     Data<bool> d_scaleTolerance; ///< Scale the error tolerance with the number of constraints
-    Data<bool> d_allVerified; ///< All contraints must be verified (each constraint's error < tolerance)
-    Data<double> d_sor; ///< Successive Over Relaxation parameter (0-2)
+    Data<bool> d_allVerified; ///< All constraints must be verified (each constraint's error < tolerance)
+    Data<SReal> d_sor; ///< Successive Over Relaxation parameter (0-2)
     Data<bool> d_schemeCorrection; ///< Apply new scheme where compliance is progressively corrected
     Data<bool> d_realTimeCompensation; ///< If the total computational time T < dt, sleep(dt-T)
 
     Data<bool> d_activateSubGraph;
 
-    Data<std::map < std::string, sofa::type::vector<double> > > d_graphErrors; ///< Sum of the constraints' errors at each iteration
-    Data<std::map < std::string, sofa::type::vector<double> > > d_graphConstraints; ///< Graph of each constraint's error at the end of the resolution
-    Data<std::map < std::string, sofa::type::vector<double> > > d_graphForces; ///< Graph of each constraint's force at each step of the resolution
+    Data<std::map < std::string, sofa::type::vector<SReal> > > d_graphErrors; ///< Sum of the constraints' errors at each iteration
+    Data<std::map < std::string, sofa::type::vector<SReal> > > d_graphConstraints; ///< Graph of each constraint's error at the end of the resolution
+    Data<std::map < std::string, sofa::type::vector<SReal> > > d_graphForces; ///< Graph of each constraint's force at each step of the resolution
 
     ConstraintProblem *getConstraintProblem() {return bufCP1 ? &CP1 : &CP2;}
-
-    /// Construction method called by ObjectFactory.
-    template<class T>
-    static typename T::SPtr create(T*, BaseContext* context, BaseObjectDescription* arg)
-    {
-        simulation::Node* gnode = dynamic_cast<simulation::Node*>(context);
-        typename T::SPtr obj = sofa::core::objectmodel::New<T>(gnode);
-        if (context) context->addObject(obj);
-        if (arg) obj->parse(arg);
-        return obj;
-    }
 
 protected:
     void launchCollisionDetection(const core::ExecParams* params);
@@ -208,11 +142,11 @@ protected:
 
 
     /// method for predictive scheme:
-    void computePredictiveForce(int dim, double* force, std::vector<core::behavior::ConstraintResolution*>& res);
+    void computePredictiveForce(int dim, SReal* force, std::vector<core::behavior::ConstraintResolution*>& res);
 
 
 
-    void gaussSeidelConstraint(int dim, double* dfree, double** w, double* force, double* d, std::vector<core::behavior::ConstraintResolution*>& res, double* df);
+    void gaussSeidelConstraint(int dim, SReal* dfree, SReal** w, SReal* force, SReal* d, std::vector<core::behavior::ConstraintResolution*>& res, SReal* df);
 
     std::vector<core::behavior::BaseConstraintCorrection*> constraintCorrections;
 

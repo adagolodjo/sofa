@@ -40,6 +40,7 @@ namespace sofa::type
 
 static constexpr bool isEnabledVectorAccessChecking {SOFA_VECTOR_CHECK_ACCESS};
 
+[[noreturn]]
 extern void SOFA_TYPE_API vector_access_failure(const void* vec, std::size_t size, std::size_t i, const std::type_info& type);
 
 // standard vector dont use the CPUMemoryManager given as template
@@ -66,12 +67,6 @@ public:
     template<class T2>
     using rebind_to = vector< T2, CPUMemoryManager<T2> >;
 
-    template<class T2> struct SOFA_ATTRIBUTE_DEPRECATED__REBIND() rebind
-    {
-        using other = rebind_to<T2>;
-    };
-
-
     /// Basic constructor
     vector() : std::vector<T,Alloc>() {}
     /// Constructor
@@ -80,7 +75,7 @@ public:
     explicit vector(Size n): std::vector<T,Alloc>(n) {}
     /// Constructor
     vector(const std::vector<T, Alloc>& x): std::vector<T,Alloc>(x) {}
-    /// Brace initalizer constructor
+    /// Brace initializer constructor
     vector(const std::initializer_list<T>& t) : std::vector<T,Alloc>(t) {}
     /// Move constructor
     vector(std::vector<T,Alloc>&& v): std::vector<T,Alloc>(std::move(v)) {}
@@ -98,14 +93,8 @@ public:
         return *this;
     }
 
-#ifdef __STL_MEMBER_TEMPLATES
-    /// Constructor
-    template <class InputIterator>
-    vector(InputIterator first, InputIterator last): std::vector<T,Alloc>(first,last) {}
-#else /* __STL_MEMBER_TEMPLATES */
     /// Constructor
     vector(typename vector<T>::const_iterator first, typename vector<T>::const_iterator last): std::vector<T>(first,last) {}
-#endif /* __STL_MEMBER_TEMPLATES */
 
     /// Read/write random access
     reference operator[](Size n)
@@ -165,8 +154,8 @@ public:
         std::fill(this->begin(), this->end(), value);
     }
 
-    /// this function is usefull for vector_device because it resize the vector without device operation (if device is not valid).
-    /// Therefore the function is used in asynchronous code to safly resize a vector which is either cuda of type::vector
+    /// this function is useful for vector_device because it resize the vector without device operation (if device is not valid).
+    /// Therefore the function is used in asynchronous code to safely resize a vector which is either cuda of type::vector
     void fastResize(Size n)
     {
         this->resize(n);

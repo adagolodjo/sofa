@@ -121,9 +121,6 @@ public:
             sofa::type::vector<TetrahedronID> &indices) const;
     void getTetraInBall(const Coord& c, Real r,
             sofa::type::vector<TetrahedronID> &indices) const;
-    /** \brief Write the current mesh into a msh file
-    */
-    void writeMSHfile(const char *filename) const;
 
     /// finds the intersection point with plane which is defined by c and normal
     void getIntersectionPointWithPlane(const TetraID ind_ta, const sofa::type::Vec<3,Real>& planP0, const sofa::type::Vec<3,Real>& normal, sofa::type::vector< sofa::type::Vec<3,Real> >& intersectedPoint, SeqEdges& intersectedEdge);
@@ -181,6 +178,8 @@ protected:
     TetrahedronSetTopologyContainer*					m_container;
     TetrahedronSetTopologyModifier*						m_modifier;
     unsigned int	m_intialNbPoints;
+
+    bool mustComputeBBox() const override;
 };
 
 #if !defined(SOFA_COMPONENT_TOPOLOGY_TETRAHEDRONSETGEOMETRYALGORITHMS_CPP)

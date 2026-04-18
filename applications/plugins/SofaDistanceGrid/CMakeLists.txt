@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(SofaDistanceGrid LANGUAGES CXX)
 
 option(SOFADISTANCEGRID_USE_MINIFLOWVR "Build and use the miniFlowVR library with DistanceGrid." OFF)
@@ -12,7 +12,7 @@ option(SOFADISTANCEGRID_USE_MESHCONV "Build meshconv, mainly used to generate Di
 if(SOFADISTANCEGRID_USE_MESHCONV)
     find_package(MiniFlowVR QUIET)
     if(MiniFlowVR_FOUND)
-        sofa_add_application(applications/meshconv meshconv OFF)
+        sofa_add_subdirectory(application applications/meshconv meshconv OFF)
     else()
         message(WARNING "meshconv needs miniFlowVR; enable SOFADISTANCEGRID_USE_MINIFLOWVR to build it.")
     endif()
@@ -22,6 +22,7 @@ set(SOFADISTANCEGRID_SRC "src/${PROJECT_NAME}")
 
 set(HEADER_FILES
     ${SOFADISTANCEGRID_SRC}/config.h.in
+    ${SOFADISTANCEGRID_SRC}/initSofaDistanceGrid.h
     ${SOFADISTANCEGRID_SRC}/DistanceGrid.h
     ${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridDiscreteIntersection.h
     ${SOFADISTANCEGRID_SRC}/components/collision/FFDDistanceGridDiscreteIntersection.inl
@@ -47,21 +48,23 @@ set(SOURCE_FILES
 set(EXTRA_FILES
     README.md
     examples/README.md
-    examples/DistanceGridCollisionModel.scn
-    examples/FFDDistanceGridCollisionModel.scn
-    examples/DistanceGridForceField-liver.scn
+    examples/DistanceGridForceField_liver.scn
+    examples/FFDDistanceGridCollisionModel_liver_DefaultAnimationLoop.scn
+    examples/FFDDistanceGridCollisionModel_liver_FreeMotionAnimationLoop.scn
+    examples/RigidDistanceGridCollisionModel_liver_DefaultAnimationLoop.scn
+    examples/RigidDistanceGridCollisionModel_liver_FreeMotionAnimationLoop.scn
+    #examples/RigidDistanceGridCollisionModel_skull_FreeMotionAnimationLoop.scn
     )
 
 
-sofa_find_package(MiniFlowVR QUIET)
-find_package(SofaMeshCollision REQUIRED)
-find_package(SofaUserInteraction REQUIRED)
-find_package(SofaMiscCollision REQUIRED)
+find_package(MiniFlowVR QUIET)
+sofa_find_package(Sofa.Core REQUIRED)
+sofa_find_package(Sofa.Component.Collision REQUIRED)
 sofa_find_package(Sofa.GL QUIET)
 
 add_library(${PROJECT_NAME} SHARED ${HEADER_FILES} ${SOURCE_FILES} ${EXTRA_FILES})
-target_link_libraries(${PROJECT_NAME} PUBLIC SofaMeshCollision SofaMiscCollision)
-target_link_libraries(${PROJECT_NAME} PUBLIC SofaUserInteraction)
+target_link_libraries(${PROJECT_NAME} PUBLIC Sofa.Core)
+target_link_libraries(${PROJECT_NAME} PUBLIC Sofa.Component.Collision)
 
 if(Sofa.GL_FOUND)
     target_link_libraries(${PROJECT_NAME} PUBLIC Sofa.GL)
@@ -75,10 +78,7 @@ else()
 endif()
 
 if(SOFA_BUILD_TESTS)
-    find_package(SofaTest QUIET)
-    if(SofaTest_FOUND)
-        add_subdirectory(SofaDistanceGrid_test)
-    endif()
+    add_subdirectory(SofaDistanceGrid_test)
 endif()
 
 ## Install rules for the library and headers; CMake package configurations files
@@ -90,3 +90,5 @@ sofa_create_package_with_targets(
     INCLUDE_INSTALL_DIR "${PROJECT_NAME}"
     RELOCATABLE "plugins"
     )
+
+sofa_add_subdirectory(plugin extensions/CUDA SofaDistanceGrid.CUDA)

@@ -23,24 +23,14 @@
 
 #include <sofa/component/statecontainer/MechanicalObject.inl>
 #include <sofa/type/Quat.h>
-#include <sofa/core/ObjectFactory.h>
 
+#include <sofa/core/ObjectFactory.h>
 
 namespace sofa::component::statecontainer
 {
 
 using namespace core::behavior;
 using namespace defaulttype;
-
-int MechanicalObjectClass = core::RegisterObject("mechanical state vectors")
-        .add< MechanicalObject<Vec3Types> >(true) // default template
-        .add< MechanicalObject<Vec2Types> >()
-        .add< MechanicalObject<Vec1Types> >()
-        .add< MechanicalObject<Vec6Types> >()
-        .add< MechanicalObject<Rigid3Types> >()
-        .add< MechanicalObject<Rigid2Types> >()
-
-        ;
 
 // template specialization must be in the same namespace as original namespace for GCC 4.1
 // g++ 4.1 requires template instantiations to be declared on a parent namespace from the template class.
@@ -51,20 +41,26 @@ template class SOFA_COMPONENT_STATECONTAINER_API MechanicalObject<Vec6Types>;
 template class SOFA_COMPONENT_STATECONTAINER_API MechanicalObject<Rigid3Types>;
 template class SOFA_COMPONENT_STATECONTAINER_API MechanicalObject<Rigid2Types>;
 
-
-
-
-
+void registerMechanicalObject(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("mechanical state vectors")
+        .add< MechanicalObject<Vec3Types> >(true) // default template
+        .add< MechanicalObject<Vec2Types> >()
+        .add< MechanicalObject<Vec1Types> >()
+        .add< MechanicalObject<Vec6Types> >()
+        .add< MechanicalObject<Rigid3Types> >()
+        .add< MechanicalObject<Rigid2Types> >());
+}
 
 template<>
 void MechanicalObject<defaulttype::Rigid3Types>::applyRotation (const type::Quat<SReal> q)
 {
-    helper::WriteAccessor< Data<VecCoord> > x = *this->write(core::VecCoordId::position());
+    helper::WriteAccessor< Data<VecCoord> > x = *this->write(core::vec_id::write_access::position);
 
-    for (unsigned int i = 0; i < x.size(); i++)
+    for (RigidCoord<3, SReal>& xi : x)
     {
-        x[i].getCenter() = q.rotate(x[i].getCenter());
-        x[i].getOrientation() = q * x[i].getOrientation();
+        xi.getCenter() = q.rotate(xi.getCenter());
+        xi.getOrientation() = q * xi.getOrientation();
     }
 }
 
@@ -187,7 +183,7 @@ void MechanicalObject<defaulttype::Rigid3Types>::addFromBaseVectorSameSize(core:
 template<>
 void MechanicalObject<defaulttype::Rigid3Types>::draw(const core::visual::VisualParams* vparams)
 {
-    vparams->drawTool()->saveLastState();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
     vparams->drawTool()->setLightingEnabled(false);
 
 	if (showIndices.getValue())
@@ -203,7 +199,7 @@ void MechanicalObject<defaulttype::Rigid3Types>::draw(const core::visual::Visual
     if (showObject.getValue())
     {
         const float scale = showObjectScale.getValue();
-        helper::ReadAccessor<Data<VecCoord> > x = *this->read(core::VecCoordId::position());
+        const helper::ReadAccessor<Data<VecCoord> > x = *this->read(core::vec_id::write_access::position);
         const size_t vsize = d_size.getValue();
         for (size_t i = 0; i < vsize; ++i)
         {
@@ -214,38 +210,40 @@ void MechanicalObject<defaulttype::Rigid3Types>::draw(const core::visual::Visual
             vparams->drawTool()->multMatrix( glTransform );
             vparams->drawTool()->scale ( scale );
 
+            constexpr type::Vec3f sizes ( 1.f,1.f,1.f );
+
 			if (getContext()->isSleeping())
 			{
-				vparams->drawTool()->drawFrame ( Vector3(), type::Quat<SReal>(), Vector3 ( 1,1,1 ), sofa::type::RGBAColor::gray());
+                vparams->drawTool()->drawFrame ( type::Vec3(), type::Quat<SReal>(), sizes, sofa::type::RGBAColor::gray());
 			}
 			else switch( drawMode.getValue() )
             {
                 case 1:
-                    vparams->drawTool()->drawFrame ( Vector3(), type::Quat<SReal>(), Vector3 ( 1,1,1 ), sofa::type::RGBAColor::green());
+                    vparams->drawTool()->drawFrame ( type::Vec3(), type::Quat<SReal>(), sizes, sofa::type::RGBAColor::green());
                     break;
                 case 2:
-                    vparams->drawTool()->drawFrame ( Vector3(), type::Quat<SReal>(), Vector3 ( 1,1,1 ), sofa::type::RGBAColor::red());
+                    vparams->drawTool()->drawFrame ( type::Vec3(), type::Quat<SReal>(), sizes, sofa::type::RGBAColor::red());
                     break;
                 case 3:
-                    vparams->drawTool()->drawFrame ( Vector3(), type::Quat<SReal>(), Vector3 ( 1,1,1 ), sofa::type::RGBAColor::blue());
+                    vparams->drawTool()->drawFrame ( type::Vec3(), type::Quat<SReal>(), sizes, sofa::type::RGBAColor::blue());
                     break;
                 case 4:
-                    vparams->drawTool()->drawFrame ( Vector3(), type::Quat<SReal>(), Vector3 ( 1,1,1 ), sofa::type::RGBAColor::yellow());
+                    vparams->drawTool()->drawFrame ( type::Vec3(), type::Quat<SReal>(), sizes, sofa::type::RGBAColor::yellow());
                     break;
                 case 5:
-                    vparams->drawTool()->drawFrame ( Vector3(), type::Quat<SReal>(), Vector3 ( 1,1,1 ), sofa::type::RGBAColor::magenta());
+                    vparams->drawTool()->drawFrame ( type::Vec3(), type::Quat<SReal>(), sizes, sofa::type::RGBAColor::magenta());
                     break;
                 case 6:
-                    vparams->drawTool()->drawFrame ( Vector3(), type::Quat<SReal>(), Vector3 ( 1,1,1 ), sofa::type::RGBAColor::cyan());
+                    vparams->drawTool()->drawFrame ( type::Vec3(), type::Quat<SReal>(), sizes, sofa::type::RGBAColor::cyan());
                     break;
                 default:
-                    vparams->drawTool()->drawFrame ( Vector3(), type::Quat<SReal>(), Vector3 ( 1,1,1 ) );
+                    vparams->drawTool()->drawFrame ( type::Vec3(), type::Quat<SReal>(), sizes );
             }
 
             vparams->drawTool()->popMatrix();
         }
     }
-    vparams->drawTool()->restoreLastState();
+
 }
 
 } // namespace sofa::component::statecontainer

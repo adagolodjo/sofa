@@ -28,12 +28,11 @@
 namespace sofa::component::topology::container::dynamic
 {
 
-using namespace std;
-using namespace sofa::defaulttype;
-
-int QuadSetTopologyContainerClass = core::RegisterObject("Quad set topology container")
-        .add< QuadSetTopologyContainer >()
-        ;
+void registerQuadSetTopologyContainer(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Topology container dedicated to a quad topology.")
+        .add< QuadSetTopologyContainer >());
+}
 
 QuadSetTopologyContainer::QuadSetTopologyContainer()
     : EdgeSetTopologyContainer()
@@ -54,16 +53,20 @@ void QuadSetTopologyContainer::addQuad(Index a, Index b, Index c, Index d )
 
 void QuadSetTopologyContainer::init()
 {
-    d_quad.updateIfDirty(); // make sure m_quad is up to date
+    core::topology::TopologyContainer::init();
 
-    helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quads = d_quad;
-    if (!m_quads.empty())
+    const helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quads = d_quad;
+    if (d_initPoints.isSet())
+    {
+        setNbPoints(Size(d_initPoints.getValue().size()));
+    } 
+    else if (!m_quads.empty())
     {
         for (size_t i=0; i<m_quads.size(); ++i)
         {
             for(PointID j=0; j<4; ++j)
             {
-                Index a = m_quads[i][j];
+                const Index a = m_quads[i][j];
                 if (a >= getNbPoints()) setNbPoints(a+1);
             }
         }
@@ -71,13 +74,13 @@ void QuadSetTopologyContainer::init()
 
     // only init if triangles are present at init.
     if (!m_quads.empty())
-        initTopology();
+        computeCrossElementBuffers();
 }
 
-void QuadSetTopologyContainer::initTopology()
+void QuadSetTopologyContainer::computeCrossElementBuffers()
 {
-    // Force creation of Edge Neighboordhood buffers.
-    EdgeSetTopologyContainer::initTopology();
+    // Force creation of Edge Neighborhood buffers.
+    EdgeSetTopologyContainer::computeCrossElementBuffers();
 
     // Create triangle cross element buffers.
     createEdgesInQuadArray();
@@ -100,8 +103,8 @@ void QuadSetTopologyContainer::createQuadsAroundVertexArray()
 
     if(hasQuadsAroundVertex()) // created by upper topology
         return;
-    
-    helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
+
+    const helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
     if (m_quad.empty())
     {
         msg_warning() << "QuadsAroundVertex buffer can't be created as no quads are present in this topology.";
@@ -190,7 +193,7 @@ void QuadSetTopologyContainer::createEdgeSetArray()
     // create a temporary map to find redundant edges
     std::map<Edge, EdgeID> edgeMap;
     helper::WriteAccessor< Data< sofa::type::vector<Edge> > > m_edge = d_edge;
-    helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
+    const helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
 
     for (size_t i=0; i<m_quad.size(); ++i)
     {
@@ -203,7 +206,7 @@ void QuadSetTopologyContainer::createEdgeSetArray()
             // sort vertices in lexicographic order
             const Edge e = ((v1<v2) ? Edge(v1,v2) : Edge(v2,v1));
 
-            if(edgeMap.find(e) == edgeMap.end())
+            if(!edgeMap.contains(e))
             {
                 // edge not in edgeMap so create a new one
                 const EdgeID edgeIndex = (EdgeID)edgeMap.size();
@@ -236,7 +239,7 @@ void QuadSetTopologyContainer::createEdgesInQuadArray()
 
     const auto numQuads = getNumberOfQuads();
     m_edgesInQuad.resize( numQuads );
-    helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
+    const helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
 
     for(sofa::Index i=0; i<numQuads; ++i)
     {
@@ -244,7 +247,7 @@ void QuadSetTopologyContainer::createEdgesInQuadArray()
         // adding edge i in the edge shell of both points
         for (sofa::Index j=0; j<4; ++j)
         {
-            EdgeID edgeIndex = getEdgeIndex(t[(j+1)%4],t[(j+2)%4]);
+            const EdgeID edgeIndex = getEdgeIndex(t[(j+1)%4],t[(j+2)%4]);
             assert(edgeIndex != InvalidID);
             m_edgesInQuad[i][j]=edgeIndex;
         }
@@ -308,7 +311,7 @@ QuadSetTopologyContainer::QuadID QuadSetTopologyContainer::getQuadIndex(PointID 
 
 Size QuadSetTopologyContainer::getNumberOfQuads() const
 {
-    helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
+    const helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
     return sofa::Size(m_quad.size());
 }
 
@@ -355,7 +358,7 @@ const QuadSetTopologyContainer::EdgesInQuad &QuadSetTopologyContainer::getEdgesI
     if (id < m_edgesInQuad.size())
         return m_edgesInQuad[id];
 
-    return InvalidQuad;
+    return InvalidEdgesInQuad;
 }
 
 int QuadSetTopologyContainer::getVertexIndexInQuad(const Quad &t, PointID vertexIndex) const
@@ -418,7 +421,7 @@ bool QuadSetTopologyContainer::checkTopology() const
     }
 
 	bool ret = true;
-	helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
+    const helper::ReadAccessor< Data< sofa::type::vector<Quad> > > m_quad = d_quad;
 
 	if (hasQuadsAroundVertex())
 	{
@@ -468,8 +471,7 @@ bool QuadSetTopologyContainer::checkTopology() const
 
 bool QuadSetTopologyContainer::checkConnexity()
 {
-
-    size_t nbr = this->getNbQuads();
+    const size_t nbr = this->getNbQuads();
 
     if (nbr == 0)
     {
@@ -477,11 +479,11 @@ bool QuadSetTopologyContainer::checkConnexity()
         return false;
     }
 
-    VecQuadID elemAll = this->getConnectedElement(0);
+    const VecQuadID elemAll = this->getConnectedElement(0);
 
     if (elemAll.size() != nbr)
     {
-        msg_warning() << "CheckConnexity: Quads are missings. There is more than one connexe component.";
+        msg_warning() << "CheckConnexity: Quads are missing. There is more than one connexe component.";
         return false;
     }
 
@@ -491,7 +493,7 @@ bool QuadSetTopologyContainer::checkConnexity()
 
 Size QuadSetTopologyContainer::getNumberOfConnectedComponent()
 {
-    auto nbr = this->getNbQuads();
+    const auto nbr = this->getNbQuads();
 
     if (nbr == 0)
     {
@@ -536,7 +538,7 @@ const QuadSetTopologyContainer::VecQuadID QuadSetTopologyContainer::getConnected
     VecQuadID elemOnFront, elemPreviousFront, elemNextFront;
     bool end = false;
     size_t cpt = 0;
-    size_t nbr = this->getNbQuads();
+    const size_t nbr = this->getNbQuads();
 
     // init algo
     elemAll.push_back(elem);
@@ -744,7 +746,7 @@ void QuadSetTopologyContainer::setQuadTopologyToDirty()
 
     // set all engines link to this container to dirty
     auto& quadTopologyHandlerList = getTopologyHandlerList(sofa::geometry::ElementType::QUAD);
-    for (auto topoHandler : quadTopologyHandlerList)
+    for (const auto topoHandler : quadTopologyHandlerList)
     {
         topoHandler->setDirtyValue();
         msg_info() << "Quad Topology Set dirty engine: " << topoHandler->getName();
@@ -758,7 +760,7 @@ void QuadSetTopologyContainer::cleanQuadTopologyFromDirty()
 
     // security, clean all engines to avoid loops
     auto& quadTopologyHandlerList = getTopologyHandlerList(sofa::geometry::ElementType::QUAD);
-    for (auto topoHandler : quadTopologyHandlerList)
+    for (const auto topoHandler : quadTopologyHandlerList)
     {
         if (topoHandler->isDirty())
         {
@@ -778,6 +780,19 @@ bool QuadSetTopologyContainer::linkTopologyHandlerToData(core::topology::Topolog
     else
     {
         return EdgeSetTopologyContainer::linkTopologyHandlerToData(topologyHandler, elementType);
+    }
+}
+
+bool QuadSetTopologyContainer::unlinkTopologyHandlerToData(core::topology::TopologyHandler* topologyHandler, sofa::geometry::ElementType elementType)
+{
+    if (elementType == sofa::geometry::ElementType::QUAD)
+    {
+        d_quad.delOutput(topologyHandler);
+        return true;
+    }
+    else
+    {
+        return EdgeSetTopologyContainer::unlinkTopologyHandlerToData(topologyHandler, elementType);
     }
 }
 

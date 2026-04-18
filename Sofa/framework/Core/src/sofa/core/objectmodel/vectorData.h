@@ -51,6 +51,7 @@ class vectorData : public type::vector< core::objectmodel::Data<T>* > {
 public:
 
     typedef type::vector< core::objectmodel::Data<T>* > Inherit;
+    using size_type = typename Inherit::size_type;
 
     /// 'dataEngineInOut' is only valid if 'component' is a DataEngine
     vectorData(core::objectmodel::Base* component, std::string const& name, std::string const& help, DataEngineDataType dataEngineDataType= DataEngineDataType::DataEngineNothing, const T& defaultValue=T())
@@ -85,7 +86,7 @@ public:
     {
         const char* p = arg->getAttribute(size.getName().c_str());
         if (p) {
-            std::string nbStr = p;
+            const std::string nbStr = p;
             size.read(nbStr);
             resize(size.getValue());
         }
@@ -94,22 +95,24 @@ public:
 
     void parseFieldsSizeData(const std::map<std::string,std::string*>& str, Data<unsigned int>& size)
     {
-        std::map<std::string,std::string*>::const_iterator it = str.find(size.getName());
+        const std::map<std::string,std::string*>::const_iterator it = str.find(size.getName());
         if (it != str.end() && it->second)
         {
-            std::string nbStr = *it->second;
+            const std::string nbStr = *it->second;
             size.read(nbStr);
             resize(size.getValue());
         }
     }
 
-    void resize(const unsigned int size)
+    void resize(const unsigned int count)
     {
         core::DataEngine* componentAsDataEngine = m_dataEngineDataType!= DataEngineDataType::DataEngineNothing ? m_component->toDataEngine() : nullptr;
 
-        if (size < this->size()) {
+        if (count < this->size())
+        {
             // removing some data if size is inferior than current size
-            for (unsigned int i=size; i<this->size(); ++i) {
+            for (size_type i = count; i < this->size(); ++i)
+            {
                 if (componentAsDataEngine!=nullptr)
                 {
                     if(m_dataEngineDataType== DataEngineDataType::DataEngineInput) componentAsDataEngine->delInput((*this)[i]);
@@ -117,12 +120,12 @@ public:
                 }
                 delete (*this)[i];
             }
-            if( size ) Inherit::resize(size);
+            if( count ) Inherit::resize(count);
             else Inherit::clear();
         }
         else
         {
-            for (unsigned int i=this->size(); i<size; ++i)
+            for (size_type i=this->size(); i<count; ++i)
             {
                 std::ostringstream oname, ohelp;
                 oname << m_name << (i+1);
@@ -144,7 +147,7 @@ public:
     /// merging several Data from a VectorData into a large Data (of the same type)
     static void merge(Data<T>& outputData, const vectorData<T>& vectorData)
     {
-        size_t nbInput = vectorData.size();
+        const size_t nbInput = vectorData.size();
         size_t nbElems = 0;
 
         for( size_t i=0 ; i<nbInput ; ++i )

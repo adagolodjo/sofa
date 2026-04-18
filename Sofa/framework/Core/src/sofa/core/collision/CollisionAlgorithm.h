@@ -19,24 +19,17 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_COLLISION_COLLISIONALGORITHM_H
-#define SOFA_CORE_COLLISION_COLLISIONALGORITHM_H
+#pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 
-namespace sofa
+namespace sofa::core::collision
 {
 
-namespace core
-{
-
-namespace collision
-{
-
-class CollisionAlgorithm : public virtual objectmodel::BaseObject
+class CollisionAlgorithm : public virtual objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(CollisionAlgorithm, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(CollisionAlgorithm, objectmodel::BaseComponent);
 
     /// Collision 'pipeline' instance, allowing to store multiple internal states
     typedef void* Instance;
@@ -61,11 +54,4 @@ public:
 protected:
     virtual void changeInstance(Instance)=0;
 };
-
-} // namespace collision
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core::collision

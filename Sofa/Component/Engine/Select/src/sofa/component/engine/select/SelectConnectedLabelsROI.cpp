@@ -21,19 +21,21 @@
 ******************************************************************************/
 #define SelectConnectedLabelsROI_CPP_
 
-#include "SelectConnectedLabelsROI.h"
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/component/engine/select/SelectConnectedLabelsROI.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/ObjectFactory.h>
 
 namespace sofa::component::engine::select
 {
 
-int SelectConnectedLabelsROIClass = core::RegisterObject("Select a subset of points or cells labeled from different sources, that are connected given a list of connection pairs")
+void registerSelectConnectedLabelsROI(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Select a subset of points or cells labeled from different sources, that are connected given a list of connection pairs.")
         .add< SelectConnectedLabelsROI<unsigned int> >(true)
         .add< SelectConnectedLabelsROI<unsigned char> >()
         .add< SelectConnectedLabelsROI<unsigned short> >()
-        .add< SelectConnectedLabelsROI<int> >()
-        ;
+        .add< SelectConnectedLabelsROI<int> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_SELECT_API SelectConnectedLabelsROI<unsigned int>;
 template class SOFA_COMPONENT_ENGINE_SELECT_API SelectConnectedLabelsROI<unsigned char>;

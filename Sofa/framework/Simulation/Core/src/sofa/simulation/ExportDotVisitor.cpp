@@ -83,7 +83,7 @@ bool ExportDotVisitor::display(Node* node, const char **color)
 }
 
 /// Test if an object should be displayed
-bool ExportDotVisitor::display(core::objectmodel::BaseObject* obj, const char **color)
+bool ExportDotVisitor::display(core::objectmodel::BaseComponent* obj, const char **color)
 {
     using namespace Colors;
     const char* c = nullptr;
@@ -176,7 +176,7 @@ bool ExportDotVisitor::display(core::objectmodel::BaseObject* obj, const char **
 /// Find the node or object a given object should be attached to.
 /// This is the parent node if it is displayed, otherwise it is the attached MechanicalState or Solver.
 /// Returns an empty string if not found.
-std::string ExportDotVisitor::getParentName(core::objectmodel::BaseObject* obj)
+std::string ExportDotVisitor::getParentName(core::objectmodel::BaseComponent* obj)
 {
     if (!obj) return "";
     Node* node = dynamic_cast<Node*>(obj->getContext());
@@ -211,20 +211,20 @@ std::string ExportDotVisitor::getParentName(core::objectmodel::BaseObject* obj)
 std::string ExportDotVisitor::getName(core::objectmodel::Base* o, std::string prefix)
 {
     if (!o) return "";
-    if (names.count(o)>0)
+    if (names.contains(o))
         return names[o];
-    std::string oname = o->getName();
+    const std::string oname = o->getName();
     std::string name = prefix;
     for (unsigned i = 0; i<oname.length(); i++)
     {
-        char c = oname[i];
+        const char c = oname[i];
         static const char *chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         if (strchr(chars, c))
             name += c;
     }
     if (name.length() > prefix.length())
         name += '_';
-    int index = nextIndex[name]++;
+    const int index = nextIndex[name]++;
     if (index)
     {
         char str[16]={"azertyazertyaze"};
@@ -242,12 +242,12 @@ std::string ExportDotVisitor::getName(core::objectmodel::BaseNode* node)
 }
 
 /// Compute the name of a given object
-std::string ExportDotVisitor::getName(core::objectmodel::BaseObject* obj)
+std::string ExportDotVisitor::getName(core::objectmodel::BaseComponent* obj)
 {
     return getName(obj, "o_");
 }
 
-void ExportDotVisitor::processObject(Node* /*node*/, core::objectmodel::BaseObject* obj)
+void ExportDotVisitor::processObject(Node* /*node*/, core::objectmodel::BaseComponent* obj)
 {
     //std::cout << ' ' << obj->getName() << '(' << sofa::helper::gettypename(typeid(*obj)) << ')';
     const char* color=nullptr;
@@ -300,12 +300,12 @@ void ExportDotVisitor::processObject(Node* /*node*/, core::objectmodel::BaseObje
         core::BaseMapping* map = obj->toBaseMapping();
         if (map!=nullptr)
         {
-            core::objectmodel::BaseObject* model1 = map->getFrom()[0];
-            core::objectmodel::BaseObject* model2 = map->getTo()[0];
+            core::objectmodel::BaseComponent* model1 = map->getFrom()[0];
+            core::objectmodel::BaseComponent* model2 = map->getTo()[0];
             if (display(model1))
             {
                 *out << getName(model1) << " -> " << name << " [style=\"dashed\",arrowhead=\"none\"";
-                core::BaseMapping* bmm = obj->toBaseMapping();
+                const core::BaseMapping* bmm = obj->toBaseMapping();
                 if (bmm)
                 {
                     if(bmm->isMechanical())
@@ -330,7 +330,7 @@ simulation::Visitor::Result ExportDotVisitor::processNodeTopDown(Node* node)
         if (labelNodeClass)
         {
             std::string name = helper::gettypename(typeid(*node));
-            std::string::size_type pos = name.find('<');
+            const std::string::size_type pos = name.find('<');
             if (pos != std::string::npos)
                 name.erase(pos);
             *out << name;

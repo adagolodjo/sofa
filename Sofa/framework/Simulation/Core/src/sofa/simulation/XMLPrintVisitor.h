@@ -27,10 +27,7 @@
 #include <sofa/simulation/Visitor.h>
 
 
-namespace sofa
-{
-
-namespace simulation
+namespace sofa::simulation
 {
 
 
@@ -40,7 +37,7 @@ protected:
     std::ostream& m_out;
     int level;
 public:
-    XMLPrintVisitor(const sofa::core::ExecParams* params, std::ostream& out) : Visitor(params), m_out(out),level(0) {}
+    XMLPrintVisitor(const sofa::core::ExecParams* eparams, std::ostream& out) : Visitor(eparams), m_out(out),level(0) {}
 
     template<class T>
     void processObject(T obj);
@@ -48,7 +45,7 @@ public:
     template<class Seq>
     void processObjects(Seq& list);
 
-    void processBaseObject(sofa::core::objectmodel::BaseObject* obj);
+    void processBaseObject(sofa::core::objectmodel::BaseComponent* obj);
 
     Result processNodeTopDown(simulation::Node* node) override;
     void processNodeBottomUp(simulation::Node* node) override;
@@ -58,8 +55,7 @@ public:
 	bool treeTraversal(TreeTraversalRepetition& repeat) override;
 };
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

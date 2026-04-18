@@ -21,7 +21,6 @@
 ******************************************************************************/
 #pragma once
 #include <sofa/component/io/mesh/config.h>
-
 #include <sofa/core/loader/VoxelLoader.h>
 
 namespace sofa::component::io::mesh
@@ -49,8 +48,8 @@ public:
     bool load() override;
     bool canLoad() override;
 
-    void setVoxelSize ( const type::Vector3 vSize );
-    type::Vector3 getVoxelSize () const override;
+    void setVoxelSize ( const type::Vec3 vSize );
+    type::Vec3 getVoxelSize () const override;
 
     void addBackgroundValue ( const int value );
     int getBackgroundValue( const unsigned int idx = 0) const;
@@ -69,20 +68,20 @@ public:
 
     Vec6i getROI() const override;
 
-    // fill the texture by 'image' only where there is the 'segmentation' of 'activeValue' and give the 3D texture sizes
+    // fill the texture by 'image' only where there is the 'segmentation' of 'd_activeValue' and give the 3D texture sizes
     void createSegmentation3DTexture( unsigned char **textureData, int& width, int& height, int& depth) override;
 
-    Data< type::Vector3 > voxelSize; ///< Dimension of one voxel
-    Data< Vec3i > dataResolution; ///< Resolution of the voxel file
-    Data< Vec6i > roi; ///< Region of interest (xmin, ymin, zmin, xmax, ymax, zmax)
-    Data< int > headerSize; ///< Header size in bytes
-    Data< int > segmentationHeaderSize; ///< Header size in bytes
-    Data< type::vector<unsigned int> > idxInRegularGrid; ///< indices of the hexa in the grid.
+    Data< type::Vec3 > d_voxelSize; ///< Dimension of one voxel
+    Data< Vec3i > d_dataResolution; ///< Resolution of the voxel file
+    Data< Vec6i > d_roi; ///< Region of interest (xmin, ymin, zmin, xmax, ymax, zmax)
+    Data< int > d_headerSize; ///< Header size in bytes
+    Data< int > d_segmentationHeaderSize; ///< Header size in bytes
+    Data< type::vector<unsigned int> > d_idxInRegularGrid; ///< indices of the hexa in the grid.
 
-    Data< type::vector<int> > backgroundValue; ///< Background values (to be ignored)
-    Data< type::vector<int> > activeValue; ///< Active data values
+    Data< type::vector<int> > d_backgroundValue; ///< Background values (to be ignored)
+    Data< type::vector<int> > d_activeValue; ///< Active data values
 
-    Data<bool> generateHexa; ///< Interpret voxel as either hexa or points
+    Data<bool> d_generateHexa; ///< Interpret voxel as either hexa or points
 
 private:
     void setResolution ( const Vec3i res );

@@ -11,7 +11,7 @@
 #include "../labelimagetoolboxaction.h"
 //#include "zonegeneratorimagetoolbox.h"
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 namespace sofa
 {
@@ -25,8 +25,6 @@ class SOFA_IMAGE_GUI_API ZoneGeneratorImageToolBoxNoTemplated;
 }}}
 
 namespace sofa
-{
-namespace gui
 {
 namespace qt
 {
@@ -78,7 +76,6 @@ private:
     
 };
 
-}
 }
 }
 

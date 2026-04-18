@@ -38,8 +38,7 @@ protected:
 public:
     virtual std::string getOperationType()=0;
 
-
-    core::objectmodel::Data<sofa::helper::OptionsGroup> button; ///< Mouse button used
+    core::objectmodel::Data<sofa::helper::OptionsGroup> d_button; ///< Mouse button used
 
 };
 

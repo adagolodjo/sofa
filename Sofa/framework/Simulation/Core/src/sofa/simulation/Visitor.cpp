@@ -42,10 +42,10 @@ void Visitor::execute(sofa::core::objectmodel::BaseContext* c, bool precomputedO
     c->executeVisitor(this, precomputedOrder);
 }
 
-//method to compare the tags of the objet with the ones of the visitor
+//method to compare the tags of the object with the ones of the visitor
 // return true if the object has all the tags of the visitor
 // or if no tag is set to the visitor
-bool Visitor::testTags(core::objectmodel::BaseObject* obj)
+bool Visitor::testTags(core::objectmodel::BaseComponent* obj)
 {
     if(subsetsToManage.empty())
         return true;
@@ -235,7 +235,7 @@ void Visitor::printCloseNode(const char* type)
 
 #endif
 
-simulation::Visitor::ctime_t Visitor::begin(simulation::Node* /*node*/, core::objectmodel::BaseObject*
+simulation::Visitor::ctime_t Visitor::begin(simulation::Node* /*node*/, core::objectmodel::BaseComponent*
 #ifdef SOFA_DUMP_VISITOR_INFO
         obj
 #endif
@@ -261,7 +261,7 @@ simulation::Visitor::ctime_t Visitor::begin(simulation::Node* /*node*/, core::ob
 
 /// Optional helper method to call after handling an object if not using the for_each method.
 /// It currently takes care of time logging, but could be extended (step-by-step execution for instance)
-void Visitor::end(simulation::Node* /*node*/, core::objectmodel::BaseObject* /*obj*/, ctime_t)
+void Visitor::end(simulation::Node* /*node*/, core::objectmodel::BaseComponent* /*obj*/, ctime_t)
 {
 #ifdef SOFA_DUMP_VISITOR_INFO
     if (printActivated)
@@ -271,17 +271,17 @@ void Visitor::end(simulation::Node* /*node*/, core::objectmodel::BaseObject* /*o
 #endif
 }
 
-simulation::Visitor::ctime_t Visitor::begin(simulation::Visitor::VisitorContext* vc, core::objectmodel::BaseObject* obj, const std::string &info)
+simulation::Visitor::ctime_t Visitor::begin(simulation::Visitor::VisitorContext* vc, core::objectmodel::BaseComponent* obj, const std::string &info)
 {
     return begin(vc->node, obj, info);
 }
 
-void Visitor::end(simulation::Visitor::VisitorContext* vc, core::objectmodel::BaseObject* obj, ctime_t t0)
+void Visitor::end(simulation::Visitor::VisitorContext* vc, core::objectmodel::BaseComponent* obj, ctime_t t0)
 {
     end(vc->node, obj, t0);
 }
 
-void Visitor::debug_write_state_before( core::objectmodel::BaseObject* obj )
+void Visitor::debug_write_state_before( core::objectmodel::BaseComponent* obj )
 {
     if( dynamic_cast<VisualVisitor*>(this) ) return;
     std::stringstream tmp;
@@ -289,21 +289,21 @@ void Visitor::debug_write_state_before( core::objectmodel::BaseObject* obj )
     if( core::behavior::BaseMechanicalState* dof = obj->getContext()->getMechanicalState() )
     {
         tmp<<", state:\nx= ";
-        dof->writeVec(core::VecId::position(), tmp);
+        dof->writeVec(sofa::core::vec_id::read_access::position, tmp);
 
         tmp<<"\nv= ";
-        dof->writeVec(core::VecId::velocity(), tmp);
+        dof->writeVec(sofa::core::vec_id::read_access::velocity, tmp);
 
         tmp<<"\ndx= ";
-        dof->writeVec(core::VecId::dx(), tmp);
+        dof->writeVec(sofa::core::vec_id::read_access::dx, tmp);
 
         tmp<<"\nf= ";
-        dof->writeVec(core::VecId::force(), tmp);
+        dof->writeVec(sofa::core::vec_id::read_access::force, tmp);
     }
     dmsg_info("Visitor(debug)") << tmp.str() ;
 }
 
-void Visitor::debug_write_state_after( core::objectmodel::BaseObject* obj )
+void Visitor::debug_write_state_after( core::objectmodel::BaseComponent* obj )
 {
     if( dynamic_cast<VisualVisitor*>(this) ) return;
     std::stringstream tmp ;
@@ -311,16 +311,16 @@ void Visitor::debug_write_state_after( core::objectmodel::BaseObject* obj )
     if( core::behavior::BaseMechanicalState* dof = obj->getContext()->getMechanicalState() )
     {
         tmp<<", state:\nx= ";
-        dof->writeVec(core::VecId::position(), tmp);
+        dof->writeVec(sofa::core::vec_id::read_access::position, tmp);
 
         tmp<<"\nv= ";
-        dof->writeVec(core::VecId::velocity(), tmp);
+        dof->writeVec(sofa::core::vec_id::read_access::velocity, tmp);
 
         tmp<<"\ndx= ";
-        dof->writeVec(core::VecId::dx(), tmp);
+        dof->writeVec(sofa::core::vec_id::read_access::dx, tmp);
 
         tmp<<"\nf= ";
-        dof->writeVec(core::VecId::force(), tmp);
+        dof->writeVec(sofa::core::vec_id::read_access::force, tmp);
     }
     dmsg_info("Visitor(debug)") << tmp.str() ;
 }

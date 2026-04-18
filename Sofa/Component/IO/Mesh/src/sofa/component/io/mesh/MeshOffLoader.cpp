@@ -31,9 +31,11 @@ using namespace sofa::type;
 using namespace sofa::defaulttype;
 using namespace sofa::helper;
 
-int MeshOffLoaderClass = core::RegisterObject("Specific mesh loader for Off file format.")
-        .add< MeshOffLoader >()
-        ;
+void registerMeshOffLoader(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Specific mesh loader for Off file format.")
+        .add< MeshOffLoader >());
+}
 
 bool MeshOffLoader::doLoad()
 {
@@ -79,8 +81,8 @@ bool MeshOffLoader::readOFF (std::ifstream &file, const char* /* filename */ )
     size_t numberOfVertices = 0, numberOfFaces = 0, numberOfEdges = 0;
     size_t currentNumberOfVertices = 0, currentNumberOfFaces = 0;
     Vec3d vertex;
-    Triangle triangle;
-    Quad quad;
+    topology::Triangle triangle;
+    topology::Quad quad;
     std::string line;
 
     while( !file.eof() && (numberOfVertices == 0) )
@@ -111,7 +113,7 @@ bool MeshOffLoader::readOFF (std::ifstream &file, const char* /* filename */ )
         std::istringstream values(line);
 
         values >> vertex[0] >> vertex[1] >> vertex[2];
-        my_positions.push_back(Vector3(vertex[0],vertex[1], vertex[2]));
+        my_positions.push_back(Vec3(vertex[0],vertex[1], vertex[2]));
 
         currentNumberOfVertices++;
     }

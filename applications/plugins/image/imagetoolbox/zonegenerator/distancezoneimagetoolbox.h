@@ -5,13 +5,13 @@
 #include "zonegeneratorimagetoolbox.h"
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <image/ImageTypes.h>
 
 #include "../labelimagetoolbox.h"
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 namespace sofa
 {
@@ -24,7 +24,7 @@ namespace engine
 
 using type::vector;
 using type::Vec;
-using type::Vector3;
+using type::Vec3;
 using namespace sofa::type;
 using namespace sofa::defaulttype;
 
@@ -72,9 +72,9 @@ public:
         addOutput(&d_vecPixCoord);*/
     }
     
-    sofa::gui::qt::LabelImageToolBoxAction* createTBAction(QWidget*parent=nullptr) override
+    sofa::qt::LabelImageToolBoxAction* createTBAction(QWidget*parent=nullptr) override
     {
-        return new sofa::gui::qt::DistanceZoneImageToolBoxAction(this,parent);
+        return new sofa::qt::DistanceZoneImageToolBoxAction(this,parent);
     }
     
     

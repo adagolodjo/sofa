@@ -46,8 +46,6 @@ public:
     typedef typename Vector::Real Real;
     typedef sofa::component::linearsolver::MatrixLinearSolver<TMatrix,TVector> Inherit;
 
-    Data<bool> f_verbose; ///< Dump system state at each iteration
-
     CholeskySolver();
 
     /// Compute x such as Mx=b. M is not used, it must have been factored before using method invert(Matrix& M)
@@ -60,7 +58,7 @@ private :
     linearalgebra::FullMatrix<typename Vector::Real> L;
 };
 
-#if  !defined(SOFA_COMPONENT_LINEARSOLVER_CHOLESKYSOLVER_CPP)
+#if !defined(SOFA_COMPONENT_LINEARSOLVER_CHOLESKYSOLVER_CPP)
 extern template class SOFA_COMPONENT_LINEARSOLVER_DIRECT_API CholeskySolver< linearalgebra::SparseMatrix<SReal>, linearalgebra::FullVector<SReal> >;
 extern template class SOFA_COMPONENT_LINEARSOLVER_DIRECT_API CholeskySolver< linearalgebra::FullMatrix<SReal>, linearalgebra::FullVector<SReal> >;
 

@@ -38,7 +38,7 @@ namespace component
 namespace forcefield
 {
 
-/// This class can be overridden if needed for additionnal storage within template specializations.
+/// This class can be overridden if needed for additional storage within template specializations.
 template<class DataTypes>
 class DistanceGridForceFieldInternalData
 {
@@ -62,7 +62,7 @@ public:
     typedef container::DistanceGrid DistanceGrid;
 
 protected:
-    DistanceGrid* grid;
+    std::shared_ptr<DistanceGrid> grid;
 
     class Contact
     {
@@ -166,11 +166,11 @@ public:
     Data<bool> drawPoints; ///< enable/disable drawing of distancegrid
     Data<Real> drawSize; ///< display size if draw is enabled
 
-    /// optional range of local DOF indices. Any computation involving only indices outside of this range are discarded (useful for parallelization using mesh partitionning)
+    /// optional range of local DOF indices. Any computation involving only indices outside of this range are discarded (useful for parallelization using mesh partitioning)
     Data< type::Vec<2,int> > localRange;
 protected:
     DistanceGridForceField()
-        : grid(NULL)
+        : grid(nullptr)
         , fileDistanceGrid( initData( &fileDistanceGrid, "filename", "load distance grid from specified file"))
         , scale( initData( &scale, 1.0, "scale", "scaling factor for input file"))
         , box( initData( &box, "box", "Field bounding box defined by xmin,ymin,zmin, xmax,ymax,zmax") )
@@ -189,7 +189,7 @@ protected:
         , bDraw(initData(&bDraw, false, "draw", "enable/disable drawing of distancegrid"))
         , drawPoints(initData(&drawPoints, false, "drawPoints", "enable/disable drawing of distancegrid"))
         , drawSize(initData(&drawSize, (Real)10.0f, "drawSize", "display size if draw is enabled"))
-        , localRange( initData(&localRange, type::Vec<2,int>(-1,-1), "localRange", "optional range of local DOF indices. Any computation involving only indices outside of this range are discarded (useful for parallelization using mesh partitionning)" ) )
+        , localRange( initData(&localRange, type::Vec<2,int>(-1,-1), "localRange", "optional range of local DOF indices. Any computation involving only indices outside of this range are discarded (useful for parallelization using mesh partitioning)" ) )
     {
         this->addAlias(&stiffnessIn,"stiffness");
         this->addAlias(&stiffnessOut,"stiffness");

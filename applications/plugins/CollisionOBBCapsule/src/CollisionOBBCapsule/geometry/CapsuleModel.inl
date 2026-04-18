@@ -47,8 +47,12 @@ CapsuleCollisionModel<DataTypes>::CapsuleCollisionModel(core::behavior::Mechanic
     enum_type = CAPSULE_TYPE;
 }
 
+template <class TDataTypes>
+CapsuleCollisionModel<TDataTypes>::~CapsuleCollisionModel()
+{}
+
 template<class DataTypes>
-void CapsuleCollisionModel<DataTypes>::resize(Size size)
+void CapsuleCollisionModel<DataTypes>::resize(sofa::Size size)
 {
     this->core::CollisionModel::resize(size);
     _capsule_points.resize(size);
@@ -99,7 +103,7 @@ void CapsuleCollisionModel<DataTypes>::init()
     auto nbEdges = bmt->getNbEdges();
     resize( nbEdges );
 
-    for(Size i = 0; i < nbEdges; ++i)
+    for(sofa::Size i = 0; i < nbEdges; ++i)
     {
         _capsule_points[i].first = bmt->getEdge(i)[0];
         _capsule_points[i].second= bmt->getEdge(i)[1];
@@ -109,7 +113,7 @@ void CapsuleCollisionModel<DataTypes>::init()
 template <class DataTypes>
 Size CapsuleCollisionModel<DataTypes>::nbCap()const
 {
-    return Size(_capsule_radii.getValue().size());
+    return sofa::Size(_capsule_radii.getValue().size());
 }
 
 template <class DataTypes>
@@ -137,14 +141,14 @@ void CapsuleCollisionModel<DataTypes>::computeBoundingTree(int maxDepth)
         typename TCapsule<DataTypes>::Real r;
 
         //const typename TCapsule<DataTypes>::Real distance = (typename TCapsule<DataTypes>::Real)this->proximity.getValue();
-        for (Size i=0; i<ncap; i++)
+        for (sofa::Size i=0; i<ncap; i++)
         {
             const Coord p1 = point1(i);
             const Coord p2 = point2(i);
             r = radius(i);
 
-            Vector3 maxVec;
-            Vector3 minVec;
+            Vec3 maxVec;
+            Vec3 minVec;
 
             for(int dim = 0 ; dim < 3 ; ++dim){
                 if(p1(dim) > p2(dim)){
@@ -173,28 +177,23 @@ void CapsuleCollisionModel<DataTypes>::draw(const core::visual::VisualParams* vp
 }
 
 template<class DataTypes>
-void CapsuleCollisionModel<DataTypes>::draw(const core::visual::VisualParams* vparams)
+void CapsuleCollisionModel<DataTypes>::drawCollisionModel(const core::visual::VisualParams* vparams)
 {
     auto df = sofa::core::visual::visualparams::getDisplayFlags(vparams);
     auto dt = sofa::core::visual::visualparams::getDrawTool(vparams);
-    if (df.getShowCollisionModels())
+    sofa::type::RGBAColor col4f(getColor4f()[0], getColor4f()[1], getColor4f()[2], getColor4f()[3]);
+    dt->setPolygonMode(0, df.getShowWireFrame());  // maybe ??
+    dt->setLightingEnabled(true);                  // Enable lightning
+
+    // Check topological modifications
+    // const int npoints = _mstate->getSize()/2;
+
+    for (sofa::Size i = 0; i < size; i++)
     {
-        sofa::type::RGBAColor col4f(getColor4f()[0], getColor4f()[1], getColor4f()[2], getColor4f()[3]);
-        dt->setPolygonMode(0,df.getShowWireFrame());//maybe ??
-        dt->setLightingEnabled(true); //Enable lightning
-
-        // Check topological modifications
-        //const int npoints = _mstate->getSize()/2;
-
-        for (Size i=0; i<size; i++){
-            dt->drawCapsule(point1(i),point2(i),(float)radius(i),col4f);
-        }
-
-        dt->setLightingEnabled(false); //Disable lightning
+        dt->drawCapsule(point1(i), point2(i), (float)radius(i), col4f);
     }
 
-    if (getPrevious()!=nullptr && df.getShowBoundingCollisionModels())
-        getPrevious()->draw(vparams);
+    dt->setLightingEnabled(false);  // Disable lightning
 
     dt->setPolygonMode(0,false);
 }
@@ -208,7 +207,7 @@ typename CapsuleCollisionModel<DataTypes>::Real CapsuleCollisionModel<DataTypes>
 
 template <class DataTypes>
 inline const typename CapsuleCollisionModel<DataTypes>::Coord & CapsuleCollisionModel<DataTypes>::point(Index i)const{
-    return this->_mstate->read(core::ConstVecCoordId::position())->getValue()[i];
+    return DataTypes::getCPos(this->_mstate->read(core::vec_id::read_access::position)->getValue()[i]);
 }
 
 template <class DataTypes>
@@ -261,11 +260,11 @@ typename TCapsule<DataTypes>::Real TCapsule<DataTypes>::radius() const
 
 
 template<class DataTypes>
-typename CapsuleCollisionModel<DataTypes>::Deriv CapsuleCollisionModel<DataTypes>::velocity(Index index) const { return ((_mstate->read(core::ConstVecDerivId::velocity())->getValue())[_capsule_points[index].first] +
-                                                                                       (_mstate->read(core::ConstVecDerivId::velocity())->getValue())[_capsule_points[index].second])/2.0;}
+typename CapsuleCollisionModel<DataTypes>::Deriv CapsuleCollisionModel<DataTypes>::velocity(Index index) const { return ((_mstate->read(core::vec_id::read_access::velocity)->getValue())[_capsule_points[index].first] +
+                                                                                       (_mstate->read(core::vec_id::read_access::velocity)->getValue())[_capsule_points[index].second])/2.0;}
 
 template<class DataTypes>
-typename TCapsule<DataTypes>::Coord TCapsule<DataTypes>::v() const {return this->model->velocity(this->index);}
+typename TCapsule<DataTypes>::Deriv TCapsule<DataTypes>::v() const {return this->model->velocity(this->index);}
 
 template<class DataTypes>
 typename CapsuleCollisionModel<DataTypes>::Coord CapsuleCollisionModel<DataTypes>::axis(Index index) const {

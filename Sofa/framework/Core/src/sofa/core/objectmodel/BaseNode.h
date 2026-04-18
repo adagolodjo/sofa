@@ -19,19 +19,13 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_OBJECTMODEL_BASENODE_H
-#define SOFA_CORE_OBJECTMODEL_BASENODE_H
+#pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/objectmodel/TypeOfInsertion.h>
+#include <sofa/core/visual/BaseVisualStyle.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace objectmodel
+namespace sofa::core::objectmodel
 {
 
 /**
@@ -91,13 +85,13 @@ public:
     virtual void moveChild(BaseNode::SPtr node) = 0;
 
     /// Add a generic object
-    virtual bool addObject(BaseObject::SPtr obj, TypeOfInsertion = TypeOfInsertion::AtEnd) = 0;
+    virtual bool addObject(sofa::core::objectmodel::BaseComponent::SPtr obj, TypeOfInsertion = TypeOfInsertion::AtEnd) = 0;
 
     /// Remove a generic object
-    virtual bool removeObject(BaseObject::SPtr obj) = 0;
+    virtual bool removeObject(sofa::core::objectmodel::BaseComponent::SPtr obj) = 0;
 
     /// Move an object from a node to another node
-    virtual void moveObject(BaseObject::SPtr obj) = 0;
+    virtual void moveObject(sofa::core::objectmodel::BaseComponent::SPtr obj) = 0;
 
     /// Test if the given node is a parent of this node.
     virtual bool hasParent(const BaseNode* node) const = 0;
@@ -140,13 +134,13 @@ private:
     /// @}
 protected:
     /// Set the context of an object to this
-    void setObjectContext(BaseObject::SPtr obj);
+    void setObjectContext(sofa::core::objectmodel::BaseComponent::SPtr obj);
 
     /// Reset the context of an object
-    void clearObjectContext(BaseObject::SPtr obj);
+    void clearObjectContext(sofa::core::objectmodel::BaseComponent::SPtr obj);
 
 
-    /// @name virtual functions to add/remove special components direclty in the right Sequence
+    /// @name virtual functions to add/remove special components directly in the right Sequence
     /// Note it is useful for Node, but is not mandatory for every BaseNode Inheritances
     /// so the default implementation does nothing
     /// @{
@@ -179,6 +173,7 @@ public:
      BASENODE_ADD_SPECIAL_COMPONENT( core::objectmodel::ConfigurationSetting, ConfigurationSetting, configurationSetting )
      BASENODE_ADD_SPECIAL_COMPONENT( core::visual::Shader, Shader, shaders )
      BASENODE_ADD_SPECIAL_COMPONENT( core::visual::VisualModel, VisualModel, visualModel )
+     BASENODE_ADD_SPECIAL_COMPONENT( core::visual::BaseVisualStyle, VisualStyle, visualStyle )
      BASENODE_ADD_SPECIAL_COMPONENT( core::visual::VisualManager, VisualManager, visualManager )
      BASENODE_ADD_SPECIAL_COMPONENT( core::CollisionModel, CollisionModel, collisionModel )
      BASENODE_ADD_SPECIAL_COMPONENT( core::collision::Pipeline, CollisionPipeline, collisionPipeline )
@@ -188,11 +183,5 @@ public:
     /// @}
 
 };
+} // namespace sofa::core::objectmodel
 
-} // namespace objectmodel
-
-} // namespace core
-
-} // namespace sofa
-
-#endif

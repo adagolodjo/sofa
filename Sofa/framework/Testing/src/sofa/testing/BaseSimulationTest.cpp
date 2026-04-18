@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -28,20 +28,17 @@ using sofa::core::execparams::defaultInstance;
 using sofa::simulation::SceneLoaderFactory ;
 using sofa::simulation::SceneLoader ;
 
-#include <SofaSimulationGraph/DAGSimulation.h>
-#include <SofaSimulationCommon/SceneLoaderXML.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
+#include <sofa/simulation/common/SceneLoaderXML.h>
 using sofa::simulation::SceneLoaderXML ;
 
 #include <sofa/helper/system/PluginManager.h>
 using sofa::helper::system::PluginManager ;
 
+#include <sofa/simpleapi/SimpleApi.h>
+
 namespace sofa::testing
 {
-
-bool BaseSimulationTest::importPlugin(const std::string& name)
-{
-    return PluginManager::getInstance().loadPlugin(name) ;
-}
 
 BaseSimulationTest::SceneInstance::SceneInstance(const std::string& type, const std::string& desc)
 {
@@ -50,18 +47,13 @@ BaseSimulationTest::SceneInstance::SceneInstance(const std::string& type, const 
         return ;
     }
 
-    if(simulation::getSimulation() == nullptr)
-        simulation::setSimulation(new simulation::graph::DAGSimulation()) ;
-
-    simulation = simulation::getSimulation() ;
-    root = SceneLoaderXML::loadFromMemory("dynamicscene", desc.c_str(), desc.size()) ;
+    root = SceneLoaderXML::loadFromMemory("dynamicscene", desc.c_str()) ;
 }
 
 BaseSimulationTest::SceneInstance BaseSimulationTest::SceneInstance::LoadFromFile(const std::string& filename)
 {
     BaseSimulationTest::SceneInstance instance ;
-    if(simulation::getSimulation() == nullptr)
-        simulation::setSimulation(new simulation::graph::DAGSimulation()) ;
+    assert(sofa::simulation::getSimulation());
 
     for(SceneLoader* loader : (*SceneLoaderFactory::getInstance()->getEntries()) )
     {
@@ -77,22 +69,13 @@ BaseSimulationTest::SceneInstance BaseSimulationTest::SceneInstance::LoadFromFil
 
 BaseSimulationTest::SceneInstance::SceneInstance(const std::string& rootname)
 {
-    if(simulation::getSimulation() == nullptr)
-        simulation::setSimulation(new simulation::graph::DAGSimulation()) ;
-
-    simulation = simulation::getSimulation() ;
     root = simulation::getSimulation()->createNewNode(rootname) ;
 }
 
 void BaseSimulationTest::SceneInstance::loadSceneFile(const std::string& filename)
 {
-    if (simulation::getSimulation() == nullptr)
-        simulation::setSimulation(new simulation::graph::DAGSimulation());
+    root = sofa::simulation::node::load(filename);
 
-    simulation = simulation::getSimulation();
-
-    root = simulation->load(filename);
-    
     if (root == nullptr)
         msg_error("BaseSimulationTest") << "Unable to find a valid loader for: '" << filename << "'";
 }
@@ -100,22 +83,22 @@ void BaseSimulationTest::SceneInstance::loadSceneFile(const std::string& filenam
 
 BaseSimulationTest::SceneInstance::~SceneInstance()
 {
-    simulation::getSimulation()->unload(root) ;
+    sofa::simulation::node::unload(root) ;
 }
 
 void BaseSimulationTest::SceneInstance::initScene()
 {
-    simulation->init(root.get());
+    sofa::simulation::node::initRoot(root.get());
 }
 
 void BaseSimulationTest::SceneInstance::simulate(const double timestep)
 {
-    simulation->animate( root.get(), (SReal)timestep );
+    sofa::simulation::node::animate(root.get(), static_cast<SReal>(timestep) );
 }
 
 BaseSimulationTest::BaseSimulationTest()
 {
-    simulation::setSimulation(new simulation::graph::DAGSimulation()) ;
+    assert(sofa::simulation::getSimulation());
 }
 
 } // namespace sofa::testing

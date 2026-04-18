@@ -36,76 +36,58 @@
 #include <sofa/type/Vec.h>
 #include <map>
 #include <sofa/defaulttype/VecTypes.h>
+#include <sofa/helper/ScopedAdvancedTimer.h>
+
 
 namespace sofa::component::topology::mapping
 {
 
-using namespace sofa::defaulttype;
-
 using namespace sofa::component::topology::mapping;
 using namespace sofa::core::topology;
 
-// Register in the Factory
-int Tetra2TriangleTopologicalMappingClass = core::RegisterObject("Special case of mapping where TetrahedronSetTopology is converted to TriangleSetTopology")
-        .add< Tetra2TriangleTopologicalMapping >()
-
-        ;
-
-// Implementation
+void registerTetra2TriangleTopologicalMapping(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Topological mapping where TetrahedronSetTopology is converted to TriangleSetTopology")
+        .add< Tetra2TriangleTopologicalMapping >());
+}
 
 Tetra2TriangleTopologicalMapping::Tetra2TriangleTopologicalMapping()
     : sofa::core::topology::TopologicalMapping()
-    , flipNormals(initData(&flipNormals, bool(false), "flipNormals", "Flip Normal ? (Inverse point order when creating triangle)"))
-    , noNewTriangles(initData(&noNewTriangles, bool(false), "noNewTriangles", "If true no new triangles are being created"))
-    , noInitialTriangles(initData(&noInitialTriangles, bool(false), "noInitialTriangles", "If true the list of initial triangles is initially empty. Only additional triangles will be added in the list"))
-    , m_outTopoModifier(nullptr)
+    , l_topologyModifier(initLink("modifier", "Optional link to a topology modifier"))
+    , d_flipNormals(initData(&d_flipNormals, bool(false), "flipNormals", "Flip Normal ? (Inverse point order when creating triangle)"))
+    , d_noNewTriangles(initData(&d_noNewTriangles, bool(false), "noNewTriangles", "If true no new triangles are being created"))
+    , d_noInitialTriangles(initData(&d_noInitialTriangles, bool(false), "noInitialTriangles", "If true the list of initial triangles is initially empty. Only additional triangles will be added in the list"))
 {
+    m_inputType = geometry::ElementType::TETRAHEDRON;
+    m_outputType = geometry::ElementType::TRIANGLE;
 }
 
 void Tetra2TriangleTopologicalMapping::init()
 {
-    bool modelsOk = true;
-    if (!fromModel)
-    {
-        // If the input topology link isn't set by the user, the TopologicalMapping::create method tries to find it.
-        // If it is null at this point, it means no input mesh topology could be found.
-        msg_error() << "No input mesh topology found. Consider setting the '" << fromModel.getName() << "' data attribute.";
-        modelsOk = false;
-    }
+    sofa::core::topology::TopologicalMapping::init();
 
-    if (!toModel)
-    {
-        // If the output topology link isn't set by the user, the TopologicalMapping::create method tries to find it.
-        // If it is null at this point, it means no output mesh topology could be found.
-        msg_error() << "No output mesh topology found. Consider setting the '" << toModel.getName() << "' data attribute.";
-        modelsOk = false;
-    }
-
-    // Making sure the output topology is derived from the triangle topology container
-    if (!dynamic_cast<container::dynamic::TriangleSetTopologyContainer *>(toModel.get())) {
-        msg_error() << "The output topology '" << toModel.getPath() << "' is not a derived class of TriangleSetTopologyContainer. "
-                    << "Consider setting the '" << toModel.getName() << "' data attribute to a valid"
-                                                                        " TriangleSetTopologyContainer derived object.";
-        modelsOk = false;
-    } else {
-        // Making sure a topology modifier exists at the same level as the output topology
-        container::dynamic::TriangleSetTopologyModifier *to_tstm;
-        toModel->getContext()->get(to_tstm);
-        if (!to_tstm) {
-            msg_error() << "No TriangleSetTopologyModifier found in the output topology node '"
-                        << toModel->getContext()->getName() << "'.";
-            modelsOk = false;
-        } else {
-            m_outTopoModifier = to_tstm;
-        }
-    }
-
-    if (!modelsOk)
+    if (!this->checkMappingInputType() || !this->checkMappingOutputType())
     {
         this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
 
+    if (!l_topologyModifier)
+    {
+        msg_info() << "Looking for a component of type TriangleSetTopologyModifier "
+                      "in the output topology context ("
+                      << toModel->getContext()->getName() <<").";
+
+        l_topologyModifier.set(toModel->getContext()->get<container::dynamic::TriangleSetTopologyModifier>(
+                core::objectmodel::BaseContext::SearchDirection::SearchUp));
+    }
+
+    if (!l_topologyModifier)
+    {
+        msg_warning() << "No TriangleSetTopologyModifier found in output topology context ("
+                         << toModel->getContext()->getName() << "). Dynamic topological changes will not be supported.";
+    }
+    
 
     // INITIALISATION of Triangle mesh from Tetrahedral mesh :
     // Clear output topology
@@ -115,17 +97,16 @@ void Tetra2TriangleTopologicalMapping::init()
     toModel->setNbPoints(fromModel->getNbPoints());
 
     // if no init triangle option (set output topology to empty)
-    if (noInitialTriangles.getValue()){
+    if (d_noInitialTriangles.getValue()){
         this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Valid);
         return;
     }
 
     // create topology maps and add triangle on border into output topology
     const auto & triangleArray = fromModel->getTriangles();
-    const bool flipN = flipNormals.getValue();
+    const bool flipN = d_flipNormals.getValue();
 
-    Topology::SetIndices & Loc2GlobVec = *(Loc2GlobDataVec.beginEdit());
-
+    auto Loc2GlobVec = sofa::helper::getWriteOnlyAccessor(Loc2GlobDataVec);
     Loc2GlobVec.clear();
     Glob2LocMap.clear();
 
@@ -146,7 +127,6 @@ void Tetra2TriangleTopologicalMapping::init()
     // Need to fully init the target topology
     toModel->init();
 
-    Loc2GlobDataVec.endEdit();
     this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Valid);
 }
 
@@ -169,25 +149,28 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
     if (this->d_componentState.getValue() != sofa::core::objectmodel::ComponentState::Valid)
         return;
 
-    sofa::helper::AdvancedTimer::stepBegin("Update Tetra2TriangleTopologicalMapping");
+    if (!l_topologyModifier)
+        return;
+
+    SCOPED_TIMER("Update Tetra2TriangleTopologicalMapping");
 
     auto itBegin=fromModel->beginChange();
     auto itEnd=fromModel->endChange();
 
-    sofa::type::vector<Index>& Loc2GlobVec = *(Loc2GlobDataVec.beginEdit());
+    auto Loc2GlobVec = sofa::helper::getWriteAccessor(Loc2GlobDataVec);
 
     while( itBegin != itEnd )
     {
         TopologyChangeType changeType = (*itBegin)->getChangeType();
         std::string topoChangeType = "Tetra2TriangleTopologicalMapping - " + parseTopologyChangeTypeToString(changeType);
-        sofa::helper::AdvancedTimer::stepBegin(topoChangeType);
+        helper::ScopedAdvancedTimer topoChangetimer(topoChangeType);
 
         switch( changeType )
         {
 
         case core::topology::ENDING_EVENT:
         {
-            m_outTopoModifier->notifyEndingEvent();
+            l_topologyModifier->notifyEndingEvent();
             break;
         }
 
@@ -220,7 +203,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
                     unsigned int lastLocId = iter_last->second;
                     Glob2LocMap[oldGlobTriId] = lastLocId;
 
-                    if (lastLocId < Loc2GlobVec.size()) // could be maped to an already removed element in loc2Glob
+                    if (lastLocId < Loc2GlobVec.size()) // could be mapped to an already removed element in loc2Glob
                         Loc2GlobVec[lastLocId] = oldGlobTriId;
                 }
                 else
@@ -228,7 +211,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
                     iter_last = Glob2LocMap.find(oldGlobTriId);
                     if(iter_last == Glob2LocMap.end())
                     {
-                        if (!noNewTriangles.getValue() && !noInitialTriangles.getValue()) // otherwise it is normal
+                        if (!d_noNewTriangles.getValue() && !d_noInitialTriangles.getValue()) // otherwise it is normal
                             msg_warning() << "Could not find last triangle id in Glob2LocMap: " << lastGlobId << " nor removed triangle id: " << oldGlobTriId;
                         lastGlobId--;
                         continue;
@@ -252,7 +235,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
                 Loc2GlobVec.pop_back(); //pop last
             }
 
-            m_outTopoModifier->removeTriangles(triangles_to_remove, true, false);
+            l_topologyModifier->removeTriangles(triangles_to_remove, true, false);
 
             break;
         }
@@ -265,7 +248,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
         */
         case core::topology::TETRAHEDRAADDED:
         {
-            if (noNewTriangles.getValue())
+            if (d_noNewTriangles.getValue())
                 break;
 
             const auto * tetraAdded = static_cast< const TetrahedraAdded *>( *itBegin );
@@ -304,7 +287,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
             }
 
             // add new elements to output topology
-            m_outTopoModifier->addTriangles(triangles_to_create);
+            l_topologyModifier->addTriangles(triangles_to_create);
 
             // remove elements not anymore on part of the border
             sofa::type::vector< BaseMeshTopology::TriangleID > local_triangleId_to_remove;
@@ -328,7 +311,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
             {
                 BaseMeshTopology::TriangleID lastGlobId = Loc2GlobVec.back();
 
-                // udpate loc2glob array
+                // update loc2glob array
                 Loc2GlobVec[triLocId] = lastGlobId;
                 Loc2GlobVec.pop_back();
 
@@ -337,12 +320,12 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
             }
 
             // remove old triangles
-            m_outTopoModifier->removeTriangles(local_triangleId_to_remove, true, false);
+            l_topologyModifier->removeTriangles(local_triangleId_to_remove, true, false);
             break;
         }
         case core::topology::TETRAHEDRAREMOVED:
         {
-            if (noNewTriangles.getValue())
+            if (d_noNewTriangles.getValue())
                 break;
 
             const auto & tetrahedronArray=fromModel->getTetrahedra();
@@ -351,7 +334,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
             sofa::type::vector< core::topology::BaseMeshTopology::Triangle > triangles_to_create;
             sofa::type::vector< unsigned int > trianglesIndexList;
             size_t nb_elems = toModel->getNbTriangles();
-            const bool flipN = flipNormals.getValue();
+            const bool flipN = d_flipNormals.getValue();
 
             // For each tetrahedron removed inside the tetra2Remove array. Will look for each face if it shared with another tetrahedron.
             // If none, it means it will be added to the triangle border topoloy.
@@ -393,10 +376,10 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
 
                     int posInTetra = fromModel->getTriangleIndexInTetrahedron(triInOtherTetra, triangleId);
 
-                    for (int i=0; i<3; i++)
+                    for (int ii = 0; ii < 3; ++ii)
                     {
-                        unsigned int vIdInTetra = trianglesOrientationInTetrahedronArray[posInTetra][i];
-                        tri[i] = otherTetra[vIdInTetra];
+                        unsigned int vIdInTetra = trianglesOrientationInTetrahedronArray[posInTetra][ii];
+                        tri[ii] = otherTetra[vIdInTetra];
                     }
 
                     if(flipN)
@@ -429,21 +412,21 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
                 }
             }
 
-            m_outTopoModifier->addTriangles(triangles_to_create);
+            l_topologyModifier->addTriangles(triangles_to_create);
             break;
         }
 
         case core::topology::EDGESADDED:
         {
             const auto* edgeAdded = static_cast<const sofa::core::topology::EdgesAdded*>(*itBegin);
-            m_outTopoModifier->addEdges(edgeAdded->edgeArray, edgeAdded->ancestorsList, edgeAdded->coefs);
+            l_topologyModifier->addEdges(edgeAdded->edgeArray, edgeAdded->ancestorsList, edgeAdded->coefs);
             break;
         }
 
         case core::topology::POINTSADDED:
         {
             const auto* pointAdded = static_cast<const sofa::core::topology::PointsAdded*>(*itBegin);
-            m_outTopoModifier->addPoints(sofa::Size(pointAdded->getNbAddedVertices()), pointAdded->ancestorsList, pointAdded->coefs, true);
+            l_topologyModifier->addPoints(sofa::Size(pointAdded->getNbAddedVertices()), pointAdded->ancestorsList, pointAdded->coefs, true);
             break;
         }
 
@@ -461,7 +444,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
 
             Topology::SetIndices & tab_indices = indices;
 
-            m_outTopoModifier->removePoints(tab_indices, false);
+            l_topologyModifier->removePoints(tab_indices, false);
             break;
         }
 
@@ -483,7 +466,7 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
             Topology::SetIndices & tab_indices = indices;
             Topology::SetIndices & inv_tab_indices = inv_indices;
 
-            m_outTopoModifier->renumberPoints(tab_indices, inv_tab_indices, false);
+            l_topologyModifier->renumberPoints(tab_indices, inv_tab_indices, false);
             break;
         }
         default:
@@ -491,12 +474,9 @@ void Tetra2TriangleTopologicalMapping::updateTopologicalMappingTopDown()
             break;
         };
 
-        sofa::helper::AdvancedTimer::stepEnd(topoChangeType);
         ++itBegin;
-    }    
-    Loc2GlobDataVec.endEdit();
+    }
 
-    sofa::helper::AdvancedTimer::stepEnd("Update Tetra2TriangleTopologicalMapping");
 }
 
 

@@ -43,7 +43,7 @@ namespace sofa::component::engine::generate
 class SOFA_COMPONENT_ENGINE_GENERATE_API MeshTetraStuffing : public core::DataEngine
 {
 public:
-    SOFA_CLASS(MeshTetraStuffing,core::objectmodel::BaseObject);
+    SOFA_CLASS(MeshTetraStuffing,core::objectmodel::BaseComponent);
 
     typedef defaulttype::Vec3Types::Real Real;
     typedef defaulttype::Vec3Types::Coord Point;
@@ -68,19 +68,19 @@ public:
 
     void doUpdate() override;
 
-    Data< type::fixed_array<Point,2> > vbbox; ///< BBox to restrict the volume to
-    Data< Real > size; ///< Size of the generate tetrahedra. If negative, number of grid cells in the largest bbox dimension
-    Data<SeqPoints> inputPoints; ///< Input surface mesh points
-    Data<SeqTriangles> inputTriangles; ///< Input surface mesh triangles
-    Data<SeqQuads> inputQuads; ///< Input surface mesh quads
-    Data<SeqPoints> outputPoints; ///< Output volume mesh points
-    Data<SeqTetrahedra> outputTetrahedra; ///< Output volume mesh tetrahedra
+    Data< type::fixed_array<Point,2> > d_vbbox; ///< BBox to restrict the volume to
+    Data< Real > d_size; ///< Size of the generate tetrahedra. If negative, number of grid cells in the largest bbox dimension
+    Data<SeqPoints> d_inputPoints; ///< Input surface mesh points
+    Data<SeqTriangles> d_inputTriangles; ///< Input surface mesh triangles
+    Data<SeqQuads> d_inputQuads; ///< Input surface mesh quads
+    Data<SeqPoints> d_outputPoints; ///< Output volume mesh points
+    Data<SeqTetrahedra> d_outputTetrahedra; ///< Output volume mesh tetrahedra
 
-    Data< Real > alphaLong; ///< Minimum alpha values on long edges when snapping points
-    Data< Real > alphaShort; ///< Minimum alpha values on short edges when snapping points
-    Data< bool > bSnapPoints; ///< Snap points to the surface if intersections on edges are closed to given alpha values
-    Data< bool > bSplitTetrahedra; ///< Split tetrahedra crossing the surface
-    Data< bool > bDraw; ///< Activate rendering of internal datasets
+    Data< Real > d_alphaLong; ///< Minimum alpha values on long edges when snapping points
+    Data< Real > d_alphaShort; ///< Minimum alpha values on short edges when snapping points
+    Data< bool > d_bSnapPoints; ///< Snap points to the surface if intersections on edges are closed to given alpha values
+    Data< bool > d_bSplitTetrahedra; ///< Split tetrahedra crossing the surface
+    Data< bool > d_bDraw; ///< Activate rendering of internal datasets
 
     Real cellsize;
     int gsize[3];

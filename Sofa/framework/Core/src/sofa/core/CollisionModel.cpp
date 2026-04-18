@@ -19,15 +19,14 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "CollisionModel.h"
+#include <sofa/core/CollisionModel.h>
 #include <sofa/core/objectmodel/BaseNode.h>
 #include <sofa/type/RGBAColor.h>
+#include <sofa/core/visual/VisualParams.h>
 
 using sofa::type::RGBAColor ;
-namespace sofa
-{
 
-namespace core
+namespace sofa::core
 {
 
 std::vector<int> BaseCollisionElementIterator::emptyVector; ///< empty vector to be able to initialize the iterator to an empty pair
@@ -106,10 +105,10 @@ CollisionModel::CollisionModel()
     , bMoving(initData(&bMoving, true, "moving", "flag indicating if this object is changing position between iterations"))
     , bSimulated(initData(&bSimulated, true, "simulated", "flag indicating if this object is controlled by a simulation"))
     , bSelfCollision(initData(&bSelfCollision, false, "selfCollision", "flag indication if the object can self collide"))
-    , proximity(initData(&proximity, (SReal)0.0, "proximity", "Distance to the actual (visual) surface"))
-    , contactStiffness(initData(&contactStiffness, (SReal)10.0, "contactStiffness", "Contact stiffness"))
-    , contactFriction(initData(&contactFriction, (SReal)0.0, "contactFriction", "Contact friction coefficient (dry or viscous or unused depending on the contact method)"))
-    , contactRestitution(initData(&contactRestitution, (SReal)0.0, "contactRestitution", "Contact coefficient of restitution"))
+    , d_contactDistance(initData(&d_contactDistance, 0.0_sreal, "contactDistance", "This distance is added along the normal of the collision element to apply 'skinning' effect for collision. The contact arise at this distance of the element."))
+    , contactStiffness(initData(&contactStiffness, 10.0_sreal, "contactStiffness", "Contact stiffness"))
+    , contactFriction(initData(&contactFriction, 0.0_sreal, "contactFriction", "Contact friction coefficient (dry or viscous or unused depending on the contact method)"))
+    , contactRestitution(initData(&contactRestitution, 0.0_sreal, "contactRestitution", "Contact coefficient of restitution"))
     , contactResponse(initData(&contactResponse, "contactResponse", "if set, indicate to the ContactManager that this model should use the given class of contacts.\nNote that this is only indicative, and in particular if both collision models specify a different class it is up to the manager to choose."))
     , color(initData(&color, sofa::type::RGBAColor(1,0,0,1), "color", "color used to display the collision model if requested"))
     , group(initData(&group,"group","IDs of the groups containing this model. No collision can occur between collision models included in a common group (e.g. allowing the same object to have multiple collision models)"))
@@ -120,13 +119,17 @@ CollisionModel::CollisionModel()
     , userData(nullptr)
     , l_collElemActiver(initLink("collisionElementActiver", "CollisionElementActiver component that activates or deactivates collision element(s) during execution"))
 {
+
+    proximity.setOriginalData(&d_contactDistance);
+    addAlias(&d_contactDistance, "proximity");
+
     d_numberOfContacts.setReadOnly(true);
 }
 
 /// Set the previous (coarser / upper / parent level) CollisionModel in the hierarchy.
 void CollisionModel::setPrevious(CollisionModel::SPtr val)
 {
-    CollisionModel::SPtr p = previous.get();
+    const CollisionModel::SPtr p = previous.get();
     if (p == val) return;
     if (p)
     {
@@ -140,6 +143,57 @@ void CollisionModel::setPrevious(CollisionModel::SPtr val)
     previous.set(val);
     if (val)
         val->next.set(this);
+}
+
+void CollisionModel::computeContinuousBoundingTree(SReal dt, ContinuousIntersectionTypeFlag continuousIntersectionFlag, int maxDepth)
+{
+    SOFA_UNUSED(dt);
+    SOFA_UNUSED(continuousIntersectionFlag);
+    computeBoundingTree(maxDepth);
+}
+
+void CollisionModel::draw(const core::visual::VisualParams* vparams)
+{
+    // don't draw if the component is not in valid state
+    if (isComponentStateInvalid())
+        return;
+
+    // don't draw if the component is not active
+    if(!isActive())
+        return;
+
+    struct DrawPrevious //RAII struct to draw the coarser collision model when exiting the scope
+    {
+        DrawPrevious(CollisionModel* previous, const core::visual::VisualParams* vparams) : m_previous(previous), m_vparams(vparams) {}
+        ~DrawPrevious()
+        {
+            if (m_previous && m_vparams->displayFlags().getShowBoundingCollisionModels())
+                m_previous->draw(m_vparams);
+        }
+        CollisionModel* m_previous { nullptr };
+        const core::visual::VisualParams* m_vparams { nullptr };
+    } drawPrevious(previous, vparams);
+
+    // don't draw if specified not to do so in the user interface
+    if (getNext() == nullptr)
+    {
+        if (!vparams->displayFlags().getShowCollisionModels())
+        {
+            return;
+        }
+    }
+    else
+    {
+        if (!vparams->displayFlags().getShowBoundingCollisionModels())
+        {
+            return;
+        }
+    }
+
+    {
+        const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
+        drawCollisionModel(vparams);
+    }
 }
 
 /// Return the first (i.e. root) CollisionModel in the hierarchy.
@@ -164,22 +218,51 @@ CollisionModel* CollisionModel::getLast()
 
 bool CollisionModel::canCollideWith(CollisionModel* model)
 {
-    if (model->getContext() == this->getContext()) // models are in the Node -> is self collision activated?
+    if (model->getContext() ==
+        this->getContext())  // models are in the Node -> is self collision activated?
         return bSelfCollision.getValue();
-    else if( this->group.getValue().empty() || model->group.getValue().empty() ) // one model has no group -> always collide
-        return true;
-    else
-    {
-        std::set<int>::const_iterator it = group.getValue().begin(), itend = group.getValue().end();
-        for( ; it != itend ; ++it )
-            if( model->group.getValue().count(*it)>0 ) // both models are included in the same group -> do not collide
-                return false;
 
+    const auto& myGroups = this->group.getValue();
+    if (myGroups.empty())  // a collision model without any group always collides
         return true;
+
+    const auto& modelGroups = model->group.getValue();
+    if (modelGroups.empty())  // a collision model without any group always collides
+        return true;
+
+    std::set<int>::const_iterator myGroupsFirst = myGroups.cbegin();
+    const std::set<int>::const_iterator myGroupsLast = myGroups.cend();
+
+    std::set<int>::const_iterator modelGroupsFirst = modelGroups.cbegin();
+    const std::set<int>::const_iterator modelGroupsLast = modelGroups.cend();
+
+    // Collision models don't collide if they have a common group
+    while (myGroupsFirst != myGroupsLast && modelGroupsFirst != modelGroupsLast)
+    {
+        if (*myGroupsFirst < *modelGroupsFirst)
+        {
+            ++myGroupsFirst;
+        }
+        else if (*myGroupsFirst > *modelGroupsFirst)
+        {
+            ++modelGroupsFirst;
+        }
+        else
+        {
+            return false;
+        }
     }
+
+    return true;
 }
 
-
+void CollisionModel::drawCollisionModel(const core::visual::VisualParams* vparams)
+{
+    for (sofa::Index i = 0; i < size; i++)
+    {
+        draw(vparams, i);
+    }
+}
 
 bool CollisionModel::insertInNode( objectmodel::BaseNode* node )
 {
@@ -194,10 +277,5 @@ bool CollisionModel::removeInNode( objectmodel::BaseNode* node )
     Inherit1::removeInNode(node);
     return true;
 }
-
-
-
-} // namespace core
-
-} // namespace sofa
+} // namespace sofa::core
 

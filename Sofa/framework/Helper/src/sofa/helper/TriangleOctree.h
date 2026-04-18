@@ -76,7 +76,7 @@ public:
 
 protected:
     /// used to add a triangle  to the octree
-    int fillOctree(int t, int d = 0, type::Vec3 v = { 0, 0, 0 });
+    int fillOctree(int t, int d = 0, type::Vec3 v = { 0_sreal, 0_sreal, 0_sreal });
     /// used to compute the Bounding Box for each triangle
     void calcTriangleAABB(int t, SReal* bb, SReal& size);
 };
@@ -124,9 +124,6 @@ public:
     }
 
     void draw(sofa::helper::visual::DrawTool* drawtool);
-
-    SOFA_ATTRIBUTE_DISABLED("v22.06", "v22.12", "This function now takes directly a DrawTool instead of a VisualParams.")
-    void draw(const sofa::core::visual::VisualParams* vparams) = delete;
 
     /// Find the nearest triangle intersecting the given ray, or -1 of not found
     int trace (type::Vec3 origin, type::Vec3 direction, traceResult &result);

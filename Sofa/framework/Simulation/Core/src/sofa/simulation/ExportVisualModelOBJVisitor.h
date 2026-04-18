@@ -24,12 +24,9 @@
 #include <sofa/simulation/Visitor.h>
 #include <sofa/core/visual/VisualModel.h>
 #include <sofa/simulation/fwd.h>
-#include <sofa/defaulttype/TopologyTypes.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 class SOFA_SIMULATION_CORE_API ExportVisualModelOBJVisitor : public Visitor
@@ -56,11 +53,7 @@ protected:
     int count;
 };
 
-using ExportOBJVisitor
-    SOFA_ATTRIBUTE_DEPRECATED("v21.12", "v22.06", "Use ExportVisualModelOBJVisitor instead.")
-    = ExportVisualModelOBJVisitor;
+} // namespace sofa::simulation
 
-} // namespace simulation
 
-} // namespace sofa
 

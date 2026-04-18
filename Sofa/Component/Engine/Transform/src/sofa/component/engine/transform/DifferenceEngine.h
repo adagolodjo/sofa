@@ -54,14 +54,14 @@ public:
 protected:
 
     Data<VecData> d_input; ///< input vector
-    Data<VecData> d_substractor; ///< vector to substract to input
+    Data<VecData> d_substractor; ///< vector to subtract to input
     Data<VecData> d_output; ///< output vector = input-substractor
 
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_DifferenceEngine_CPP)
-extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API DifferenceEngine<type::Vec1d>;
-extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API DifferenceEngine<type::Vec3d>;
+#if !defined(SOFA_COMPONENT_ENGINE_DifferenceEngine_CPP)
+extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API DifferenceEngine<type::Vec1>;
+extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API DifferenceEngine<type::Vec3>;
 
 #endif
 

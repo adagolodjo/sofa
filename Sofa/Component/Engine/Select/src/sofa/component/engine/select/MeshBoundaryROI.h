@@ -23,7 +23,7 @@
 #include <sofa/component/engine/select/config.h>
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/type/SVector.h>
 
@@ -39,8 +39,7 @@ namespace sofa::component::engine::select
 class MeshBoundaryROI : public core::DataEngine
 {
 public:
-    typedef core::DataEngine Inherited;
-    SOFA_CLASS(MeshBoundaryROI,Inherited);
+    SOFA_CLASS(MeshBoundaryROI, DataEngine);
 
     typedef core::topology::BaseMeshTopology::Triangle Triangle;
     typedef core::topology::BaseMeshTopology::SeqTriangles SeqTriangles;

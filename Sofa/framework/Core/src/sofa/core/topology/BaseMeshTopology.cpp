@@ -23,42 +23,59 @@
 #include <sofa/helper/io/MeshTopologyLoader.h>
 #include <sofa/helper/system/FileRepository.h>
 #include <sofa/core/objectmodel/BaseNode.h>
-namespace sofa
-{
-
-namespace core
-{
-
-namespace topology
+namespace sofa::core::topology
 {
 
 using namespace sofa::defaulttype;
 using type::vector;
 using type::fixed_array;
 
-
-BaseMeshTopology::EdgesInTriangle BaseMeshTopology::InvalidEdgesInTriangles;
-BaseMeshTopology::EdgesInQuad     BaseMeshTopology::InvalidEdgesInQuad;
-BaseMeshTopology::TrianglesInTetrahedron BaseMeshTopology::InvalidTrianglesInTetrahedron;
-BaseMeshTopology::EdgesInTetrahedron BaseMeshTopology::InvalidEdgesInTetrahedron;
-BaseMeshTopology::QuadsInHexahedron BaseMeshTopology::InvalidQuadsInHexahedron;
-BaseMeshTopology::EdgesInHexahedron BaseMeshTopology::InvalidEdgesInHexahedron;
-
-int initStaticStructures()
-{
-    BaseMeshTopology::InvalidEdgesInTriangles.assign(sofa::InvalidID);
-    BaseMeshTopology::InvalidEdgesInQuad.assign(sofa::InvalidID);
-    BaseMeshTopology::InvalidTrianglesInTetrahedron.assign(sofa::InvalidID);
-    BaseMeshTopology::InvalidEdgesInTetrahedron.assign(sofa::InvalidID);
-    BaseMeshTopology::InvalidQuadsInHexahedron.assign(sofa::InvalidID);
-    BaseMeshTopology::InvalidEdgesInHexahedron.assign(sofa::InvalidID);
-    return 0;
-}
-
 BaseMeshTopology::BaseMeshTopology()
     : fileTopology(initData(&fileTopology,"filename","Filename of the mesh"))
 {
     addAlias(&fileTopology,"fileTopology");
+}
+
+template <>
+Size BaseMeshTopology::getNbElements<geometry::Edge>()
+{
+    return getNbEdges();
+}
+
+template <>
+Size BaseMeshTopology::getNbElements<geometry::Triangle>()
+{
+    return getNbTriangles();
+}
+
+template <>
+Size BaseMeshTopology::getNbElements<geometry::Quad>()
+{
+    return getNbQuads();
+}
+
+template <>
+Size BaseMeshTopology::getNbElements<geometry::Tetrahedron>()
+{
+    return getNbTetrahedra();
+}
+
+template <>
+Size BaseMeshTopology::getNbElements<geometry::Hexahedron>()
+{
+    return getNbHexahedra();
+}
+
+template <>
+Size BaseMeshTopology::getNbElements<geometry::Prism>()
+{
+    return getNbPrisms();
+}
+
+template <>
+Size BaseMeshTopology::getNbElements<geometry::Pyramid>()
+{
+    return getNbPyramids();
 }
 
 /// Returns the set of edges adjacent to a given vertex.
@@ -338,6 +355,16 @@ void BaseMeshTopology::addHexa(Index, Index, Index, Index, Index, Index, Index, 
     msg_error() << "addHexa() not supported.";
 }
 
+void BaseMeshTopology::addPrism(Index, Index, Index, Index, Index, Index)
+{
+    msg_error() << "addPrism() not supported.";
+}
+
+void BaseMeshTopology::addPyramid(Index, Index, Index, Index, Index)
+{
+    msg_error() << "addPyramid() not supported.";
+}
+
 void BaseMeshTopology::reOrientateTriangle(TriangleID /*id*/)
 {
     msg_error() << "reOrientateTriangle() not supported.";
@@ -346,28 +373,28 @@ void BaseMeshTopology::reOrientateTriangle(TriangleID /*id*/)
 std::list<const TopologyChange *>::const_iterator BaseMeshTopology::beginChange() const
 {
     msg_error() << "beginChange() not supported.";
-    std::list<const TopologyChange *>::const_iterator l;
+    const std::list<const TopologyChange *>::const_iterator l;
     return l;
 }
 
 std::list<const TopologyChange *>::const_iterator BaseMeshTopology::endChange() const
 {
     msg_error() << "endChange() not supported.";
-    std::list<const TopologyChange *>::const_iterator l;
+    const std::list<const TopologyChange *>::const_iterator l;
     return l;
 }
 
 std::list<const TopologyChange *>::const_iterator BaseMeshTopology::beginStateChange() const
 {
     msg_error() << "beginStateChange() not supported.";
-    std::list<const TopologyChange *>::const_iterator l;
+    const std::list<const TopologyChange *>::const_iterator l;
     return l;
 }
 
 std::list<const TopologyChange *>::const_iterator BaseMeshTopology::endStateChange() const
 {
     msg_error() << "endStateChange() not supported.";
-    std::list<const TopologyChange *>::const_iterator l;
+    const std::list<const TopologyChange *>::const_iterator l;
     return l;
 }
 
@@ -499,11 +526,4 @@ bool BaseMeshTopology::removeInNode( objectmodel::BaseNode* node )
     Inherit1::removeInNode(node);
     return true;
 }
-
-
-
-} // namespace topology
-
-} // namespace core
-
-} // namespace sofa
+} // namespace sofa::core::topology

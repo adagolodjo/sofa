@@ -31,7 +31,16 @@
 #include <unistd.h>
 #endif
 
-#include <filesystem>
+#if __has_include(<filesystem>)
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#else
+  error "Missing the <filesystem> header."
+#endif
+
 #include <iterator>
 
 #include <cstring>
@@ -50,20 +59,15 @@ using sofa::helper::system::FileSystem;
 #define ON_WIN32 false
 #endif // WIN32
 
-namespace sofa
-{
 
-namespace helper
+namespace sofa::helper::system
 {
-
-namespace system
-{
-// replacing every occurences of "//"  by "/"
+// replacing every occurrences of "//"  by "/"
 std::string cleanPath( const std::string& path )
 {
     std::string p = path;
     size_t pos = p.find("//");
-    size_t len = p.length();
+    const size_t len = p.length();
     while( pos != std::string::npos )
     {
         if ( pos == (len-1))
@@ -89,8 +93,8 @@ FileRepository PluginRepository(
 FileRepository PluginRepository(
     "SOFA_PLUGIN_PATH",
     {
-        Utils::getSofaPathTo("plugins"),
         Utils::getSofaPathTo("lib"),
+        Utils::getSofaPathTo("plugins"),
     }
 );
 #endif
@@ -98,7 +102,8 @@ FileRepository DataRepository(
     "SOFA_DATA_PATH",
     {
         Utils::getSofaPathTo("share/sofa"),
-        Utils::getSofaPathTo("share/sofa/examples")
+        Utils::getSofaPathTo("share/sofa/examples"),
+        Utils::getSofaPathTo("share/sofa/icons")
     },
     {
         { Utils::getSofaPathTo("etc/sofa.ini"), {"SHARE_DIR", "EXAMPLES_DIR"} }
@@ -168,7 +173,7 @@ std::string FileRepository::cleanPath(const std::string& path)
 
 void FileRepository::addFirstPath(const std::string& p)
 {
-    // replacing every occurences of "//" by "/"
+    // replacing every occurrences of "//" by "/"
     std::string path = FileSystem::cleanPath(p);
 
     std::vector<std::string> entries;
@@ -188,7 +193,7 @@ void FileRepository::addFirstPath(const std::string& p)
 
 void FileRepository::addLastPath(const std::string& p)
 {
-    // replacing every occurences of "//" by "/"
+    // replacing every occurrences of "//" by "/"
     std::string path = FileSystem::cleanPath(p);
 
     std::vector<std::string> entries;
@@ -243,10 +248,10 @@ std::string FileRepository::getFirstPath()
 bool FileRepository::findFileIn(std::string& filename, const std::string& path)
 {
     if (filename.empty()) return false; // no filename
-    std::string newfname = SetDirectory::GetRelativeFromDir(filename.c_str(), path.c_str());
+    const std::string newfname = SetDirectory::GetRelativeFromDir(filename.c_str(), path.c_str());
 
-    std::filesystem::path p = std::filesystem::u8path(newfname);
-    if (std::filesystem::exists(p))
+    const auto p = fs::path(std::u8string(newfname.begin(), newfname.end()));
+    if (fs::exists(p))
     {
         // File found
         filename = newfname;
@@ -299,6 +304,45 @@ bool FileRepository::findFileFromFile(std::string& filename, const std::string& 
     return findFile(filename, SetDirectory::GetParentDir(basefile.c_str()), errlog);
 }
 
+void FileRepository::findAllFilesInRepository(const std::string& path, std::vector<std::string>& files, const std::vector<std::string>& extensions, bool recursive)
+{
+    auto addToFiles = [&files, extensions](const std::filesystem::directory_entry& entry)
+    {
+        if (fs::is_regular_file(entry.path()))
+        {
+            if (extensions.empty() || std::find(extensions.begin(), extensions.end(), entry.path().extension()) != extensions.end())
+            {
+                files.push_back(entry.path().string());
+            }
+        }
+    };
+
+    for (std::vector<std::string>::const_iterator it = vpath.begin(); it != vpath.end(); ++it)
+    {
+        // Get the full / absolute path (vpath + path)
+        const std::string fullPath = SetDirectory::GetRelativeFromDir(path.c_str(), it->c_str());
+        fs::path p = fs::path(fullPath);
+
+        if (fs::exists(p) && fs::is_directory(p))
+        {
+            if (recursive)
+            {
+                for (auto& entry : fs::recursive_directory_iterator(p))
+                {
+                    addToFiles(entry);
+                }
+            }
+            else
+            {
+                for (auto& entry : fs::directory_iterator(p))
+                {
+                    addToFiles(entry);
+                }
+            }
+        }
+    }
+}
+
 void FileRepository::print()
 {
     for (std::vector<std::string>::const_iterator it = vpath.begin(); it != vpath.end(); ++it)
@@ -318,48 +362,38 @@ const std::string FileRepository::getPathsJoined()
     return implodedStr;
 }
 
-/*static*/
 std::string FileRepository::relativeToPath(std::string path, std::string refPath)
 {
-    /// This condition replace the #ifdef in the code.
-    /// The advantage is that the code is compiled and is
-    /// removed by the optimization pass.
-    if( ! ON_WIN32 )
-    {
-        /// Case sensitive OS.
-        std::string::size_type loc = path.find( refPath, 0 );
-        if (loc==0)
-            path = path.substr(refPath.size()+1);
-
-        return path;
-    }
-
-    /// WIN32 is a pain here because of mixed case formatting with randomly
-    /// picked slash and backslash to separate dirs.
-    std::string tmppath;
     std::replace(path.begin(),path.end(),'\\' , '/' );
     std::replace(refPath.begin(),refPath.end(),'\\' , '/' );
 
     std::transform(refPath.begin(), refPath.end(), refPath.begin(), ::tolower );
 
-    tmppath = path ;
+    std::string tmppath=path;
     std::transform(tmppath.begin(), tmppath.end(), tmppath.begin(), ::tolower );
 
-    std::string::size_type loc = tmppath.find( refPath, 0 );
-    if (loc==0)
-        path = path.substr(refPath.size()+1);
+    const std::string::size_type loc = tmppath.find( refPath, 0 );
+    if (loc != std::string::npos)
+    {
+        path = path.substr(refPath.size());
+
+        while(!path.empty() && (path.front() == '/' || path.front() == '\\' ))
+        {
+            path = path.substr(1);
+        }
+    }
 
     return path;
 }
 
 const std::string FileRepository::getTempPath() const
 {
-    return std::filesystem::temp_directory_path().string();
+    return fs::temp_directory_path().string();
 }
 
-} // namespace system
+} // namespace sofa::helper::system
 
-} // namespace helper
 
-} // namespace sofa
+
+
 

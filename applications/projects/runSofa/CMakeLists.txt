@@ -1,5 +1,12 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(runSofa)
+
+# Detect if component is compiled outside SOFA
+if ("${CMAKE_PROJECT_NAME}" STREQUAL "${PROJECT_NAME}")
+    find_package(Sofa.Config REQUIRED)
+    sofa_find_package(Sofa.Simulation.Graph REQUIRED)
+    sofa_find_package(ZLIB)
+endif()
 
 ###################################
 # Generate plugin_list.conf.default
@@ -11,19 +18,31 @@ else()
     # plugins are located in lib/
     set(_pluginLocation "lib")
 endif()
+
 set(_configPluginFileName plugin_list.conf)
 set(_defaultConfigPluginFileName "${_configPluginFileName}.default")
 set(_defaultConfigPluginFilePath "${CMAKE_BINARY_DIR}/${_pluginLocation}/${_defaultConfigPluginFileName}")
-sofa_generate_plugin_config(${_defaultConfigPluginFilePath})
-message("Write Plugin list at ${_defaultConfigPluginFilePath}")
+
+# Generate plugin_list.conf files from existing targets
+# This step is skipped if the app is compiled outside SOFA, as no targets are defined
+if (NOT "${CMAKE_PROJECT_NAME}" STREQUAL "${PROJECT_NAME}") # in-tree build
+    sofa_generate_plugin_config(${_defaultConfigPluginFilePath})
+    message("Write Plugin list at ${_defaultConfigPluginFilePath}")
+else() # ouf-of-tree build
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/${_pluginLocation}")
+    file(TOUCH ${_defaultConfigPluginFilePath})
+    message("Created empty Plugin list at ${_defaultConfigPluginFilePath} (no targets defined)")
+endif()
+
 configure_file(${_defaultConfigPluginFilePath} ${PROJECT_BINARY_DIR}/${_defaultConfigPluginFileName} COPYONLY)
 install(FILES "${_defaultConfigPluginFilePath}" DESTINATION ${_pluginLocation}/ COMPONENT applications)
 ###################################
 
-sofa_find_package(SofaValidation QUIET)
+sofa_find_package(Sofa.Component.Playback QUIET)
 
+sofa_find_package(Sofa.Simulation.Graph REQUIRED)
 sofa_find_package(Sofa.GUI.Common REQUIRED)
-sofa_find_package(Sofa.GUI.Qt QUIET)
+sofa_find_package(Sofa.GUI.Batch REQUIRED)
 sofa_find_package(SceneChecking REQUIRED)
 
 set(HEADER_FILES
@@ -33,7 +52,7 @@ set(SOURCE_FILES
     Main.cpp
     )
 
-if(SofaValidation_FOUND)
+if(Sofa.Component.Playback_FOUND)
     list(APPEND SOURCE_FILES runSofaValidation.cpp)
 else()
     list(APPEND SOURCE_FILES runSofaNoValidation.cpp)
@@ -60,22 +79,19 @@ endif()
 target_compile_definitions(${PROJECT_NAME} PUBLIC "CONFIG_PLUGIN_FILENAME=${_configPluginFileName}")
 target_compile_definitions(${PROJECT_NAME} PUBLIC "DEFAULT_CONFIG_PLUGIN_FILENAME=${_defaultConfigPluginFileName}")
 
-target_link_libraries(${PROJECT_NAME} SofaSimulationGraph)
-target_link_libraries(${PROJECT_NAME} SofaGui)
-target_link_libraries(${PROJECT_NAME} SofaGraphComponent)
+target_link_libraries(${PROJECT_NAME} Sofa.Simulation.Graph)
+target_link_libraries(${PROJECT_NAME} Sofa.GUI.Common)
+target_link_libraries(${PROJECT_NAME} Sofa.GUI.Batch)
 target_link_libraries(${PROJECT_NAME} SceneChecking)
 
-if(SofaValidation_FOUND)
-    target_link_libraries(${PROJECT_NAME} SofaValidation)
+if(Sofa.Component.Playback_FOUND)
+    target_link_libraries(${PROJECT_NAME} Sofa.Component.Playback)
 else()
-    message(WARNING "runSofa: SofaValidation not found, disabling validation feature.")
+    message(WARNING "runSofa: Sofa.Component.Playback not found, disabling validation feature.")
 endif()
 
 if(SOFA_BUILD_TESTS)
-    sofa_find_package(SofaTest QUIET)
-    if(SofaTest_FOUND)
-        add_subdirectory(runSofa_test)
-    endif()
+    add_subdirectory(runSofa_test)
 endif()
 
 # Create build and install versions of .ini file for resources finding
@@ -88,8 +104,8 @@ install(FILES "${CMAKE_BINARY_DIR}/etc/installed${PROJECT_NAME}.ini" DESTINATION
 install(DIRECTORY "resources/" DESTINATION "share/sofa/gui/runSofa" COMPONENT resources)
 
 sofa_add_targets_to_package(
-    PACKAGE_NAME SofaGui
+    PACKAGE_NAME Sofa.GUI
     TARGETS ${PROJECT_NAME} AUTO_SET_TARGET_PROPERTIES
     INCLUDE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
-    INCLUDE_INSTALL_DIR "SofaGui/runSofa"
+    INCLUDE_INSTALL_DIR "Sofa.GUI/runSofa"
     )

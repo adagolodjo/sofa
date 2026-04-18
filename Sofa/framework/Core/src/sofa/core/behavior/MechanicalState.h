@@ -22,20 +22,22 @@
 #pragma once
 
 #include <sofa/core/behavior/BaseMechanicalState.h>
+#include <sofa/defaulttype/typeinfo/TypeInfo_RigidTypes.h>
+#include <sofa/defaulttype/typeinfo/TypeInfo_VecTypes.h>
 #include <sofa/core/State.h>
+#include <sofa/helper/StringUtils.h>
 
 namespace sofa::core::behavior
 {
 
 /**
  *  \brief Component storing all state vectors of a simulated body (position,
- *  velocity, etc), using the datatype specified in the templace.
+ *  velocity, etc), using the datatype specified in the template.
  *
  *  The given DataTypes class should define the following internal types:
  *  \li \code Real \endcode : scalar values (float or double).
  *  \li \code Coord \endcode : position values.
  *  \li \code Deriv \endcode : derivative values (velocity, forces, displacements).
- *  \li \code VecReal \endcode : container of scalar values with the same API as sofa::type::vector.
  *  \li \code VecCoord \endcode : container of Coord values with the same API as sofa::type::vector.
  *  \li \code VecDeriv \endcode : container of Deriv values with the same API as sofa::type::vector.
  *  \li \code MatrixDeriv \endcode : vector of constraints.
@@ -61,8 +63,6 @@ public:
     typedef typename DataTypes::Coord Coord;
     /// Derivative values (velocity, forces, displacements).
     typedef typename DataTypes::Deriv Deriv;
-    /// Container of scalar values with the same API as sofa::type::vector.
-    typedef typename DataTypes::VecReal VecReal;
     /// Container of Coord values with the same API as sofa::type::vector.
     typedef typename DataTypes::VecCoord VecCoord;
     /// Container of Deriv values with the same API as sofa::type::vector.
@@ -96,7 +96,7 @@ protected:
     ~MechanicalState() override {}
 };
 
-#if  !defined(SOFA_CORE_BEHAVIOR_MECHANICALSTATE_CPP)
+#if !defined(SOFA_CORE_BEHAVIOR_MECHANICALSTATE_CPP)
 extern template class SOFA_CORE_API MechanicalState<defaulttype::Vec1Types>;
 extern template class SOFA_CORE_API MechanicalState<defaulttype::Vec2Types>;
 extern template class SOFA_CORE_API MechanicalState<defaulttype::Vec3Types>;

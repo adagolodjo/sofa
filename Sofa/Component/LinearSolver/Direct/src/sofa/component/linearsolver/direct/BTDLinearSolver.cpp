@@ -24,16 +24,19 @@
 #include <sofa/component/linearsolver/direct/BTDLinearSolver.inl>
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/linearalgebra/BTDMatrix.inl>
-#include <sofa/linearalgebra/BlocFullMatrix.inl>
+#include <sofa/linearalgebra/BlockFullMatrix.inl>
 #include <sofa/linearalgebra/BlockVector.inl>
 #include <sofa/component/linearsolver/iterative/MatrixLinearSolver.inl>
+#include <sofa/linearalgebra/FullVector.h>
 
 namespace sofa::component::linearsolver::direct
 {
 
-int BTDLinearSolverClass = core::RegisterObject("Linear system solver using Thomas Algorithm for Block Tridiagonal matrices")
-    .add< BTDLinearSolver<linearalgebra::BTDMatrix<6, SReal>, linearalgebra::BlockVector<6, SReal> > >(true)
-;
+void registerBTDLinearSolver(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Linear system solver using Thomas Algorithm for Block Tridiagonal matrices.")
+        .add< BTDLinearSolver<linearalgebra::BTDMatrix<6, SReal>, linearalgebra::BlockVector<6, SReal> > >(true));
+}
 
 template class SOFA_COMPONENT_LINEARSOLVER_DIRECT_API BTDLinearSolver< linearalgebra::BTDMatrix<6, SReal>, linearalgebra::BlockVector<6, SReal> >;
 

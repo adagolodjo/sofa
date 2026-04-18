@@ -24,8 +24,12 @@
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/helper/system/SetDirectory.h>
 #include <fstream>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
 #include <sofa/helper/accessor.h>
 #include <sofa/helper/system/Locale.h>
+#include <sofa/type/hardening.h>
 
 namespace sofa::component::io::mesh
 {
@@ -35,9 +39,11 @@ using namespace sofa::defaulttype;
 using namespace sofa::core::loader;
 using sofa::helper::getWriteOnlyAccessor;
 
-int MeshOBJLoaderClass = core::RegisterObject("Specific mesh loader for OBJ file format.")
-.add< MeshOBJLoader >()
-.addAlias("MeshObjLoader");
+void registerMeshOBJLoader(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Specific mesh loader for OBJ file format.")
+        .add< MeshOBJLoader >());
+}
 
 MeshOBJLoader::MeshOBJLoader()
     : MeshLoader()
@@ -185,7 +191,7 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
     getWriteOnlyAccessor(d_quadsGroups).clear();
 
     int vtn[3];
-    Vector3 result;
+    Vec3 result;
     helper::WriteOnlyAccessor<Data<type::vector< PrimitiveGroup> > > my_faceGroups[NBFACETYPE] =
     {
         d_edgesGroups,
@@ -213,19 +219,19 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
         {
             // vertex
             values >> result[0] >> result[1] >> result[2];
-            my_positions.push_back(Vector3(result[0],result[1], result[2]));
+            my_positions.push_back(Vec3(result[0],result[1], result[2]));
         }
         else if (token == "vn")
         {
             // normal
             values >> result[0] >> result[1] >> result[2];
-            my_normals.push_back(Vector3(result[0],result[1], result[2]));
+            my_normals.push_back(Vec3(result[0],result[1], result[2]));
         }
         else if (token == "vt")
         {
             // texcoord
             values >> result[0] >> result[1];
-            my_texCoords.push_back(Vector2(result[0],result[1]));
+            my_texCoords.push_back(Vec2(result[0],result[1]));
         }
         else if ((token == "mtllib") && d_loadMaterial.getValue())
         {
@@ -304,15 +310,22 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
 
                     if (!tmp.empty())
                     {
-                        vtn[j] = atoi(tmp.c_str());
-                        if (vtn[j] >= 1)
-                            vtn[j] -=1; // -1 because the numerotation begins at 1 and a vector begins at 0
-                        else if (vtn[j] < 0)
-                            vtn[j] += (j==0) ? sofa::Size(my_positions.size()) : (j==1) ? sofa::Size(my_texCoords.size()) : sofa::Size(my_normals.size());
-                        else
+                        if(!sofa::type::hardening::safeStrToInt(tmp, vtn[j]))
                         {
                             msg_error() << "Invalid index " << tmp;
                             vtn[j] = -1;
+                        }
+                        else
+                        {
+                            if (vtn[j] >= 1)
+                                vtn[j] -=1; // -1 because the numerotation begins at 1 and a vector begins at 0
+                            else if (vtn[j] < 0)
+                                vtn[j] += (j==0) ? sofa::Size(my_positions.size()) : (j==1) ? sofa::Size(my_texCoords.size()) : sofa::Size(my_normals.size());
+                            else
+                            {
+                                msg_error() << "Invalid index " << tmp;
+                                vtn[j] = -1;
+                            }
                         }
                     }
                 }
@@ -411,16 +424,16 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
                 unsigned int ni = nIndices[i];
                 unsigned int ti = tIndices[i];
                 if (pi >= vertexCount) continue;
-                if (ti < my_texCoords.size() && (vTexCoords[pi] == sofa::type::Vector2() ||
-                                                 (my_texCoords[ti]-vTexCoords[pi])*sofa::type::Vector2(-1,1) > 0))
+                if (ti < my_texCoords.size() && (vTexCoords[pi] == sofa::type::Vec2() ||
+                                                 (my_texCoords[ti]-vTexCoords[pi])*sofa::type::Vec2(-1,1) > 0))
                     vTexCoords[pi] = my_texCoords[ti];
                 if (ni < my_normals.size())
                     vNormals[pi] += my_normals[ni];
             }
         }
-        for (size_t i=0; i<vNormals.size(); ++i)
+        for (auto& vNormal : vNormals)
         {
-            vNormals[i].normalize();
+            vNormal.normalize();
         }
     }
     else
@@ -462,7 +475,7 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
 
         // Then we can create the final arrays
 
-        type::vector<sofa::type::Vector3> vertices2;
+        type::vector<sofa::type::Vec3> vertices2;
         auto vnormals = getWriteOnlyAccessor(d_normals);
         auto vtexcoords = getWriteOnlyAccessor(d_texCoords);
         auto vertPosIdx = getWriteOnlyAccessor(d_vertPosIdx);
@@ -495,7 +508,7 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
                 if (vsplit)
                 {
                     vertPosIdx[j] = i;
-                    if (normMap.count(n))
+                    if (normMap.contains(n))
                         vertNormIdx[j] = normMap[n];
                     else
                     {
@@ -509,7 +522,7 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
 
         // replace the original (non duplicated) vector with the new one
         my_positions.clear();
-        for(const sofa::type::Vector3& c : vertices2)
+        for(const sofa::type::Vec3& c : vertices2)
             my_positions.push_back(c);
 
         if( vsplit && nbNOut == nbVOut )
@@ -554,9 +567,9 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
                     addTriangle(my_triangles.wref(), Triangle(nodes[0], nodes[j-1], nodes[j]));
             }
         }
-        for (size_t i=0; i<vnormals.size(); ++i)
+        for (auto& vnormal : vnormals)
         {
-            vnormals[i].normalize();
+            vnormal.normalize();
         }
     }
 
@@ -575,7 +588,7 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
                     out.push_back(f);
             }
         }
-        for (int ft = 0; ft < NBFACETYPE; ++ft)
+        for (const auto& materialFace : materialFaces)
         {
             std::string fname;
             switch (faceType)
@@ -585,10 +598,8 @@ bool MeshOBJLoader::readOBJ (std::ifstream &file, const char* filename)
             case MeshOBJLoader::QUAD:     fname = "quad"; break;
             default: break;
             }
-            for (std::map< std::string, type::vector<unsigned int> >::const_iterator it = materialFaces[ft].begin(), itend = materialFaces[ft].end(); it != itend; ++it)
+            for (const auto& [materialName, faces] : materialFace)
             {
-                std::string materialName = it->first;
-                const type::vector<unsigned>& faces = it->second;
                 if (faces.empty()) continue;
                 std::ostringstream oname;
                 oname << "material_" << materialName << "_" << fname << "Indices";

@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -21,10 +21,11 @@
 ******************************************************************************/
 #pragma once
 
+#include <sofa/Modules.h>
 #include <sofa/testing/BaseSimulationTest.h>
 using sofa::testing::BaseSimulationTest;
 
-#include <SofaSimulationGraph/SimpleApi.h>
+#include <sofa/simpleapi/SimpleApi.h>
 
 #include <sofa/testing/NumericTest.h>
 #include <sofa/simulation/Node.h>
@@ -38,16 +39,22 @@ struct ODESolverSpringTest : public BaseSimulationTest
 {
     SceneInstance m_si{};
 
+    void doSetUp() override
+    {
+        this->loadPlugins({
+            Sofa.Component.ODESolver,
+            Sofa.Component.LinearSolver.Iterative,
+            Sofa.Component.StateContainer,
+            Sofa.Component.Mass,
+            Sofa.Component.Constraint.Projective,
+            Sofa.Component.SolidMechanics.Spring
+        });
+    }
+
     inline void prepareScene(double K, double m, double l0)
     {
         // Create the scene
         m_si.root->setGravity({ 0, -10, 0 });
-
-        sofa::simpleapi::importPlugin("Sofa.Component.ODESolver");
-        sofa::simpleapi::importPlugin("SofaBaseLinearSolver");
-        sofa::simpleapi::importPlugin("SofaBaseMechanics");
-        sofa::simpleapi::importPlugin("SofaDeformable"); 
-        sofa::simpleapi::importPlugin("SofaBoundaryCondition");
 
         // remove warnings
         simpleapi::createObject(m_si.root, "DefaultAnimationLoop", {});

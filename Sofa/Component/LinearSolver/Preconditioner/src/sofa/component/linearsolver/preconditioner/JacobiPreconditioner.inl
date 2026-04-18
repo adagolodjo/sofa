@@ -36,14 +36,7 @@ namespace sofa::component::linearsolver::preconditioner
 
 template<class TMatrix, class TVector>
 JacobiPreconditioner<TMatrix,TVector>::JacobiPreconditioner()
-    : f_verbose( initData(&f_verbose,false,"verbose","Dump system state at each iteration") )
 {
-}
-
-template<class TMatrix, class TVector>
-void JacobiPreconditioner<TMatrix,TVector>::setSystemMBKMatrix(const core::MechanicalParams* mparams)
-{
-    Inherit::setSystemMBKMatrix(mparams);
 }
 
 /// Solve P^-1 Mx= P^-1 b
@@ -59,6 +52,18 @@ template<class TMatrix, class TVector>
 void JacobiPreconditioner<TMatrix,TVector>::invert(Matrix& M)
 {
     M.invert();
+}
+
+template <class TMatrix, class TVector>
+void JacobiPreconditioner<TMatrix, TVector>::parse(core::objectmodel::BaseObjectDescription* arg)
+{
+    if (arg->getAttribute("verbose"))
+    {
+        msg_warning() << "Attribute 'verbose' has no use in this component. "
+                         "To disable this warning, remove the attribute from the scene.";
+    }
+
+    Inherit::parse(arg);
 }
 
 } // namespace sofa::component::linearsolver::preconditioner

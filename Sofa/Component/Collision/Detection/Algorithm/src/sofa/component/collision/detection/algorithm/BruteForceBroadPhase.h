@@ -23,7 +23,7 @@
 
 #include <sofa/component/collision/detection/algorithm/config.h>
 #include <sofa/core/collision/BroadPhaseDetection.h>
-#include <sofa/component/collision/geometry/CubeModel.h>
+#include <sofa/component/collision/geometry/CubeCollisionModel.h>
 
 namespace sofa::component::collision::detection::algorithm
 {
@@ -44,12 +44,12 @@ public:
 
 protected:
     BruteForceBroadPhase();
+
     ~BruteForceBroadPhase() override = default;
 
 private:
+    Data<type::fixed_array<sofa::type::Vec3, 2> > d_box; ///< if not empty, objects that do not intersect this bounding-box will be ignored
 
-    ///< if not empty, objects that do not intersect this bounding-box will be ignored
-    Data< type::fixed_array<sofa::type::Vector3,2> > box;
 
 public:
     void init() override;

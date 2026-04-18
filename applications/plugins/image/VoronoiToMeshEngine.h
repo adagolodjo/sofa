@@ -25,7 +25,7 @@
 #include <image/config.h>
 #include "ImageTypes.h"
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/core/visual/VisualParams.h>
 
@@ -88,7 +88,7 @@ public:
     typedef helper::WriteOnlyAccessor<Data< SeqTriangles > > waTriangles;
     Data< SeqTriangles > triangles; ///< output triangles
 
-    Data< Real > minLength; ///< minimun edge length in pixels
+    Data< Real > minLength; ///< minimum edge length in pixels
 
     VoronoiToMeshEngine()    :   Inherited()
       , showMesh(initData(&showMesh,false,"showMesh","show reconstructed mesh"))
@@ -98,7 +98,7 @@ public:
       , position(initData(&position,SeqPositions(),"position","output positions"))
       , edges(initData(&edges,SeqEdges(),"edges","output edges"))
       , triangles(initData(&triangles,SeqTriangles(),"triangles","output triangles"))
-      , minLength(initData(&minLength,(Real)2.,"minLength","minimun edge length in pixels"))
+      , minLength(initData(&minLength,(Real)2.,"minLength","minimum edge length in pixels"))
       , time((unsigned int)0)
     {
         image.setReadOnly(true);
@@ -170,7 +170,7 @@ protected:
         return true;
     }
 
-    // remove edges bellow a certain length
+    // remove edges below a certain length
     inline bool removeSmallEdges(IDtoInd& neighbors,IDtoInd& regions,IDtoCoord& coords, IDtoCoordAndUI& sums,const Real& tol) const
     {
         Real tol2=tol*tol;
@@ -296,7 +296,7 @@ protected:
         // merge points close to each other
         count = 0;
         IDtoCoordAndUI coordsum;
-        for(IDtoCoordIt p=coords.begin();p!=coords.end();++p) coordsum[p->first]=std::pair<Coord,unsigned int>(p->second,1);        // intitialize accumulator of coords
+        for(IDtoCoordIt p=coords.begin();p!=coords.end();++p) coordsum[p->first]=std::pair<Coord,unsigned int>(p->second,1);        // initialize accumulator of coords
         while(!removeSmallEdges(neighbors,regions,coords,coordsum,minLength.getValue())) count++;
         for(IDtoCoordIt p=coords.begin();p!=coords.end();++p) p->second = coordsum[p->first].first/(Real)coordsum[p->first].second;        // average to get mean of merged points
         if(this->f_printLog.getValue()) std::cout<<this->name<<": removed "<<count<<" edges"<<std::endl;
@@ -413,7 +413,7 @@ protected:
         vparams->drawTool()->drawPoints(this->position.getValue(),5,sofa::type::RGBAColor(0.2,1.,0.2,1.));
 
         raPositions pos(this->position);
-        std::vector<type::Vector3> points;
+        std::vector<type::Vec3> points;
         raEdges Edges(this->edges);
         points.resize(2*Edges.size());
         for (std::size_t i=0; i<Edges.size(); ++i)

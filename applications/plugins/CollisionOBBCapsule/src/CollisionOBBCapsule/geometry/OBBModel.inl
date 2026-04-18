@@ -102,11 +102,11 @@ void OBBCollisionModel<DataTypes>::computeBoundingTree(int maxDepth){
     cubeModel->resize(size);
     if (!empty())
     {
-        const typename OBBCollisionModel<DataTypes>::Real distance = (typename OBBCollisionModel<DataTypes>::Real)this->proximity.getValue();
+        const typename OBBCollisionModel<DataTypes>::Real distance = (typename OBBCollisionModel<DataTypes>::Real)this->d_contactDistance.getValue();
 
         std::vector<Coord> vs;
         vs.reserve(8);
-        for (Size i=0; i<size; i++)
+        for (sofa::Size i=0; i<size; i++)
         {
             vs.clear();
             vertices(i,vs);
@@ -146,14 +146,14 @@ void OBBCollisionModel<DataTypes>::draw(const sofa::core::visual::VisualParams* 
 
     sofa::type::RGBAColor col4f(getColor4f()[0], getColor4f()[1], getColor4f()[2], getColor4f()[3]);
 
-    std::vector<Vector3> n;
+    std::vector<Vec3> n;
     n.push_back(axis(index,1));
     n.push_back(axis(index,0));
     n.push_back(-n[0]);
     n.push_back(-n[2]);
     n.push_back(n.front());
 
-    std::vector<Vector3> points;
+    std::vector<Vec3> points;
     points.push_back(p[3]);
     points.push_back(p[0]);
     points.push_back(p[2]);
@@ -195,20 +195,17 @@ void OBBCollisionModel<DataTypes>::draw(const sofa::core::visual::VisualParams* 
 }
 
 template<class DataTypes>
-void OBBCollisionModel<DataTypes>::draw(const sofa::core::visual::VisualParams* vparams){
-    if (vparams->displayFlags().getShowCollisionModels())
+void OBBCollisionModel<DataTypes>::drawCollisionModel(const sofa::core::visual::VisualParams* vparams)
+{
+    vparams->drawTool()->setPolygonMode(0, vparams->displayFlags().getShowWireFrame());
+
+    const auto npoints = _mstate->getSize();
+    vparams->drawTool()->setLightingEnabled(true);  // Enable lightning
+    for (sofa::Size i = 0; i < npoints; ++i)
     {
-        vparams->drawTool()->setPolygonMode(0,vparams->displayFlags().getShowWireFrame());
-
-        const auto npoints = _mstate->getSize();
-        vparams->drawTool()->setLightingEnabled(true); //Enable lightning
-        for(Size i = 0 ; i < npoints ; ++i )
-            draw(vparams,i);
-        vparams->drawTool()->setLightingEnabled(false); //Disable lightning
+        draw(vparams, i);
     }
-
-    if (getPrevious()!=nullptr && vparams->displayFlags().getShowBoundingCollisionModels())
-        getPrevious()->draw(vparams);
+    vparams->drawTool()->setLightingEnabled(false);  // Disable lightning
 
     vparams->drawTool()->setPolygonMode(0,false);
 }
@@ -233,13 +230,13 @@ inline bool TOBB<DataTypes>::onSurface(const Coord &c)const{
 }
 
 template <class DataTypes>
-inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>::generalCoordinates(const Coord &c, Index index)const{
+inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>::generalCoordinates(const Coord &c, sofa::Index index)const{
     return orientation(index).rotate(c) + center(index);
 }
 
 
 template <class DataTypes>
-inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>::localCoordinates(const Coord &c, Index index)const{
+inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>::localCoordinates(const Coord &c, sofa::Index index)const{
     return orientation(index).inverseRotate(c - center(index));
 }
 
@@ -249,8 +246,8 @@ inline typename TOBB<DataTypes>::Coord TOBB<DataTypes>::localCoordinates(const C
 }
 
 template <class DataTypes>
-inline const typename OBBCollisionModel<DataTypes>::Coord & OBBCollisionModel<DataTypes>::lvelocity(Index index)const{
-    return (_mstate->read(core::ConstVecDerivId::velocity())->getValue())[index].getLinear();
+inline const typename OBBCollisionModel<DataTypes>::Coord & OBBCollisionModel<DataTypes>::lvelocity(sofa::Index index)const{
+    return (_mstate->read(core::vec_id::read_access::velocity)->getValue())[index].getLinear();
 }
 
 template <class DataTypes>
@@ -259,7 +256,7 @@ inline const typename TOBB<DataTypes>::Coord & TOBB<DataTypes>::v()const{
 }
 
 template<class DataTypes>
-inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>::axis(Index index,int dim)const{
+inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>::axis(sofa::Index index,int dim)const{
     Coord unit;
     if(dim == 0){
         unit[0] = 1;
@@ -281,7 +278,7 @@ inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>
 }
 
 template<class DataTypes>
-inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>::vertex(Index index,int num)const{
+inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>::vertex(sofa::Index index,int num)const{
     Real s0 = extent(index,0);
     Real s1 = extent(index,1);
     Real s2 = extent(index,2);
@@ -331,7 +328,7 @@ inline typename OBBCollisionModel<DataTypes>::Coord OBBCollisionModel<DataTypes>
 }
 
 template<class DataTypes>
-inline void OBBCollisionModel<DataTypes>::axes(Index index,Coord * v_axes)const{
+inline void OBBCollisionModel<DataTypes>::axes(sofa::Index index,Coord * v_axes)const{
     v_axes[0] = axis(index,0);
     v_axes[1] = axis(index,1);
     v_axes[2] = axis(index,2);
@@ -343,7 +340,7 @@ inline void TOBB<DataTypes>::axes(Coord * v_axes)const{
 }
 
 template<class DataTypes>
-inline void OBBCollisionModel<DataTypes>::vertices(Index index,std::vector<Coord> & vs)const{
+inline void OBBCollisionModel<DataTypes>::vertices(sofa::Index index,std::vector<Coord> & vs)const{
     Coord a0(axis(index,0) * extent(index,0));
     Coord a1(axis(index,1) * extent(index,1));
     Coord a2(axis(index,2) * extent(index,2));
@@ -361,22 +358,22 @@ inline void OBBCollisionModel<DataTypes>::vertices(Index index,std::vector<Coord
 }
 
 template<class DataTypes>
-inline const typename OBBCollisionModel<DataTypes>::Coord & OBBCollisionModel<DataTypes>::center(Index index)const{
-    return _mstate->read(core::ConstVecCoordId::position())->getValue()[index].getCenter();
+inline const typename OBBCollisionModel<DataTypes>::Coord & OBBCollisionModel<DataTypes>::center(sofa::Index index)const{
+    return _mstate->read(core::vec_id::read_access::position)->getValue()[index].getCenter();
 }
 
 template<class DataTypes>
-inline const typename OBBCollisionModel<DataTypes>::Quaternion & OBBCollisionModel<DataTypes>::orientation(Index index)const{
-    return _mstate->read(core::ConstVecCoordId::position())->getValue()[index].getOrientation();
+inline const typename OBBCollisionModel<DataTypes>::Quaternion & OBBCollisionModel<DataTypes>::orientation(sofa::Index index)const{
+    return _mstate->read(core::vec_id::read_access::position)->getValue()[index].getOrientation();
 }
 
 template<class DataTypes>
-inline typename OBBCollisionModel<DataTypes>::Real OBBCollisionModel<DataTypes>::extent(Index index,int dim)const{
+inline typename OBBCollisionModel<DataTypes>::Real OBBCollisionModel<DataTypes>::extent(sofa::Index index,int dim)const{
     return ((ext.getValue())[index])[dim];
 }
 
 template<class DataTypes>
-inline const typename OBBCollisionModel<DataTypes>::Coord & OBBCollisionModel<DataTypes>::extents(Index index)const{
+inline const typename OBBCollisionModel<DataTypes>::Coord & OBBCollisionModel<DataTypes>::extents(sofa::Index index)const{
     return (ext.getValue())[index];
 }
 
@@ -437,7 +434,7 @@ void OBBCollisionModel<DataTypes>::computeBBox(const core::ExecParams*, bool onl
 
     std::vector<Coord> p;
     const auto npoints = _mstate->getSize();
-    for(Size i = 0 ; i < npoints ; ++i )
+    for(sofa::Size i = 0 ; i < npoints ; ++i )
     {
         vertices(i,p);
         for (unsigned int j=0; j<8; j++)

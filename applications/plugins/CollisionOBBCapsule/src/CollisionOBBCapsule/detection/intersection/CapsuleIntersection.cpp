@@ -29,7 +29,8 @@
 #include <CollisionOBBCapsule/geometry/OBBModel.h>
 #include <sofa/component/collision/geometry/SphereModel.h>
 #include <sofa/component/collision/geometry/RayModel.h>
-#include <SofaUserInteraction/FixParticlePerformer.h>
+#include <sofa/gui/component/performer/FixParticlePerformer.h>
+
 
 namespace collisionobbcapsule::detection::intersection
 {
@@ -42,8 +43,7 @@ using namespace collisionobbcapsule::geometry;
 IntersectorCreator<DiscreteIntersection, CapsuleDiscreteIntersection> CapsuleDiscreteIntersectors("Capsule");
 IntersectorCreator<NewProximityIntersection, CapsuleMeshDiscreteIntersection> CapsuleMeshDiscreteIntersectors("CapsuleMesh");
 
-CapsuleDiscreteIntersection::CapsuleDiscreteIntersection(DiscreteIntersection* object)
-    : intersection(object)
+CapsuleDiscreteIntersection::CapsuleDiscreteIntersection(DiscreteIntersection* intersection)
 {
     intersection->intersectors.add<CapsuleCollisionModel<sofa::defaulttype::Vec3Types>, CapsuleCollisionModel<sofa::defaulttype::Vec3Types>, CapsuleDiscreteIntersection>(this);
     intersection->intersectors.add<CapsuleCollisionModel<sofa::defaulttype::Vec3Types>, SphereCollisionModel<sofa::defaulttype::Vec3Types>, CapsuleDiscreteIntersection>(this);
@@ -59,8 +59,7 @@ CapsuleDiscreteIntersection::CapsuleDiscreteIntersection(DiscreteIntersection* o
     intersection->intersectors.ignore<RayCollisionModel, CapsuleCollisionModel<sofa::defaulttype::Rigid3Types>>();
 }
 
-CapsuleMeshDiscreteIntersection::CapsuleMeshDiscreteIntersection(NewProximityIntersection* object)
-    : intersection(object)
+CapsuleMeshDiscreteIntersection::CapsuleMeshDiscreteIntersection(NewProximityIntersection* intersection)
 {
 
     intersection->intersectors.add<CapsuleCollisionModel<sofa::defaulttype::Vec3Types>, TriangleCollisionModel<sofa::defaulttype::Vec3Types>, CapsuleMeshDiscreteIntersection>(this);
@@ -70,7 +69,7 @@ CapsuleMeshDiscreteIntersection::CapsuleMeshDiscreteIntersection(NewProximityInt
 }
 
 // add CapsuleModel to the list of supported collision models for FixParticlePerformer
-using FixParticlePerformer3d = sofa::component::collision::FixParticlePerformer<defaulttype::Vec3Types>;
+using FixParticlePerformer3d = sofa::gui::component::performer::FixParticlePerformer<defaulttype::Vec3Types>;
 
 int capsuleFixParticle = FixParticlePerformer3d::RegisterSupportedModel<CapsuleCollisionModel<sofa::defaulttype::Vec3Types>>(
     []

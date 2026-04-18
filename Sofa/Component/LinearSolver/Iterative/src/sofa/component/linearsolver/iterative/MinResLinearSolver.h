@@ -45,18 +45,17 @@ public:
     typedef sofa::component::linearsolver::MatrixLinearSolver<TMatrix,TVector> Inherit;
     Data<unsigned> f_maxIter; ///< maximum number of iterations of the Conjugate Gradient solution
     Data<double> f_tolerance; ///< desired precision of the Conjugate Gradient Solution (ratio of current residual norm over initial residual norm)
-    Data<bool> f_verbose; ///< Dump system state at each iteration
+
     Data<std::map < std::string, sofa::type::vector<SReal> > > f_graph; ///< Graph of residuals at each iteration
 
 protected:
     MinResLinearSolver();
 
 public:
-    void resetSystem() override;
-    void setSystemMBKMatrix(const sofa::core::MechanicalParams* mparams) override;
-
     /// Solve Mx=b
     void solve (Matrix& M, Vector& x, Vector& b) override;
+
+    void parse(core::objectmodel::BaseObjectDescription* arg) override;
 };
 
 #if !defined(SOFA_COMPONENT_LINEARSOLVER_MINRESLINEARSOLVER_CPP)

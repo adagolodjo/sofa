@@ -19,13 +19,10 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "BaseState.h"
+#include <sofa/core/BaseState.h>
 #include <sofa/core/objectmodel/BaseNode.h>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 
@@ -43,9 +40,14 @@ bool BaseState::removeInNode( objectmodel::BaseNode* node )
     return true;
 }
 
+void BaseState::addToTotalForces(core::ConstVecDerivId forceId)
+{
+    SOFA_UNUSED(forceId);
+}
 
-
-} // namespace core
-
-} // namespace sofa
+void BaseState::removeFromTotalForces(core::ConstVecDerivId forceId)
+{
+    SOFA_UNUSED(forceId);
+}
+} // namespace sofa::core
 

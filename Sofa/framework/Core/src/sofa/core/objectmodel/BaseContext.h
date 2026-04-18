@@ -39,7 +39,7 @@ namespace sofa::core::objectmodel
  *  \brief Base class for Context classes, storing shared variables and parameters.
  *
  *  A Context contains values or pointers to variables and parameters shared
- *  by a group of objects, typically refering to the same simulated body.
+ *  by a group of objects, typically referring to the same simulated body.
  *  Derived classes can defined simple isolated contexts or more powerful
  *  hierarchical representations (scene-graphs), in which case the context also
  *  implements the BaseNode interface.
@@ -147,7 +147,7 @@ public:
     class GetObjectsCallBack
     {
     public:
-      virtual ~GetObjectsCallBack() {}
+        virtual ~GetObjectsCallBack() = default;
         virtual void operator()(void* ptr) = 0;
     };
 
@@ -185,12 +185,12 @@ public:
         return result ;
     }
 
-    /// Returns a list of object of type passed as a parameter. There shoud be no
+    /// Returns a list of object of type passed as a parameter. There should be no
     /// Copy constructor because of Return Value Optimization.
     /// eg:
     ///    for(BaseObject* o : context->getObjects() ){ ... }
     ///    for(VisualModel* o : context->getObjects<VisualModel>() ){ ... }
-    template<class Object=sofa::core::objectmodel::BaseObject>
+    template<class Object=sofa::core::objectmodel::BaseComponent>
     std::vector<Object*> getObjects(SearchDirection dir = SearchUp){
         std::vector<Object*> o;
         getObjects(o, dir) ;
@@ -283,18 +283,9 @@ public:
         ptr = this->get<T>(path);
     }
 
+    /// Helper functor allowing to insert an object into a container
     template<class T, class Container>
-    class GetObjectsCallBackT : public GetObjectsCallBack
-    {
-    public:
-        Container* dest;
-        GetObjectsCallBackT(Container* d) : dest(d) {}
-        virtual ~GetObjectsCallBackT() override {}
-        void operator()(void* ptr) override
-	{
-	    dest->push_back(reinterpret_cast<T*>(ptr));
-	}
-    };
+    class GetObjectsCallBackT;
 
     /// Generic list of objects access template wrapper, possibly searching up or down from the current context
     template<class T, class Container>
@@ -347,11 +338,11 @@ public:
     /// @{
 
     /// Mechanical Degrees-of-Freedom
-    virtual void setMechanicalState( BaseObject* )
+    virtual void setMechanicalState( sofa::core::objectmodel::BaseComponent* )
     { }
 
     /// Topology
-    virtual void setTopology( BaseObject* )
+    virtual void setTopology( sofa::core::objectmodel::BaseComponent* )
     { }
 
     /// @}
@@ -371,13 +362,13 @@ public:
     /// @{
 
     /// Add an object, or return false if not supported
-    virtual bool addObject( sptr<BaseObject> /*obj*/, TypeOfInsertion = TypeOfInsertion::AtEnd)
+    virtual bool addObject( sptr<sofa::core::objectmodel::BaseComponent> /*obj*/, TypeOfInsertion = TypeOfInsertion::AtEnd)
     {
         return false;
     }
 
     /// Remove an object, or return false if not supported
-    virtual bool removeObject( sptr<BaseObject> /*obj*/ )
+    virtual bool removeObject( sptr<sofa::core::objectmodel::BaseComponent> /*obj*/ )
     {
         return false;
     }
@@ -402,9 +393,9 @@ public:
     /// @name Notifications for graph change listeners
     /// @{
 
-    virtual void notifyAddSlave(core::objectmodel::BaseObject* master, core::objectmodel::BaseObject* slave);
-    virtual void notifyRemoveSlave(core::objectmodel::BaseObject* master, core::objectmodel::BaseObject* slave);
-    virtual void notifyMoveSlave(core::objectmodel::BaseObject* previousMaster, core::objectmodel::BaseObject* master, core::objectmodel::BaseObject* slave);
+    virtual void notifyAddSlave(core::objectmodel::BaseComponent* master, core::objectmodel::BaseComponent* slave);
+    virtual void notifyRemoveSlave(core::objectmodel::BaseComponent* master, core::objectmodel::BaseComponent* slave);
+    virtual void notifyMoveSlave(core::objectmodel::BaseComponent* previousMaster, core::objectmodel::BaseComponent* master, core::objectmodel::BaseComponent* slave);
 
     /// @}
 
@@ -412,6 +403,25 @@ public:
 
 protected:
     ComponentNameHelper m_nameHelper;
+};
+
+template<class T, class Container>
+class BaseContext::GetObjectsCallBackT : public BaseContext::GetObjectsCallBack
+{
+public:
+    Container* dest;
+    GetObjectsCallBackT(Container* d) : dest(d) {}
+    void operator()(void* ptr) override
+    {
+        if constexpr (sofa::type::trait::is_vector<Container>)
+        {
+            dest->push_back(reinterpret_cast<T*>(ptr));
+        }
+        else //for sets
+        {
+            dest->insert(reinterpret_cast<T*>(ptr));
+        }
+    }
 };
 
 } // namespace sofa::core::objectmodel

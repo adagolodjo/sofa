@@ -21,6 +21,12 @@
 ******************************************************************************/
 #pragma once
 
+#include <sofa/config.h>
+
+#ifndef SOFA_BUILD_SOFA_SIMULATION_CORE
+SOFA_HEADER_DEPRECATED_NOT_REPLACED("v25.12", "v26.06")
+#endif
+
 #include <sofa/simulation/config.h>
 #include <sofa/simulation/fwd.h>
 #include <sofa/simulation/Visitor.h>
@@ -31,7 +37,7 @@
 namespace sofa::simulation
 {
 
-class SOFA_SIMULATION_CORE_API AnimateVisitor : public Visitor
+class SOFA_SIMULATION_CORE_API SOFA_ATTRIBUTE_DEPRECATED_ANIMATEVISITOR() AnimateVisitor : public Visitor
 {
 
 protected :
@@ -56,12 +62,6 @@ public:
     /// Only used for debugging / profiling purposes
     const char* getCategoryName() const override { return "animate"; }
     const char* getClassName() const override { return "AnimateVisitor"; }
-
-    // Deprecated functions because they are not used
-    SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#2194)", "v21.12", "This was not used in SOFA codebase. If you need it, contact SOFA Consortium.")
-    virtual void processBehaviorModel(simulation::Node* node, core::BehaviorModel* obj) = delete;
-    SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#2194)", "v21.12", "This was not used in SOFA codebase. If you need it, contact SOFA Consortium.")
-    virtual void processOdeSolver(simulation::Node* node, core::behavior::OdeSolver* obj) = delete;
 };
 
 } // namespace sofa::simulation

@@ -27,7 +27,7 @@
 #include <sofa/helper/rmath.h>
 #include <sofa/helper/IndexOpenMP.h>
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/core/visual/VisualParams.h>
 
@@ -66,7 +66,7 @@ public:
 
     typedef SReal Real;
 
-    Data< type::vector<Real> > voxelSize; ///< should be a Vec<3,Real>, but it is easier to be backward-compatible that way
+    Data< type::vector<Real> > voxelSize; ///< voxel Size (redondant with and not priority over nbVoxels)
     typedef helper::WriteOnlyAccessor<Data< type::vector<Real> > > waVecReal;
     Data< type::Vec<3,unsigned> > nbVoxels; ///< number of voxel (redondant with and priority over voxelSize)
     Data< bool > rotateImage; ///< orient the image bounding box according to the mesh (OBB)
@@ -322,10 +322,18 @@ protected:
             M/=(Real)nbpTotal;
 
             // get eigen vectors of the covariance matrix
-            Eigen::Matrix<Real, 3, 3> e = Eigen::Matrix<Real, 3, 3>::Zero();
+            Eigen::Matrix<Real, 3, 3> e;
+            e.setZero();
+            for (size_t j = 0; j < 3; j++) 
+            { 
+                for (size_t k = j; k < 3; k++)  
+                    e(j , k) = M[j][k]; 
+                for (size_t k = 0; k < j; k++)  
+                    e(k , j) = e(j, k ); 
+            }
 
             //compute eigenvalues and eigenvectors
-            Eigen::JacobiSVD svd(e, Eigen::ComputeThinU | Eigen::ComputeThinV);
+            Eigen::JacobiSVD<Eigen::Matrix<Real, 3, 3>> svd(e, Eigen::ComputeThinU | Eigen::ComputeThinV);
             auto V = svd.matrixV();
 
             for(size_t j=0; j<3; j++) for(size_t k=0; k<3; k++) M[j][k]=V(j,k);

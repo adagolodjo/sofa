@@ -33,8 +33,12 @@ using sofa::simulation::Node;
 #include <sofa/component/sceneutility/APIVersion.h>
 using sofa::component::sceneutility::APIVersion;
 
+#include <sofa/simulation/SceneCheckMainRegistry.h>
+
 namespace sofa::_scenechecking_
 {
+
+// const bool SceneCheckAPIChangeRegistered = sofa::simulation::SceneCheckMainRegistry::addToRegistry(SceneCheckAPIChange::newSPtr());
 
 SceneCheckAPIChange::SceneCheckAPIChange()
 {
@@ -90,7 +94,7 @@ void SceneCheckAPIChange::doCheckOn(sofa::simulation::Node* node)
     {
         Base* o = object.get();
 
-        if(m_selectedApiLevel != m_currentApiLevel && m_changesets.find(m_selectedApiLevel) != m_changesets.end())
+        if(m_selectedApiLevel != m_currentApiLevel && m_changesets.contains(m_selectedApiLevel))
         {
             for(auto& hook : m_changesets[m_selectedApiLevel])
             {
@@ -103,7 +107,7 @@ void SceneCheckAPIChange::doCheckOn(sofa::simulation::Node* node)
 void SceneCheckAPIChange::installDefaultChangeSets()
 {
     // Template of addHookInChangeSet
-    // addHookInChangeSet warns the user about changes that occured within a component
+    // addHookInChangeSet warns the user about changes that occurred within a component
     // (change in API, behavior, default values, etc.)
     /*
     addHookInChangeSet("17.06", [this](Base* o){

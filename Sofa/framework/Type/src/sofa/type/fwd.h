@@ -25,6 +25,7 @@
 
 namespace sofa::type
 {
+
 template <sofa::Size L, class Real=float>
 class Vec;
 
@@ -61,12 +62,6 @@ typedef Vec<6,int> Vec6i;
 typedef Vec<6,unsigned> Vec6u;
 typedef Vec<6,SReal> Vec6;
 
-typedef Vec1d Vector1; ///< alias
-typedef Vec2d Vector2; ///< alias
-typedef Vec3d Vector3; ///< alias
-typedef Vec4d Vector4; ///< alias
-typedef Vec6d Vector6; ///< alias
-
 
 template <sofa::Size L, sofa::Size C, class Real=float>
 class Mat;
@@ -89,9 +84,13 @@ typedef Mat<3,4,double> Mat3x4d;
 typedef Mat<4,4,float> Mat4x4f;
 typedef Mat<4,4,double> Mat4x4d;
 
+typedef Mat<6, 6, float> Mat6x6f;
+typedef Mat<6, 6, double> Mat6x6d;
+
 typedef Mat<2,2,SReal> Mat2x2;
 typedef Mat<3,3,SReal> Mat3x3;
 typedef Mat<4,4,SReal> Mat4x4;
+typedef Mat<6,6,SReal> Mat6x6;
 
 typedef Mat<2,2,SReal> Matrix2;
 typedef Mat<3,3,SReal> Matrix3;
@@ -102,6 +101,8 @@ using Quatd = type::Quat<double>;
 using Quatf = type::Quat<float>;
 
 class BoundingBox;
+using BoundingBox3D = BoundingBox;
 class BoundingBox1D;
 class BoundingBox2D;
+
 }

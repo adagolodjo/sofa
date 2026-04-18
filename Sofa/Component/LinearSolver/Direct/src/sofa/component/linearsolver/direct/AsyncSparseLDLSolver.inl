@@ -29,44 +29,58 @@ namespace sofa::component::linearsolver::direct
 {
 
 template <class TMatrix, class TVector, class TThreadManager>
-void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::init()
+AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::AsyncSparseLDLSolver()
+    : d_enableAssembly(initData(&d_enableAssembly, true, "enableAssembly", "Allow assembly of the linear system"))
 {
-    Inherit1::init();
-    waitForAsyncTask = true;
-    m_asyncThreadInvertData = &m_secondInvertData;
-    m_mainThreadInvertData = static_cast<InvertData*>(this->invertData.get());
 }
 
 template <class TMatrix, class TVector, class TThreadManager>
-void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::setSystemMBKMatrix(const core::MechanicalParams* mparams)
+void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::init()
 {
-    if (isAsyncFactorizationFinished() || !m_asyncResult.valid())
+    Inherit1::init();
+
+    if (!this->isComponentStateInvalid())
     {
-        sofa::helper::ScopedAdvancedTimer setSystemMBKMatrixTimer("setSystemMBKMatrix");
-        Inherit1::setSystemMBKMatrix(mparams);
-        m_hasUpdatedMatrix = true;
+        if (this->l_linearSystem)
+        {
+            this->l_linearSystem->d_enableAssembly.setParent(&d_enableAssembly);
+        }
+
+        waitForAsyncTask = true;
+        m_asyncThreadInvertData = &m_secondInvertData;
+        m_mainThreadInvertData = static_cast<InvertData*>(this->invertData.get());
     }
+}
+
+template <class TMatrix, class TVector, class TThreadManager>
+void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::reset()
+{
+    d_enableAssembly.setValue(true);
+    waitForAsyncTask = true;
 }
 
 template <class TMatrix, class TVector, class TThreadManager>
 void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::solveSystem()
 {
-    sofa::helper::ScopedAdvancedTimer invertDataCopyTimer("AsyncSolve");
+    SCOPED_TIMER_VARNAME(invertDataCopyTimer, "solveSystem");
 
     if (newInvertDataReady)
     {
         swapInvertData();
     }
 
-    if (this->linearSystem.needInvert)
+    if (this->d_factorizationInvalidation.getValue())
     {
         if (this->invertData == nullptr)
         {
-            this->getMatrixInvertData(this->linearSystem.systemMatrix);
+            this->getMatrixInvertData(this->l_linearSystem->getSystemMatrix());
             m_mainThreadInvertData = static_cast<InvertData*>(this->invertData.get());
         }
         launchAsyncFactorization();
-        this->linearSystem.needInvert = false;
+        this->d_factorizationInvalidation.setValue(false);
+
+        //matrix assembly is temporarily stopped until the next factorization
+        d_enableAssembly.setValue(false);
     }
 
     if (waitForAsyncTask)
@@ -81,16 +95,18 @@ void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::solveSystem()
         swapInvertData();
     }
 
-    this->solve(*this->linearSystem.systemMatrix, *this->linearSystem.systemLHVector, *this->linearSystem.systemRHVector);
-    if (!this->linearSystem.solutionVecId.isNull())
-    {
-        this->executeVisitor(simulation::mechanicalvisitor::MechanicalMultiVectorFromBaseVectorVisitor(core::execparams::defaultInstance(), this->linearSystem.solutionVecId, this->linearSystem.systemLHVector, &(this->linearSystem.matrixAccessor)) );
-    }
+    auto* A = this->l_linearSystem->getSystemMatrix();
+    auto* b = this->l_linearSystem->getRHSVector();
+    auto* x = this->l_linearSystem->getSolutionVector();
+
+    this->solve(*A, *x, *b);
 }
 
 template <class TMatrix, class TVector, class TThreadManager>
 void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::solve(Matrix& M, Vector& x, Vector& b)
 {
+    SOFA_UNUSED(M);
+
     Inherit1::solve_cpu(&x[0],&b[0], m_mainThreadInvertData);
 }
 
@@ -101,26 +117,16 @@ void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::invert(TMatrix& M)
 }
 
 template <class TMatrix, class TVector, class TThreadManager>
-bool AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::addJMInvJtLocal(TMatrix* M, ResMatrixType* result,
-    const JMatrixType* J, SReal fact)
+bool AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::addJMInvJtLocal(
+    TMatrix* M, ResMatrixType* result, const JMatrixType* J, SReal fact)
 {
+    SOFA_UNUSED(M);
+
     if (newInvertDataReady)
     {
         swapInvertData();
     }
     return Inherit1::doAddJMInvJtLocal(result, J, fact, m_mainThreadInvertData);
-}
-
-template <class TMatrix, class TVector, class TThreadManager>
-bool AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::hasUpdatedMatrix()
-{
-    return m_hasUpdatedMatrix;
-}
-
-template <class TMatrix, class TVector, class TThreadManager>
-void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::updateSystemMatrix()
-{
-    m_hasUpdatedMatrix = false;
 }
 
 template <class TMatrix, class TVector, class TThreadManager>
@@ -146,9 +152,14 @@ void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::launchAsyncFactoriz
 template <class TMatrix, class TVector, class TThreadManager>
 void AsyncSparseLDLSolver<TMatrix, TVector, TThreadManager>::asyncFactorization()
 {
+    SCOPED_TIMER_TR("asyncFactorization");
+
     newInvertDataReady = false;
-    this->invert(*this->linearSystem.systemMatrix);
+    this->invert(*this->l_linearSystem->getSystemMatrix());
     newInvertDataReady = true;
+
+    //factorization is finished: matrix assembly is authorized once again
+    d_enableAssembly.setValue(true);
 }
 
 template <class TMatrix, class TVector, class TThreadManager>

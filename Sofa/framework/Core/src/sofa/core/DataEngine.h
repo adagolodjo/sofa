@@ -19,17 +19,13 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_DATAENGINE_H
-#define SOFA_CORE_DATAENGINE_H
+#pragma once
 
 #include <sofa/core/config.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/DataTracker.h>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 /**
@@ -56,10 +52,10 @@ namespace core
  * }
  *
  */
-class SOFA_CORE_API DataEngine : public core::DataTrackerDDGNode, public virtual core::objectmodel::BaseObject
+class SOFA_CORE_API DataEngine : public core::DataTrackerDDGNode, public virtual core::objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(DataEngine, core::objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(DataEngine, core::objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(DataEngine)
 protected:
     /// Constructor
@@ -95,9 +91,4 @@ public:
     /// Add a new output to this engine
     void addOutput(objectmodel::BaseData* n);
 };
-
-} // namespace core
-
 } // namespace sofa
-
-#endif

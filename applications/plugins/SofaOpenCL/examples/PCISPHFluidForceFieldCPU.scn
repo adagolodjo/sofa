@@ -1,5 +1,5 @@
 <Node dt="0.005" showBehaviorModels="1" showCollisionModels="1" showMappings="0" showForceFields="1" gravity="0 -10 0" >
-    <RequiredPlugin name="SofaOpenglVisual"/>
+    <RequiredPlugin pluginName="SofaOpenglVisual"/>
 	<Node>
 	<!--<RungeKutta4Solver/>-->
 		<!--<CentralDifferenceSolver/>-->
@@ -15,7 +15,7 @@
 			zmin="-1.5" zmax="1.5"
 		/>
 <!---->
-		<UniformMass name="M1" mass="1" />
+		<UniformMass name="M1" vertexMass="1" />
 		<SpatialGridContainer cellWidth="1.5" />
 		<!-- The following force fields handle collision with walls and an inclined floor -->
 		<PlaneForceField normal="1.0 0 0" d="-4.0"/>

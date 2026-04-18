@@ -3,14 +3,15 @@
 @PACKAGE_GUARD@
 @PACKAGE_INIT@
 
-set(SOFASIMULATION_MODULES @SOFASIMULATION_MODULES@)
+set(SOFASIMULATION_TARGETS @SOFASIMULATION_TARGETS@)
 
-foreach(target ${SOFASIMULATION_MODULES})
-    find_package(${target} QUIET REQUIRED)
+find_package(Sofa.Config QUIET REQUIRED)
+
+foreach(target ${SOFASIMULATION_TARGETS})
+    sofa_find_package(${target} QUIET REQUIRED)
 endforeach()
 
 if(NOT TARGET @PROJECT_NAME@)
     include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
 endif()
-
 check_required_components(@PROJECT_NAME@)

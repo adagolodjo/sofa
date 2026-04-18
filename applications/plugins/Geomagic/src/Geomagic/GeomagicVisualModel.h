@@ -25,7 +25,7 @@
 //Geomagic include
 #include <Geomagic/config.h>
 #include <Geomagic/GeomagicDriver.h>
-#include <SofaOpenglVisual/OglModel.h>
+#include <sofa/gl/component/rendering3d/OglModel.h>
 #include <sofa/component/io/mesh/MeshOBJLoader.h>
 
 #include <sofa/type/Vec.h>
@@ -33,17 +33,11 @@
 #include <sofa/defaulttype/RigidTypes.h>
 
 //Visualization
-#include <SofaRigid/RigidMapping.h>
-#include <SofaBaseMechanics/MechanicalObject.h>
+#include <sofa/component/mapping/nonlinear/RigidMapping.h>
+#include <sofa/component/statecontainer/MechanicalObject.h>
 #include <sofa/simulation/Node.h>
 
-namespace sofa 
-{
-
-namespace component 
-{
-
-namespace controller
+namespace geomagic
 {
 
 using namespace sofa::defaulttype;
@@ -61,8 +55,8 @@ public:
     {
         simulation::Node::SPtr node;
         sofa::component::io::mesh::MeshOBJLoader::SPtr loader;
-        sofa::component::visualmodel::OglModel::SPtr visu;        
-        sofa::component::mapping::RigidMapping< Rigid3Types , Vec3Types  >::SPtr mapping;
+        sofa::gl::component::rendering3d::OglModel::SPtr visu;
+        sofa::component::mapping::nonlinear::RigidMapping< Rigid3Types , Vec3Types  >::SPtr mapping;
     };
 
 
@@ -103,7 +97,7 @@ protected:
     static const char* visualNodeNames[NVISUALNODE];
     static const char* visualNodeFiles[NVISUALNODE];
     simulation::Node::SPtr m_omniVisualNode;
-    component::container::MechanicalObject<sofa::defaulttype::Rigid3dTypes>::SPtr rigidDOF;
+    component::statecontainer::MechanicalObject<sofa::defaulttype::Rigid3dTypes>::SPtr rigidDOF;
 
     VecCoord m_posDeviceVisu; ///< position of the hpatic devices for rendering. first pos is equal to d_posDevice
 
@@ -113,10 +107,6 @@ private:
     double m_scale;
 };
 
-} // namespace controller
-
-} // namespace component
-
-} // namespace sofa
+} // namespace geomagic
 
 #endif // SOFA_GEOMAGIC_VISUALMODEL_H

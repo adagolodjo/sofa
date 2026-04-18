@@ -92,7 +92,7 @@ namespace sofa
 
 		SofaHAPIHapticsDevice::SofaHAPIHapticsDevice()
 			: scale(initData(&scale, 1.0, "scale","Default scale applied to the Phantom Coordinates. "))
-			, forceScale(initData(&forceScale, 1.0, "forceScale","Default forceScale applied to the force feedback. "))
+			, forceScale(initData(&forceScale, 1.0, "forceScale","Default scaling factor applied to the force feedback"))
 			, positionBase(initData(&positionBase, Vec3d(0,0,0), "positionBase","Position of the interface base in the scene world coordinates"))
 			, orientationBase(initData(&orientationBase, Quat(0,0,0,1), "orientationBase","Orientation of the interface base in the scene world coordinates"))
 			, positionTool(initData(&positionTool, Vec3d(0,0,0), "positionTool","Position of the tool in the device end effector frame"))
@@ -365,9 +365,9 @@ namespace sofa
 					{
 						sout << "Enabling tool transition spring" << sendl;
 
-						sofa::helper::ReadAccessor<Data<sofa::type::vector<sofa::defaulttype::RigidCoord<3,double> > > > x = *this->mState->read(sofa::core::VecCoordId::position());
-						Transform world_H_virtualTool(x[newToolIndex].getCenter(), x[newToolIndex].getOrientation());
-						Transform baseDevice_H_endDevice2 = data.world_H_baseDevice.inversed() * world_H_virtualTool * data.endDevice_H_virtualTool.inversed();
+						sofa::helper::ReadAccessor<Data<sofa::type::vector<sofa::defaulttype::RigidCoord<3,double> > > > x = *this->mState->read(sofa::core::vec_id::read_access::position);
+						Transform world_H_new_virtualTool(x[newToolIndex].getCenter(), x[newToolIndex].getOrientation());
+						Transform baseDevice_H_endDevice2 = data.world_H_baseDevice.inversed() * world_H_new_virtualTool * data.endDevice_H_virtualTool.inversed();
 						transitionEffect.reset(
 							new HAPI::HapticSpring( conv(baseDevice_H_endDevice2.getOrigin()*(1/data.scale)),
 									toolTransitionSpringStiffness.getValue()));
@@ -415,8 +415,8 @@ namespace sofa
 					sofa::helper::AdvancedTimer::stepBegin("SetState");
 					/// TODO : SHOULD INCLUDE VELOCITY !!
 
-					sofa::helper::WriteAccessor<Data<sofa::type::vector<sofa::defaulttype::RigidCoord<3,double> > > > x = *this->mState->write(sofa::core::VecCoordId::position());
-					sofa::helper::WriteAccessor<Data<sofa::type::vector<sofa::defaulttype::RigidCoord<3,double> > > > xfree = *this->mState->write(sofa::core::VecCoordId::freePosition());
+					sofa::helper::WriteAccessor<Data<sofa::type::vector<sofa::defaulttype::RigidCoord<3,double> > > > x = *this->mState->write(sofa::core::vec_id::write_access::position);
+					sofa::helper::WriteAccessor<Data<sofa::type::vector<sofa::defaulttype::RigidCoord<3,double> > > > xfree = *this->mState->write(sofa::core::vec_id::write_access::freePosition);
 
 					xfree[currentToolIndex].getCenter() = world_H_virtualTool.getOrigin();
 					x[currentToolIndex].getCenter() = world_H_virtualTool.getOrigin();

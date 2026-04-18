@@ -19,10 +19,14 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include <sofa/component/constraint/config.h>
+#include <sofa/component/constraint/init.h>
 
 #include <sofa/component/constraint/lagrangian/init.h>
 #include <sofa/component/constraint/projective/init.h>
+
+#include <sofa/core/ObjectFactory.h>
+#include <sofa/helper/system/PluginManager.h>
+#include <sofa/Modules.h>
 
 namespace sofa::component::constraint
 {
@@ -31,19 +35,12 @@ extern "C" {
     SOFA_EXPORT_DYNAMIC_LIBRARY void initExternalModule();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleName();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleVersion();
+    SOFA_EXPORT_DYNAMIC_LIBRARY void registerObjects(sofa::core::ObjectFactory* factory);
 }
 
 void initExternalModule()
 {
-    static bool first = true;
-    if (first)
-    {        
-        // force dependencies at compile-time
-        sofa::component::constraint::lagrangian::init();
-        sofa::component::constraint::projective::init();
-
-        first = false;
-    }
+    init();
 }
 
 const char* getModuleName()
@@ -56,9 +53,26 @@ const char* getModuleVersion()
     return MODULE_VERSION;
 }
 
+void registerObjects(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjectsFromPlugin(Sofa.Component.Constraint.Lagrangian);
+    factory->registerObjectsFromPlugin(Sofa.Component.Constraint.Projective);
+}
+
 void init()
 {
-    initExternalModule();
+    static bool first = true;
+    if (first)
+    {
+        // force dependencies at compile-time
+        sofa::component::constraint::lagrangian::init();
+        sofa::component::constraint::projective::init();
+
+        // make sure that this plugin is registered into the PluginManager
+        sofa::helper::system::PluginManager::getInstance().registerPlugin(MODULE_NAME);
+
+        first = false;
+    }
 }
 
 } // namespace sofa::component::constraint

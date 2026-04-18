@@ -32,9 +32,9 @@ namespace sofa::type
 
 /** The affine transformation of points and vectors from a coordinate system (the local frame) to another (the reference frame). The transformation is not necessarily rigid.
 
-When defined using (origin, rotation, scale), the transfrom can be seen as three frame displacements starting from the reference frame: translation, then rotation along the new origin, then scale along the new axes. Conversely, the projection of a point from the local frame to the reference frame undergoes scaling, then rotation, then translation. Vectors do not undergo translation since they model directions or displacement.
+When defined using (origin, rotation, scale), the transform can be seen as three frame displacements starting from the reference frame: translation, then rotation along the new origin, then scale along the new axes. Conversely, the projection of a point from the local frame to the reference frame undergoes scaling, then rotation, then translation. Vectors do not undergo translation since they model directions or displacement.
 
-The product F1F2 can be seen as a frame displacement F1 starting from the reference frame followed by a frame displacement F2 starting from the new frame. It is used in frame hierarchies to model the transfromation frome frame 2 wrt the reference frame.
+The product F1F2 can be seen as a frame displacement F1 starting from the reference frame followed by a frame displacement F2 starting from the new frame. It is used in frame hierarchies to model the transformation from frame 2 wrt the reference frame.
 
 \author Francois Faure, INRIA-UJF, 2006
 */
@@ -48,10 +48,10 @@ private:
     Mat33 basis_;
 public:
     /** Define the local frame using origin and basis vectors */
-    Frame (const Vec3 &origin, const Mat33& m );
+    Frame (const Vec3 &origin, const Mat33& matrix );
 
     /** Define the local frame using three transforms */
-    Frame (const Vec3 &origin, const Quat &orientation, const Vec3& scale=Vec3(1,1,1) );
+    Frame (const Vec3 &origin, const Quat &orientation, const Vec3& scale=Vec3(1_sreal,1_sreal,1_sreal) );
 
     /** Define the local frame without rotation */
     Frame (const Vec3 &origin );
@@ -103,9 +103,9 @@ public:
     V projectVector( const V& v ) const
     {
         return V(
-                basis_[0][0]*v[0]+basis_[0][1]*v[1]+basis_[0][2]*v[2],
-                basis_[1][0]*v[0]+basis_[1][1]*v[1]+basis_[1][2]*v[2],
-                basis_[2][0]*v[0]+basis_[2][1]*v[1]+basis_[2][2]*v[2]
+                basis_(0,0)*v[0]+basis_(0,1)*v[1]+basis_(0,2)*v[2],
+                basis_(1,0)*v[0]+basis_(1,1)*v[1]+basis_(1,2)*v[2],
+                basis_(2,0)*v[0]+basis_(2,1)*v[1]+basis_(2,2)*v[2]
                 );
     }
 

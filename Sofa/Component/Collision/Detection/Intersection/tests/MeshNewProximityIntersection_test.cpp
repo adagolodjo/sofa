@@ -22,8 +22,8 @@
 
 #include <gtest/gtest.h>
 
-#include <SofaMeshCollision/MeshNewProximityIntersection.h>
-#include <SofaMeshCollision/MeshNewProximityIntersection.inl>
+#include <sofa/component/collision/detection/intersection/MeshNewProximityIntersection.h>
+#include <sofa/component/collision/detection/intersection/MeshNewProximityIntersection.inl>
 
 #include <sofa/testing/BaseTest.h>
 using sofa::testing::BaseTest;
@@ -34,9 +34,9 @@ namespace sofa{
 
     struct MeshNewProximityIntersectionTest : public BaseTest
     {
-        typedef sofa::type::Vector3 Vec3;
-        typedef sofa::type::Vector2 Vec2;
-        typedef sofa::component::collision::MeshNewProximityIntersection ProximityIntersection;
+        typedef sofa::type::Vec3 Vec3;
+        typedef sofa::type::Vec2 Vec2;
+        typedef sofa::component::collision::detection::intersection::MeshNewProximityIntersection ProximityIntersection;
 
         MeshNewProximityIntersectionTest(){
         }
@@ -57,8 +57,8 @@ namespace sofa{
         {
             using Real = SReal;
             sofa::type::vector<sofa::core::collision::DetectionOutput> outputVector;
-            unsigned nbTest = 100;
-            int flag = 0xffff;
+            const unsigned nbTest = 100;
+            const int flag = 0xffff;
 
 
             for(unsigned i=0; i<nbTest; i++)
@@ -80,7 +80,7 @@ namespace sofa{
                 bary/=bary.sum();
 
                 Vec3 pc = p1 + bary[0]*(p1p2) + bary[1]*(p1p3);
-                SReal maxDist = 0.1;
+                const SReal maxDist = 0.1;
                 SReal dist = (2*helper::drand() - 1)*maxDist;
                 Vec3 q = pc + dist*n;
                 if(!ProximityIntersection::doIntersectionTrianglePoint(maxDist,flag, p1,p2,p3,n,q,&outputVector,i,true))
@@ -127,12 +127,12 @@ namespace sofa{
             {
                 // custom test for triangle with an angle > 90 degrees
 
-                Vec3 p1(0,0,0);
-                Vec3 p2(-0.1,1,0);
-                Vec3 p3(1,0,0);
+                const Vec3 p1(0,0,0);
+                const Vec3 p2(-0.1,1,0);
+                const Vec3 p3(1,0,0);
 
-                Vec3 p1p2 = p2 - p1;
-                Vec3 p1p3 = p3 - p1;
+                const Vec3 p1p2 = p2 - p1;
+                const Vec3 p1p3 = p3 - p1;
 
                 Vec3 n = p1p2.cross(p1p3);
                 n.normalize();

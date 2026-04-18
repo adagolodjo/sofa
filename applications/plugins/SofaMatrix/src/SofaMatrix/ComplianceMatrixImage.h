@@ -22,9 +22,9 @@
 #pragma once
 #include <SofaMatrix/config.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <SofaMatrix/BaseMatrixImageProxy.h>
-#include <SofaConstraint/ConstraintSolverImpl.h>
+#include <sofa/component/constraint/lagrangian/solver/ConstraintSolverImpl.h>
 
 namespace sofa::component::constraintset
 {
@@ -33,12 +33,12 @@ namespace sofa::component::constraintset
  * Component to convert a BaseMatrix from the constraint solver into an image that can be visualized in the GUI.
  * Use ComplianceMatrixExporter in order to save an image on the disk.
  *
- * Note that the compliance matrix is dense. It means all the entries will proably be non-zero
+ * Note that the compliance matrix is dense. It means all the entries will probably be non-zero
  */
-class SOFA_SOFAMATRIX_API ComplianceMatrixImage : public core::objectmodel::BaseObject
+class SOFA_SOFAMATRIX_API ComplianceMatrixImage : public core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(ComplianceMatrixImage, core::objectmodel::BaseObject);
+    SOFA_CLASS(ComplianceMatrixImage, core::objectmodel::BaseComponent);
 
 protected:
 
@@ -48,8 +48,8 @@ protected:
     void init() override;
     void handleEvent(core::objectmodel::Event *event) override;
 
-    Data< type::BaseMatrixImageProxy > d_bitmap; ///< A proxy to visualize the produced image in the GUI through a DataWidget
-    SingleLink<ComplianceMatrixImage, sofa::component::constraintset::ConstraintSolverImpl, BaseLink::FLAG_STOREPATH|BaseLink::FLAG_STRONGLINK> l_constraintSolver;
+    Data< type::BaseMatrixImageProxy > d_bitmap; ///< Visualization of the representation of the matrix as a binary image. White pixels are zeros, black pixels are non-zeros.
+    SingleLink<ComplianceMatrixImage, sofa::component::constraint::lagrangian::solver::ConstraintSolverImpl, BaseLink::FLAG_STOREPATH|BaseLink::FLAG_STRONGLINK> l_constraintSolver;
 };
 
 } //namespace sofa::component::constraintset

@@ -23,7 +23,7 @@
 #include <sofa/component/collision/response/mapper/config.h>
 
 #include <sofa/defaulttype/VecTypes.h>
-#include <sofa/component/collision/geometry/TetrahedronModel.h>
+#include <sofa/component/collision/geometry/TetrahedronCollisionModel.h>
 #include <sofa/component/collision/response/mapper/BarycentricContactMapper.h>
 
 namespace sofa::component::collision::response::mapper
@@ -34,10 +34,9 @@ template<class DataTypes>
 class ContactMapper<collision::geometry::TetrahedronCollisionModel, DataTypes> : public BarycentricContactMapper<collision::geometry::TetrahedronCollisionModel, DataTypes>
 {
 public:
-    using Index = sofa::Index;
     typedef typename DataTypes::Real Real;
     typedef typename DataTypes::Coord Coord;
-    Index addPoint(const Coord& P, Index index, Real&)
+    sofa::Index addPoint(const Coord& P, sofa::Index index, Real&)
     {
         collision::geometry::Tetrahedron t(this->model, index);
         auto b = t.getBary(P);
@@ -45,7 +44,7 @@ public:
     }
 };
 
-#if  !defined(SOFA_COMPONENT_COLLISION_TETRAHEDRONBARYCENTRICCONTACTMAPPER_CPP)
+#if !defined(SOFA_COMPONENT_COLLISION_TETRAHEDRONBARYCENTRICCONTACTMAPPER_CPP)
 extern template class SOFA_COMPONENT_COLLISION_RESPONSE_MAPPER_API ContactMapper<collision::geometry::TetrahedronCollisionModel, sofa::defaulttype::Vec3Types>;
 
 #  ifdef _MSC_VER

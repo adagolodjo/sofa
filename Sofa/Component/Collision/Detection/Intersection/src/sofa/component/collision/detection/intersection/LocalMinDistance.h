@@ -24,12 +24,12 @@
 
 #include <sofa/component/collision/detection/intersection/BaseProximityIntersection.h>
 
-#include <sofa/component/collision/geometry/SphereModel.h>
-#include <sofa/component/collision/geometry/TriangleModel.h>
-#include <sofa/component/collision/geometry/LineModel.h>
-#include <sofa/component/collision/geometry/PointModel.h>
-#include <sofa/component/collision/geometry/CubeModel.h>
-#include <sofa/component/collision/geometry/RayModel.h>
+#include <sofa/component/collision/geometry/SphereCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
+#include <sofa/component/collision/geometry/LineCollisionModel.h>
+#include <sofa/component/collision/geometry/PointCollisionModel.h>
+#include <sofa/component/collision/geometry/CubeCollisionModel.h>
+#include <sofa/component/collision/geometry/RayCollisionModel.h>
 
 namespace sofa::component::collision::detection::intersection
 {
@@ -61,51 +61,50 @@ public:
 
     typedef core::collision::IntersectorFactory<LocalMinDistance> IntersectorFactory;
 
-    Data<bool> filterIntersection; ///< Activate LMD filter
-    Data<double> angleCone; ///< Filtering cone extension angle
-    Data<double> coneFactor; ///< Factor for filtering cone angle computation
-    Data<bool> useLMDFilters; ///< Use external cone computation (Work in Progress)
+    Data<bool> d_filterIntersection; ///< Activate LMD filter
+    Data<double> d_angleCone; ///< Filtering cone extension angle
+    Data<double> d_coneFactor; ///< Factor for filtering cone angle computation
+    Data<bool> d_useLMDFilters; ///< Use external cone computation
 
 protected:
     LocalMinDistance();
 
 public:
     void init() override;
+    
+    bool testIntersection(collision::geometry::Cube& ,collision::geometry::Cube&, const core::collision::Intersection* currentIntersection) override;
 
-    bool testIntersection(collision::geometry::Cube& ,collision::geometry::Cube&) override;
+    bool testIntersection(collision::geometry::Point&, collision::geometry::Point&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Sphere&, collision::geometry::Point&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Sphere&, collision::geometry::Sphere&, const core::collision::Intersection* currentIntersection) override;
+    bool testIntersection(collision::geometry::Line&, collision::geometry::Point&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Line&, collision::geometry::Sphere&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Line&, collision::geometry::Line&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Triangle&, collision::geometry::Point&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Triangle&, collision::geometry::Sphere&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Ray&, collision::geometry::Sphere&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Ray&, collision::geometry::Triangle&, const core::collision::Intersection* currentIntersection);
 
-    bool testIntersection(collision::geometry::Point&, collision::geometry::Point&);
-    bool testIntersection(collision::geometry::Sphere&, collision::geometry::Point&);
-    bool testIntersection(collision::geometry::Sphere&, collision::geometry::Sphere&) override;
-    bool testIntersection(collision::geometry::Line&, collision::geometry::Point&);
-    bool testIntersection(collision::geometry::Line&, collision::geometry::Sphere&);
-    bool testIntersection(collision::geometry::Line&, collision::geometry::Line&);
-    bool testIntersection(collision::geometry::Triangle&, collision::geometry::Point&);
-    bool testIntersection(collision::geometry::Triangle&, collision::geometry::Sphere&);
-    bool testIntersection(collision::geometry::Ray&, collision::geometry::Sphere&);
-    bool testIntersection(collision::geometry::Ray&, collision::geometry::Triangle&);
-
-    int computeIntersection(collision::geometry::Cube&, collision::geometry::Cube&, OutputVector*) override;
-    int computeIntersection(collision::geometry::Point&, collision::geometry::Point&, OutputVector*);
-    int computeIntersection(collision::geometry::Sphere&, collision::geometry::Point&, OutputVector*);
-    int computeIntersection(collision::geometry::Sphere&, collision::geometry::Sphere&, OutputVector*) override;
-    int computeIntersection(collision::geometry::Line&, collision::geometry::Point&, OutputVector*);
-    int computeIntersection(collision::geometry::Line&, collision::geometry::Sphere&, OutputVector*);
-    int computeIntersection(collision::geometry::Line&, collision::geometry::Line&, OutputVector*);
-    int computeIntersection(collision::geometry::Triangle&, collision::geometry::Point&, OutputVector*);
-    int computeIntersection(collision::geometry::Triangle&, collision::geometry::Sphere&, OutputVector*);
-    int computeIntersection(collision::geometry::Ray&, collision::geometry::Sphere&, OutputVector*);
-    int computeIntersection(collision::geometry::Ray&, collision::geometry::Triangle&, OutputVector*);
+    int computeIntersection(collision::geometry::Cube&, collision::geometry::Cube&, OutputVector*, const core::collision::Intersection* currentIntersection) override;
+    int computeIntersection(collision::geometry::Point&, collision::geometry::Point&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Sphere&, collision::geometry::Point&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Sphere&, collision::geometry::Sphere&, OutputVector*, const core::collision::Intersection* currentIntersection) override;
+    int computeIntersection(collision::geometry::Line&, collision::geometry::Point&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Line&, collision::geometry::Sphere&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Line&, collision::geometry::Line&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Triangle&, collision::geometry::Point&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Triangle&, collision::geometry::Sphere&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Ray&, collision::geometry::Sphere&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Ray&, collision::geometry::Triangle&, OutputVector*, const core::collision::Intersection* currentIntersection);
 
     /// These methods check the validity of a found intersection.
     /// According to the local configuration around the found intersected primitive,
     /// we build a "Region Of Interest" geometric cone.
     /// Pertinent intersections have to belong to this cone, others are not taking into account anymore.
-    bool testValidity(collision::geometry::Sphere&, const type::Vector3&) const { return true; }
-    bool testValidity(collision::geometry::Point&, const type::Vector3&) const;
-    bool testValidity(collision::geometry::Line&, const type::Vector3&) const;
-    bool testValidity(collision::geometry::Triangle&, const type::Vector3&) const;
-
+    bool testValidity(collision::geometry::Sphere&, const type::Vec3&) const { return true; }
+    bool testValidity(collision::geometry::Point&, const type::Vec3&) const;
+    bool testValidity(collision::geometry::Line&, const type::Vec3&) const;
+    bool testValidity(collision::geometry::Triangle&, const type::Vec3&) const;
 };
 
 } // namespace sofa::component::collision::detection::intersection

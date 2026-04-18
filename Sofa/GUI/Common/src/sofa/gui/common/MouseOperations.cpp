@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -47,7 +47,25 @@ helper::Creator<InteractionPerformer::InteractionPerformerFactory, SuturePointPe
 namespace sofa::gui::common
 {
 
-//*******************************************************************************************
+Operation::Operation(sofa::component::setting::MouseButtonSetting::SPtr s)
+    : pickHandle(nullptr), mbsetting(s), performer(nullptr), button(NONE)
+{
+}
+
+Operation::~Operation() = default;
+
+void Operation::configure(PickHandler* picker, const MOUSE_BUTTON b)
+{
+    pickHandle = picker;
+    button = b;
+}
+
+void Operation::configure(PickHandler* picker, sofa::component::setting::MouseButtonSetting* s)
+{
+    setSetting(s);
+    configure(picker, GetMouseId(s->d_button.getValue().getSelectedId()));
+}
+
 void Operation::start()
 {
     if (!performer)
@@ -69,9 +87,39 @@ void Operation::start()
 
 InteractionPerformer *Operation::createPerformer()
 {
-    std::string type = defaultPerformerType();
-    if (type.empty()) return nullptr;
-    return InteractionPerformer::InteractionPerformerFactory::getInstance()->createObject(type, pickHandle->getInteraction()->mouseInteractor.get());
+    // Obtain the type of performer to create
+    const std::string type = defaultPerformerType();
+    if (type.empty())
+    {
+        msg_error("MouseOperation") << "Failed to create InteractionPerformer: Default performer type is empty.";
+        return nullptr;
+    }
+
+    // Retrieve the interaction associated with the pickHandle
+    const auto interaction = pickHandle->getInteraction();
+    if (!interaction)
+    {
+        msg_error("MouseOperation") << "Failed to create InteractionPerformer: ComponentMouseInteraction object from input PickHandler is null.";
+        return nullptr;
+    }
+
+    // Retrieve the mouseInteractor from the interaction
+    const auto mouseInteractor = interaction->mouseInteractor.get();
+    if (!mouseInteractor)
+    {
+        msg_error("MouseOperation") << "Failed to create InteractionPerformer: MouseInteractor inside input PickHandler  is null.";
+        return nullptr;
+    }
+
+    // Create the InteractionPerformer using the factory
+    InteractionPerformer *performer = InteractionPerformer::InteractionPerformerFactory::getInstance()->createObject(type, mouseInteractor);
+    if (!performer)
+    {
+        msg_error("MouseOperation") << "Failed to create InteractionPerformer: Performer creation failed for type \"" << type << "\".";
+        return nullptr;
+    }
+
+    return performer;
 }
 
 void Operation::configurePerformer(InteractionPerformer* p)
@@ -84,7 +132,22 @@ void Operation::end()
     if (performer)
     {
         pickHandle->getInteraction()->mouseInteractor->removeInteractionPerformer(performer);
-        delete performer; performer=nullptr;
+        delete performer;
+        performer = nullptr;
+    }
+}
+MOUSE_BUTTON Operation::GetMouseId(unsigned int i)
+{
+    switch (i)
+    {
+        case LEFT:
+            return LEFT;
+        case MIDDLE:
+            return MIDDLE;
+        case RIGHT:
+            return RIGHT;
+        default:
+            return NONE;
     }
 }
 
@@ -181,8 +244,7 @@ void TopologyOperation::endOperation()
 //*******************************************************************************************
 void InciseOperation::start()
 {
-    int currentMethod = getIncisionMethod();
-
+    const int currentMethod = getIncisionMethod();
     if (!startPerformer)
     {
         startPerformer=InteractionPerformer::InteractionPerformerFactory::getInstance()->createObject("InciseAlongPath", pickHandle->getInteraction()->mouseInteractor.get());

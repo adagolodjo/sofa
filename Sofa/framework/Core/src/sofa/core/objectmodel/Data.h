@@ -19,8 +19,7 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_OBJECTMODEL_DATA_H
-#define SOFA_CORE_OBJECTMODEL_DATA_H
+#pragma once
 
 #include <sofa/core/config.h>
 #include <sofa/core/objectmodel/BaseData.h>
@@ -28,13 +27,11 @@
 #include <sofa/helper/accessor.h>
 #include <istream>
 #include <sofa/core/objectmodel/DataContentValue.h>
+#include <sofa/core/trait/DataTypes.h>
+#include <sofa/type/fixed_array.h>
 namespace sofa
 {
-
-namespace core
-{
-
-namespace objectmodel
+namespace core::objectmodel
 {
 
 /** \brief Container that holds a variable for a component.
@@ -76,6 +73,8 @@ template < class T = void* >
 class Data : public BaseData
 {
 public:
+    using value_type = T;
+
     using BaseData::m_counter;
     using BaseData::m_isSet;
     using BaseData::setDirtyOutputs;
@@ -114,6 +113,7 @@ public:
     {
         m_value = ValueType(init.value);
         m_hasDefaultValue = true;
+        m_defaultValue = init.value;
     }
 
     /** \copydoc BaseData(const char*, bool, bool) */
@@ -145,7 +145,7 @@ public:
     }
 
     /// Destructor.
-    virtual ~Data() {}
+    ~Data() override {}
 
     /// @}
 
@@ -189,35 +189,6 @@ public:
         return m_value.getValue();
     }
 
-    SOFA_ATTRIBUTE_DISABLED__TDATA_INTO_DATA("Update your code by using copyValueFrom() or setParent() depending on the expected behavior.")
-    void virtualSetLink(const BaseData& bd) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__TDATA_INTO_DATA("Update your code by using setValue().")
-    void virtualSetValue(const T& v) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__TDATA_INTO_DATA("Update your code by using getValue().")
-    const T& virtualGetValue() = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__TDATA_INTO_DATA("Update your code by using beginEdit().")
-    T* virtualBeginEdit() = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__TDATA_INTO_DATA("Update your code by using endEdit().")
-    void virtualEndEdit() = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__ASPECT_EXECPARAMS()
-    void endEdit(const core::ExecParams*) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__ASPECT_EXECPARAMS()
-    T* beginWriteOnly(const core::ExecParams*) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__ASPECT_EXECPARAMS()
-    T* beginEdit(const core::ExecParams*) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__ASPECT_EXECPARAMS()
-    void setValue(const core::ExecParams*, const T& value) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__ASPECT_EXECPARAMS()
-    const T& getValue(const core::ExecParams*) const = delete;
     /// @}
 
     /// Get info about the value type of the associated variable
@@ -232,39 +203,32 @@ public:
     bool read( const std::string& s ) override;
     void printValue(std::ostream& out) const override;
     std::string getValueString() const override;
+    std::string getDefaultValueString() const override;
     std::string getValueTypeString() const override;
-
-    friend std::ostream & operator << (std::ostream &out, const Data& df)
-    {
-        out<<df.getValue();
-        return out;
-    }
-
-    SOFA_ATTRIBUTE_DISABLED__DATA_OPERATOR("Update your code by replacing 'myData == aValue' with 'myData.getValue() == aValue'")
-    bool operator ==( const T& value ) const = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__DATA_OPERATOR("Update your code by replacing 'myData != aValue' with 'myData.getValue() != aValue'")
-    bool operator!=( const T& value ) const = delete;
 
     void operator =( const T& value )
     {
         this->setValue(value);
     }
 
-    bool copyValueFrom(const BaseData* data){ return doCopyValueFrom(data); }
     bool copyValueFrom(const Data<T>* data);
 
     static constexpr bool isCopyOnWrite(){ return !std::is_scalar_v<T>; }
 
+    Data(const Data& ) = delete;
+    Data& operator=(const Data& ) = delete;
+
 protected:
     typedef DataContentValue<T,  !std::is_scalar_v<T>> ValueType;
+    T m_defaultValue;
 
     /// Value
     ValueType m_value;
 
+    std::istream& readValue(std::istream& in);
+
 private:
-    Data(const Data& );
-    Data& operator=(const Data& );
+
 
     bool doIsExactSameDataType(const BaseData* parent) override;
     bool doCopyValueFrom(const BaseData* parent) override;
@@ -275,6 +239,14 @@ private:
 };
 
 class EmptyData : public Data<void*> {};
+
+template <class T>
+std::istream& Data<T>::readValue(std::istream& in)
+{
+    in >> *beginEdit();
+    endEdit();
+    return in;
+}
 
 /// Specialization for reading strings
 template<>
@@ -292,7 +264,7 @@ void Data<T>::printValue( std::ostream& out) const
     out << getValue() << " ";
 }
 
-/// General case for printing default value
+/// General case for printing value
 template<class T>
 std::string Data<T>::getValueString() const
 {
@@ -301,10 +273,23 @@ std::string Data<T>::getValueString() const
     return out.str();
 }
 
+/// General case for printing default value
+template<class T>
+std::string Data<T>::getDefaultValueString() const
+{
+    if (hasDefaultValue())
+    {
+        std::ostringstream out;
+        out << this->m_defaultValue;
+        return out.str();
+    }
+    return {};
+}
+
 template<class T>
 std::string Data<T>::getValueTypeString() const
 {
-    return BaseData::typeName(&getValue());
+    return BaseData::typeName<T>();
 }
 
 template <class T>
@@ -312,18 +297,17 @@ bool Data<T>::read(const std::string& s)
 {
     if (s.empty())
     {
-        bool resized = getValueTypeInfo()->setSize( BaseData::beginEditVoidPtr(), 0 );
+        const bool resized = getValueTypeInfo()->setSize( BaseData::beginEditVoidPtr(), 0 );
         BaseData::endEditVoidPtr();
         return resized;
     }
     std::istringstream istr( s.c_str() );
 
     // capture std::cerr output (if any)
-    std::stringstream cerrbuffer;
+    const std::stringstream cerrbuffer;
     std::streambuf* old = std::cerr.rdbuf(cerrbuffer.rdbuf());
 
-    istr >> *beginEdit();
-    endEdit();
+    readValue(istr);
 
     // restore the previous cerr
     std::cerr.rdbuf(old);
@@ -377,16 +361,13 @@ bool Data<T>::doIsExactSameDataType(const BaseData* parent)
     return dynamic_cast<const Data<T>*>(parent) != nullptr;
 }
 
-#if  !defined(SOFA_CORE_OBJECTMODEL_DATA_CPP)
+#if !defined(SOFA_CORE_OBJECTMODEL_DATA_CPP)
 extern template class SOFA_CORE_API Data< std::string >;
 extern template class SOFA_CORE_API Data< sofa::type::vector<std::string> >;
 extern template class SOFA_CORE_API Data< sofa::type::vector<Index> >;
 extern template class SOFA_CORE_API Data< bool >;
 #endif
-
-} // namespace objectmodel
-
-} // namespace core
+} // namespace core::objectmodel
 
 // Overload helper::ReadAccessor and helper::WriteAccessor
 
@@ -405,12 +386,6 @@ public:
 
     ReadAccessor(const data_container_type& d) : Inherit(d.getValue()) {}
     ReadAccessor(const data_container_type* d) : Inherit(d->getValue()) {}
-
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    ReadAccessor(const core::ExecParams*, const data_container_type& d) : Inherit(d.getValue()) {}
-
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    ReadAccessor(const core::ExecParams*, const data_container_type* d) : Inherit(d->getValue()) {}
 };
 
 /// Read/Write Accessor.
@@ -429,31 +404,38 @@ public:
     // these are forbidden (until c++11 move semantics) as they break
     // RAII encapsulation. the reference member 'data' prevents them
     // anyways, but the intent is more obvious like this.
-    WriteAccessor(const WriteAccessor& );
-    WriteAccessor& operator=(const WriteAccessor& );
+    WriteAccessor(const WriteAccessor& ) = delete;
+    WriteAccessor& operator=(const WriteAccessor& ) = delete;
 
 protected:
     data_container_type& data;
+    bool m_moved = false;
 
     /// @internal used by WriteOnlyAccessor
     WriteAccessor( container_type* c, data_container_type& d) : Inherit(*c), data(d) {}
 
 public:
+    WriteAccessor(WriteAccessor&& other) noexcept : Inherit(std::move(other)), data(other.data)
+    {
+        other.m_moved = true;
+    }
+
     WriteAccessor(data_container_type& d) : Inherit(*d.beginEdit()), data(d) {}
     WriteAccessor(data_container_type* d) : Inherit(*d->beginEdit()), data(*d) {}
 
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    WriteAccessor(const core::ExecParams*, data_container_type& d) : WriteAccessor(d) {}
-
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    WriteAccessor(const core::ExecParams*, data_container_type* d) : WriteAccessor(d) {}
-    ~WriteAccessor() { data.endEdit(); }
+    ~WriteAccessor()
+    {
+        if (!m_moved)
+        {
+            data.endEdit();
+        }
+    }
 };
 
 
 
 /** @brief The WriteOnlyAccessor provides an access to the Data without triggering an engine update.
- * This should be the prefered writeAccessor for most of the cases as it avoids uncessary Data updates.
+ * This should be the preferred writeAccessor for most of the cases as it avoids unnecessary Data updates.
  * @warning read access to the Data is NOT up-to-date
  */
 template<class T>
@@ -467,17 +449,11 @@ public:
     // these are forbidden (until c++11 move semantics) as they break
     // RAII encapsulation. the reference member 'data' prevents them
     // anyways, but the intent is more obvious like this.
-    WriteOnlyAccessor(const WriteOnlyAccessor& );
-    WriteOnlyAccessor& operator=(const WriteOnlyAccessor& );
+    WriteOnlyAccessor(const WriteOnlyAccessor& ) = delete;
+    WriteOnlyAccessor& operator=(const WriteOnlyAccessor& ) = delete;
 
     WriteOnlyAccessor(data_container_type& d) : Inherit( d.beginWriteOnly(), d ) {}
     WriteOnlyAccessor(data_container_type* d) : Inherit( d->beginWriteOnly(), *d ) {}
-
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    WriteOnlyAccessor(const core::ExecParams*, data_container_type& d) : Inherit( d.beginWriteOnly(), d ) {}
-
-    SOFA_ATTRIBUTE_DEPRECATED__ASPECT_EXECPARAMS()
-    WriteOnlyAccessor(const core::ExecParams*, data_container_type* d) : Inherit( d->beginWriteOnly(), *d ) {}
 };
 
 
@@ -490,15 +466,6 @@ WriteAccessor<core::objectmodel::Data<T> > getWriteAccessor(core::objectmodel::D
     return WriteAccessor<core::objectmodel::Data<T> >(data);
 }
 
-template<class T>
-SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#1807)", "v21.12", "You can probably update your code by removing aspect related calls. To update your code, use the new function.")
-WriteAccessor<core::objectmodel::Data<T> > write(core::objectmodel::Data<T>& data) = delete;
-
-template<class T>
-SOFA_ATTRIBUTE_DISABLED__ASPECT("You can probably update your code by removing aspect related calls.")
-WriteAccessor<core::objectmodel::Data<T> > write(core::objectmodel::Data<T>& data, const core::ExecParams*) = delete;
-
-
 
 /// Returns a read accessor from the provided Data<>
 /// Example of use:
@@ -508,14 +475,6 @@ ReadAccessor<core::objectmodel::Data<T> > getReadAccessor(const core::objectmode
 {
     return ReadAccessor<core::objectmodel::Data<T> >(data);
 }
-
-template<class T>
-SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#1807)", "v21.12", "You can probably update your code by removing aspect related calls. To update your code, use the new function.")
-ReadAccessor<core::objectmodel::Data<T> > read(const core::objectmodel::Data<T>& data) = delete;
-
-template<class T>
-SOFA_ATTRIBUTE_DISABLED__ASPECT("You can probably update your code by removing aspect related calls.")
-ReadAccessor<core::objectmodel::Data<T> > read(const core::objectmodel::Data<T>& data, const core::ExecParams*) = delete;
 
 /// Returns a write only accessor from the provided Data<>
 /// WriteOnly accessors are faster than WriteAccessor because
@@ -535,6 +494,3 @@ WriteOnlyAccessor<core::objectmodel::Data<T> > getWriteOnlyAccessor(core::object
 using core::objectmodel::Data;
 
 } // namespace sofa
-
-#endif  // SOFA_CORE_OBJECTMODEL_DATA_H
-

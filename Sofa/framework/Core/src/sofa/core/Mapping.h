@@ -19,16 +19,12 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_MAPPING_H
-#define SOFA_CORE_MAPPING_H
+#pragma once
 
 #include <sofa/core/BaseMapping.h>
 #include <sofa/core/State.h>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 /**
@@ -37,7 +33,6 @@ namespace core
 *
 *
 */
-
 template <class TIn, class TOut>
 class Mapping : public BaseMapping
 {
@@ -72,13 +67,13 @@ public:
 
     /// by default rest position are NOT propagated to mapped dofs.
     /// In some cases, rest pos is needed for mapped dofs (generally when this dof is used to compute mechanics).
-    /// In that case, Data applyRestPosition must be setted to true for all the mappings until the desired dof.
+    /// In that case, Data applyRestPosition must be set to true for all the mappings until the desired dof.
     Data<bool> f_applyRestPosition;
 protected:
     /// Constructor, taking input and output models as parameters.
     ///
     /// Note that if you do not specify these models here, you must call
-    /// setModels with non-nullptr value before the intialization (i.e. before
+    /// setModels with non-nullptr value before the initialization (i.e. before
     /// init() is called).
     Mapping(State< In >* from=nullptr, State< Out >* to=nullptr);
     /// Destructor
@@ -227,7 +222,7 @@ public:
             return false;
         }
 
-        if (dynamic_cast<BaseObject*>(stin) == dynamic_cast<BaseObject*>(stout))
+        if (dynamic_cast<sofa::core::objectmodel::BaseComponent*>(stin) == dynamic_cast<sofa::core::objectmodel::BaseComponent*>(stout))
         {
             // we should refuse to create mappings with the same input and output model, which may happen if a State object is missing in the child node
             arg->logError("Both the input and the output point to the same mechanical state ('"+stin->getName()+"').");
@@ -311,9 +306,4 @@ extern template class SOFA_CORE_API Mapping< sofa::defaulttype::Vec3Types, sofa:
 
 // cross templates
 #endif
-
-} // namespace core
-
-} // namespace sofa
-
-#endif // SOFA_CORE_MAPPING_H
+} // namespace sofa::core

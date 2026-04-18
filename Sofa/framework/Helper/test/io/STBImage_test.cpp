@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -43,11 +43,11 @@ protected:
 
     }
 
-    void SetUp() override
+    void doSetUp() override
     {
         sofa::helper::system::DataRepository.addFirstPath(STBIMAGETEST_RESOURCES_DIR);
     }
-    void TearDown() override
+    void doTearDown() override
     {
         sofa::helper::system::DataRepository.removePath(STBIMAGETEST_RESOURCES_DIR);
     }
@@ -72,7 +72,7 @@ protected:
             bool res = true;
             if(lossy)
             {
-                unsigned int total = width*height*bpp;
+                const unsigned int total = width*height*bpp;
                 //we will compare the average of pixels
                 //and it has to be within a certain ratio with the reference
                 //there are much better algorithms
@@ -96,7 +96,7 @@ protected:
         {
             sofa::helper::io::STBImage img;
 
-            bool isLoaded = img.load(filename);
+            const bool isLoaded = img.load(filename);
             ASSERT_TRUE(isLoaded);
             //necessary to test if the image was effectively loaded
             //otherwise segfault from Image (and useless to test the rest anyway)
@@ -148,11 +148,11 @@ TEST_F(STBImage_test, STBImage_ReadBlackWhite_png)
     EXPECT_MSG_NOEMIT(Error);
     EXPECT_MSG_NOEMIT(Warning);
 
-    unsigned int width = 800;
-    unsigned int height = 600;
-    unsigned int bpp = 3;//images are RGB
-    unsigned int totalsize = width*height*bpp;
-    unsigned int halfTotalsize = totalsize / 2;
+    const unsigned int width = 800;
+    const unsigned int height = 600;
+    const unsigned int bpp = 3;//images are RGB
+    const unsigned int totalsize = width*height*bpp;
+    const unsigned int halfTotalsize = totalsize / 2;
 
     std::vector<unsigned char> imgdata(totalsize, 0);
     //half image (800x300) is black the other one is white
@@ -167,11 +167,11 @@ TEST_F(STBImage_test, STBImage_ReadBlackWhite_jpg)
     EXPECT_MSG_NOEMIT(Error);
     EXPECT_MSG_NOEMIT(Warning);
 
-    unsigned int width = 800;
-    unsigned int height = 600;
-    unsigned int bpp = 3;//images are RGB
-    unsigned int totalsize = width*height*bpp;
-    unsigned int halfTotalsize = totalsize / 2;
+    const unsigned int width = 800;
+    const unsigned int height = 600;
+    const unsigned int bpp = 3;//images are RGB
+    const unsigned int totalsize = width*height*bpp;
+    const unsigned int halfTotalsize = totalsize / 2;
 
     std::vector<unsigned char> imgdata(totalsize, 0);
     //half image (800x300) is black the other one is white
@@ -187,7 +187,7 @@ TEST_F(STBImage_test, STBImage_ReadBlackWhite_tiff)
     EXPECT_MSG_EMIT(Error);
     sofa::helper::io::STBImage img;
 
-    bool isLoaded = img.load("imagetest_blackwhite.tiff");
+    const bool isLoaded = img.load("imagetest_blackwhite.tiff");
     EXPECT_FALSE(isLoaded);
 
 }
@@ -197,11 +197,11 @@ TEST_F(STBImage_test, STBImage_ReadBlackWhite_bmp)
     EXPECT_MSG_NOEMIT(Error);
     EXPECT_MSG_NOEMIT(Warning);
 
-    unsigned int width = 800;
-    unsigned int height = 600;
-    unsigned int bpp = 3;//images are RGB
-    unsigned int totalsize = width*height*bpp;
-    unsigned int halfTotalsize = totalsize / 2;
+    const unsigned int width = 800;
+    const unsigned int height = 600;
+    const unsigned int bpp = 3;//images are RGB
+    const unsigned int totalsize = width*height*bpp;
+    const unsigned int halfTotalsize = totalsize / 2;
 
     std::vector<unsigned char> imgdata(totalsize, 0);
     //half image (800x300) is black the other one is white
@@ -217,22 +217,22 @@ TEST_F(STBImage_test, STBImage_WriteBlackWhite)
     EXPECT_MSG_NOEMIT(Error);
     EXPECT_MSG_NOEMIT(Warning);
 
-    unsigned int width = 800;
-    unsigned int height = 600;
-    unsigned int bpp = 3;//image is RGB
-    unsigned int totalsize = width*height*bpp;
-    unsigned int halfTotalsize = totalsize / 2;
+    const unsigned int width = 800;
+    const unsigned int height = 600;
+    const unsigned int bpp = 3;//image is RGB
+    const unsigned int totalsize = width*height*bpp;
+    const unsigned int halfTotalsize = totalsize / 2;
 
     std::vector<unsigned char> imgdata(totalsize, 0);
     //half image (800x300) is black the other one is white
     std::fill(imgdata.begin() + halfTotalsize , imgdata.end(), 255);
 
     sofa::helper::io::STBImage img;
-    bool isLoaded = img.load("imagetest_blackwhite.png");
+    const bool isLoaded = img.load("imagetest_blackwhite.png");
     EXPECT_TRUE(isLoaded);
 
-    std::string output_bw_path = sofa::helper::system::DataRepository.getFirstPath() + "/output_bw.png";
-    bool isWritten = img.save(output_bw_path);
+    const std::string output_bw_path = sofa::helper::system::DataRepository.getFirstPath() + "/output_bw.png";
+    const bool isWritten = img.save(output_bw_path);
     EXPECT_TRUE(isWritten);
 
     STBImageTestData imgBW("output_bw.png", width, height, bpp, imgdata.data());

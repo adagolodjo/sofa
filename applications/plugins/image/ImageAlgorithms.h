@@ -159,7 +159,7 @@ real Eikonal(const sofa::type::Vec<6,real>& d,const sofa::type::Vec<6,real>& d2,
 * Update geodesic distances in the image, given a bias distance function b(x).
 * This is equivalent to solve for the eikonal equation || grad d(x) || = 1/b(x) with d(p)=0 at @param pos
 * using fast marching method presented from sethian http://math.berkeley.edu/~sethian/2006/Publications/Book/2006/
-* distances should be intialized (<0 outside the object, >=0 inside, and = 0 for seeds)
+* distances should be initialized (<0 outside the object, >=0 inside, and = 0 for seeds)
 * returns @param voronoi and @param distances
 */
 
@@ -229,7 +229,7 @@ void fastMarching (std::set<std::pair<real,sofa::type::Vec<3,int> > > &trial,cim
 * Update geodesic distances in the image given a bias distance function b(x).
 * This is equivalent to solve for the eikonal equation || grad d(x) || = 1/b(x) with d(p)=0 at @param pos
 * using dijkstra minimum path algorithm
-* distances should be intialized (<0 outside the object, >=0 inside, and = 0 for seeds)
+* distances should be initialized (<0 outside the object, >=0 inside, and = 0 for seeds)
 * returns @param voronoi and @param distances
 */
 
@@ -300,7 +300,7 @@ real norm(cimg_library::CImg<real>& distances, sofa::type::fixed_array<int, 3>& 
 /// @brief Replace value at oldCoord with a combinaison of value at newCoord, a offset and a bias if provided
 template<typename real,typename T>
 void replace(cimg_library::CImg<unsigned int>& voronoi, cimg_library::CImg<real>& distances, sofa::type::fixed_array<int, 3>& oldCoord, sofa::type::fixed_array<int, 3>& newCoord,
-             sofa::type::fixed_array<real, 3>& offset, const sofa::type::fixed_array<real, 3>& voxelSize, const cimg_library::CImg<T>* bias)
+             sofa::type::fixed_array<real, 3>& offset, const sofa::type::Vec<3, real>& voxelSize, const cimg_library::CImg<T>* bias)
 {
     real b=1.0;
     if(bias)
@@ -313,7 +313,7 @@ void replace(cimg_library::CImg<unsigned int>& voronoi, cimg_library::CImg<real>
 
 /// @brief Update value of the pixel of an image after comparing it with its neighbor
 template<typename real,typename T>
-void update(cimg_library::CImg<real>& distances, cimg_library::CImg<unsigned int>& voronoi, sofa::type::fixed_array< sofa::type::fixed_array<int, 3>, 10 >& coord, sofa::type::fixed_array< sofa::type::fixed_array<real, 3>, 10 >& offset, const sofa::type::fixed_array<real, 3>& voxelSize, const cimg_library::CImg<T>* bias)
+void update(cimg_library::CImg<real>& distances, cimg_library::CImg<unsigned int>& voronoi, sofa::type::fixed_array< sofa::type::fixed_array<int, 3>, 10 >& coord, sofa::type::fixed_array< sofa::type::fixed_array<real, 3>, 10 >& offset, const  sofa::type::Vec<3, real>& voxelSize, const cimg_library::CImg<T>* bias)
 {
     real l_curr=norm(distances,coord[0]);
     for(int l=1; l<=9; ++l)
@@ -348,7 +348,7 @@ bool hasConverged(cimg_library::CImg<real>& previous, cimg_library::CImg<real>& 
 
 /// @brief Perform a raster scan from left to right to update distances
 template<typename real,typename T>
-void left(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::fixed_array<real, 3>& vx, const cimg_library::CImg<T>* bias)
+void left(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const  sofa::type::Vec<3, real>& vx, const cimg_library::CImg<T>* bias)
 {
     for(int i=d.width()-2; i>=0; --i)
     {
@@ -361,11 +361,11 @@ void left(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, cons
             {
                 sofa::type::fixed_array< sofa::type::fixed_array<int, 3>, 10 > c;
                 sofa::type::fixed_array< sofa::type::fixed_array<real, 3>, 10 > o;
-                c[0] = sofa::type::fixed_array<int, 3>(i,j,k); o[0] = sofa::type::fixed_array<real, 3>(0,0,0); int count=1;
+                c[0] = sofa::type::fixed_array<int, 3>({i,j,k}); o[0] = sofa::type::fixed_array<real, 3>({0,0,0}); int count=1;
                 for(int y=-1;y<=1; ++y) for(int z=-1; z<=1; z++)
                 {
-                    c[count] = sofa::type::fixed_array<int, 3>(i+1,j+y,k+z);
-                    o[count] = sofa::type::fixed_array<real, 3>(1,std::abs(y),std::abs(z)); count++;
+                    c[count] = sofa::type::fixed_array<int, 3>({i+1,j+y,k+z});
+                    o[count] = sofa::type::fixed_array<real, 3>({1,std::fabs(y),std::fabs(z)}); count++;
                 }
                 update(d,v,c,o,vx, bias);
             }
@@ -375,7 +375,7 @@ void left(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, cons
 
 /// @brief Perform a raster scan from right to left to update distances
 template<typename real,typename T>
-void right(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::fixed_array<real, 3>& vx, const cimg_library::CImg<T>* bias)
+void right(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::Vec<3, real>& vx, const cimg_library::CImg<T>* bias)
 {
     for(int i=1; i<d.width(); ++i)
     {
@@ -388,11 +388,11 @@ void right(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, con
             {
                 sofa::type::fixed_array< sofa::type::fixed_array<int, 3>, 10 > c;
                 sofa::type::fixed_array< sofa::type::fixed_array<real, 3>, 10 > o;
-                c[0] = sofa::type::fixed_array<int, 3>(i,j,k); o[0] = sofa::type::fixed_array<real, 3>(0,0,0); int count=1;
+                c[0] = sofa::type::fixed_array<int, 3>({i,j,k}); o[0] = sofa::type::fixed_array<real, 3>({0,0,0}); int count=1;
                 for(int y=-1;y<=1; ++y) for(int z=-1; z<=1; z++)
                 {
-                    c[count] = sofa::type::fixed_array<int, 3>(i-1,j+y,k+z);
-                    o[count] = sofa::type::fixed_array<real, 3>(1,std::abs(y),std::abs(z)); count++;
+                    c[count] = sofa::type::fixed_array<int, 3>({i-1,j+y,k+z});
+                    o[count] = sofa::type::fixed_array<real, 3>({1,std::fabs(y),std::fabs(z)}); count++;
                 }
                 update(d,v,c,o,vx, bias);
             }
@@ -402,7 +402,7 @@ void right(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, con
 
 /// @brief Perform a raster scan from down to up to update distances
 template<typename real,typename T>
-void down(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::fixed_array<real, 3>& vx, const cimg_library::CImg<T>* bias)
+void down(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::Vec<3, real>& vx, const cimg_library::CImg<T>* bias)
 {
     for(int j=d.height()-2; j>=0; --j)
     {
@@ -415,11 +415,11 @@ void down(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, cons
             {
                 sofa::type::fixed_array< sofa::type::fixed_array<int, 3>, 10 > c;
                 sofa::type::fixed_array< sofa::type::fixed_array<real, 3>, 10 > o;
-                c[0] = sofa::type::fixed_array<int, 3>(i,j,k); o[0] = sofa::type::fixed_array<real, 3>(0,0,0); int count=1;
+                c[0] = sofa::type::fixed_array<int, 3>({i,j,k}); o[0] = sofa::type::fixed_array<real, 3>({0,0,0}); int count=1;
                 for(int x=-1;x<=1; ++x) for(int z=-1; z<=1; z++)
                 {
-                    c[count] = sofa::type::fixed_array<int, 3>(i+x,j+1,k+z);
-                    o[count] = sofa::type::fixed_array<real, 3>(std::abs(x),1,std::abs(z)); count++;
+                    c[count] = sofa::type::fixed_array<int, 3>({i+x,j+1,k+z});
+                    o[count] = sofa::type::fixed_array<real, 3>({std::fabs(x),1,std::fabs(z)}); count++;
                 }
                 update(d,v,c,o,vx, bias);
             }
@@ -429,7 +429,7 @@ void down(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, cons
 
 /// @brief Perform a raster scan from up to down to update distances
 template<typename real,typename T>
-void up(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::fixed_array<real, 3>& vx, const cimg_library::CImg<T>* bias)
+void up(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::Vec<3, real>& vx, const cimg_library::CImg<T>* bias)
 {
     for(int j=1; j<d.height(); ++j)
     {
@@ -442,11 +442,11 @@ void up(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const 
             {
                 sofa::type::fixed_array< sofa::type::fixed_array<int, 3>, 10 > c;
                 sofa::type::fixed_array< sofa::type::fixed_array<real, 3>, 10 > o;
-                c[0] = sofa::type::fixed_array<int, 3>(i,j,k); o[0] = sofa::type::fixed_array<real, 3>(0,0,0); int count=1;
+                c[0] = sofa::type::fixed_array<int, 3>({i,j,k}); o[0] = sofa::type::fixed_array<real, 3>({0,0,0}); int count=1;
                 for(int x=-1;x<=1; ++x) for(int z=-1; z<=1; z++)
                 {
-                    c[count] = sofa::type::fixed_array<int, 3>(i+x,j-1,k+z);
-                    o[count] = sofa::type::fixed_array<real, 3>(std::abs(x),1,std::abs(z)); count++;
+                    c[count] = sofa::type::fixed_array<int, 3>({i+x,j-1,k+z});
+                    o[count] = sofa::type::fixed_array<real, 3>({std::fabs(x),1,std::fabs(z)}); count++;
                 }
                 update(d,v,c,o,vx, bias);
             }
@@ -456,7 +456,7 @@ void up(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const 
 
 /// @brief Perform a raster scan from backward to forward to update distances
 template<typename real,typename T>
-void backward(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::fixed_array<real, 3>& vx, const cimg_library::CImg<T>* bias)
+void backward(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const  sofa::type::Vec<3, real>& vx, const cimg_library::CImg<T>* bias)
 {
     for(int k=d.depth()-2; k>=0; --k)
     {
@@ -469,11 +469,11 @@ void backward(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, 
             {
                 sofa::type::fixed_array< sofa::type::fixed_array<int, 3>, 10 > c;
                 sofa::type::fixed_array< sofa::type::fixed_array<real, 3>, 10 > o;
-                c[0] = sofa::type::fixed_array<int, 3>(i,j,k); o[0] = sofa::type::fixed_array<real, 3>(0,0,0); int count=1;
+                c[0] = sofa::type::fixed_array<int, 3>({i,j,k}); o[0] = sofa::type::fixed_array<real, 3>({0,0,0}); int count=1;
                 for(int x=-1;x<=1; ++x) for(int y=-1; y<=1; y++)
                 {
-                    c[count] = sofa::type::fixed_array<int, 3>(i+x,j+y,k+1);
-                    o[count] = sofa::type::fixed_array<real, 3>(std::abs(x),std::abs(y),1); count++;
+                    c[count] = sofa::type::fixed_array<int, 3>({i+x,j+y,k+1});
+                    o[count] = sofa::type::fixed_array<real, 3>({std::fabs(x),std::fabs(y),1}); count++;
                 }
                 update(d,v,c,o,vx,bias);
             }
@@ -483,7 +483,7 @@ void backward(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, 
 
 /// @brief Perform a raster scan from forward to backward to update distances
 template<typename real,typename T>
-void forward(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const sofa::type::fixed_array<real, 3>& vx, const cimg_library::CImg<T>* bias)
+void forward(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, const  sofa::type::Vec<3, real>& vx, const cimg_library::CImg<T>* bias)
 {
     for(int k=1; k<d.depth(); ++k)
     {
@@ -496,11 +496,11 @@ void forward(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, c
             {
                 sofa::type::fixed_array< sofa::type::fixed_array<int, 3>, 10 > c;
                 sofa::type::fixed_array< sofa::type::fixed_array<real, 3>, 10 > o;
-                c[0] = sofa::type::fixed_array<int, 3>(i,j,k); o[0] = sofa::type::fixed_array<real, 3>(0,0,0); int count=1;
+                c[0] = sofa::type::fixed_array<int, 3>({i,j,k}); o[0] = sofa::type::fixed_array<real, 3>({0,0,0}); int count=1;
                 for(int x=-1;x<=1; ++x) for(int y=-1; y<=1; y++)
                 {
-                    c[count] = sofa::type::fixed_array<int, 3>(i+x,j+y,k-1);
-                    o[count] = sofa::type::fixed_array<real, 3>(std::abs(x),std::abs(y),1); count++;
+                    c[count] = sofa::type::fixed_array<int, 3>({i+x,j+y,k-1});
+                    o[count] = sofa::type::fixed_array<real, 3>({std::fabs(x),std::fabs(y),1}); count++;
                 }
                 update(d,v,c,o,vx,bias);
             }
@@ -510,7 +510,7 @@ void forward(cimg_library::CImg<unsigned int>& v, cimg_library::CImg<real>& d, c
 
 /// @brief Perform 6 raster scan of an image to fully cover it.
 template<typename real,typename T>
-void rasterScan(cimg_library::CImg<unsigned int>& voronoi, cimg_library::CImg<real>& distances, const sofa::type::fixed_array<real, 3>& voxelSize, const cimg_library::CImg<T>* biasFactor=NULL)
+void rasterScan(cimg_library::CImg<unsigned int>& voronoi, cimg_library::CImg<real>& distances, const sofa::type::Vec<3, real>& voxelSize, const cimg_library::CImg<T>* biasFactor=NULL)
 {
     right(voronoi, distances, voxelSize, biasFactor);
     left(voronoi, distances, voxelSize, biasFactor);
@@ -528,7 +528,7 @@ void rasterScan(cimg_library::CImg<unsigned int>& voronoi, cimg_library::CImg<re
 /// @param tolerance should be carefully chosen to minimize computation time.
 /// @returns @param voronoi and @param distances
 template<typename real,typename T>
-void parallelMarching(cimg_library::CImg<real>& distances, cimg_library::CImg<unsigned int>& voronoi, const sofa::type::fixed_array<real, 3>& voxelSize, const unsigned int maxIter=std::numeric_limits<unsigned int>::max(), const SReal tolerance=10, const cimg_library::CImg<T>* biasFactor=NULL)
+void parallelMarching(cimg_library::CImg<real>& distances, cimg_library::CImg<unsigned int>& voronoi, const sofa::type::Vec<3, real>& voxelSize, const unsigned int maxIter=std::numeric_limits<unsigned int>::max(), const SReal tolerance=10, const cimg_library::CImg<T>* biasFactor=NULL)
 {
     if(distances.width()<3 || distances.height()<3 || distances.depth()<3)
     {

@@ -28,8 +28,8 @@
 #include <sofa/core/topology/TopologicalMapping.h>
 #include <sofa/simulation/Node.h>
 #include <sofa/simulation/Simulation.h>
-#include <sofa/component/collision/geometry/CubeModel.h>
-#include <sofa/component/collision/geometry/TriangleModel.inl>
+#include <sofa/component/collision/geometry/CubeCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.inl>
 
 namespace sofa::component::collision::geometry
 {
@@ -38,9 +38,11 @@ using namespace sofa::type;
 using namespace sofa::core::topology;
 using namespace sofa::defaulttype;
 
-int TriangleModelInRegularGridClass = core::RegisterObject ( "collision model using a triangular mesh in a regular grid, as described in BaseMeshTopology" )
-        .add< TriangleModelInRegularGrid >()
-        ;
+void registerTriangleModelInRegularGrid(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Collision model using a triangular mesh in a regular grid, as described in BaseMeshTopology.")
+        .add< TriangleModelInRegularGrid >());
+}
 
 TriangleModelInRegularGrid::TriangleModelInRegularGrid() : TriangleCollisionModel<sofa::defaulttype::Vec3Types>()
 {
@@ -74,15 +76,15 @@ void TriangleModelInRegularGrid::init()
     while ( found )
     {
         found = false;
-        for ( vector<TopologicalMapping*>::iterator it = topoVec.begin(); it != topoVec.end(); ++it )
+        for (const auto& v : topoVec)
         {
-            if ( ( *it )->getTo() == _higher_topo )
+            if ( v->getTo() == _higher_topo )
             {
                 found = true;
-                _topoMapping = *it;
+                _topoMapping = v;
                 _higher_topo = _topoMapping->getFrom();
                 if ( !_higher_topo ) break;
-                sofa::simulation::Node* node = static_cast< sofa::simulation::Node* > ( _higher_topo->getContext() );
+                const sofa::simulation::Node* node = static_cast< sofa::simulation::Node* > ( _higher_topo->getContext() );
                 _higher_mstate = dynamic_cast< core::behavior::MechanicalState<Vec3Types>* > ( node->getMechanicalState() );
             }
         }
@@ -107,9 +109,9 @@ void TriangleModelInRegularGrid::computeBoundingTree ( int )
     if ( !isMoving() && !cubeModel->empty() && !m_needsUpdate ) return; // No need to recompute BBox if immobile
 
     m_needsUpdate=false;
-    Vector3 minElem, maxElem;
-    const VecCoord& xHigh =_higher_mstate->read(core::ConstVecCoordId::position())->getValue();
-    const VecCoord& x =m_mstate->read(core::ConstVecCoordId::position())->getValue();
+    Vec3 minElem, maxElem;
+    const VecCoord& xHigh =_higher_mstate->read(core::vec_id::read_access::position)->getValue();
+    const VecCoord& x =m_mstate->read(core::vec_id::read_access::position)->getValue();
 
     // no hierarchy
     if ( empty() )
@@ -121,7 +123,7 @@ void TriangleModelInRegularGrid::computeBoundingTree ( int )
         maxElem = xHigh[0];
         for ( unsigned i=1; i<xHigh.size(); ++i )
         {
-            const Vector3& pt1 = xHigh[i];
+            const Vec3& pt1 = xHigh[i];
             if ( pt1[0] > maxElem[0] ) maxElem[0] = pt1[0];
             else if ( pt1[0] < minElem[0] ) minElem[0] = pt1[0];
             if ( pt1[1] > maxElem[1] ) maxElem[1] = pt1[1];
@@ -133,9 +135,9 @@ void TriangleModelInRegularGrid::computeBoundingTree ( int )
         for (std::size_t i=0; i<getSize(); ++i)
         {
             Triangle t(this,i);
-            const Vector3& pt1 = x[t.p1Index()];
-            const Vector3& pt2 = x[t.p2Index()];
-            const Vector3& pt3 = x[t.p3Index()];
+            const Vec3& pt1 = x[t.p1Index()];
+            const Vec3& pt2 = x[t.p2Index()];
+            const Vec3& pt3 = x[t.p3Index()];
             t.n() = cross(pt2-pt1,pt3-pt1);
             t.n().normalize();
         }

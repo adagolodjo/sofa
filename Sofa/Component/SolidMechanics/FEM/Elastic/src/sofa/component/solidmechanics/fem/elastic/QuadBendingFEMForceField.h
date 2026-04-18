@@ -26,24 +26,23 @@
 #pragma once
 
 #include <sofa/component/solidmechanics/fem/elastic/config.h>
-
 #include <sofa/core/behavior/ForceField.h>
-#include <sofa/core/topology/BaseMeshTopology.h>
-#include <sofa/defaulttype/VecTypes.h>
-#include <sofa/type/Mat.h>
+#include <sofa/core/behavior/TopologyAccessor.h>
 #include <sofa/core/topology/TopologyData.h>
+#include <sofa/defaulttype/VecTypes.h>
+#include <sofa/helper/map.h>
+#include <sofa/type/Mat.h>
 
 #include <map>
-#include <sofa/helper/map.h>
 
 namespace sofa::component::solidmechanics::fem::elastic
 {
 
 template<class DataTypes>
-class QuadBendingFEMForceField : public core::behavior::ForceField<DataTypes>
+class QuadBendingFEMForceField : public core::behavior::ForceField<DataTypes>, public virtual core::behavior::TopologyAccessor
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE(QuadBendingFEMForceField, DataTypes), SOFA_TEMPLATE(core::behavior::ForceField, DataTypes));
+    SOFA_CLASS2(SOFA_TEMPLATE(QuadBendingFEMForceField, DataTypes), SOFA_TEMPLATE(core::behavior::ForceField, DataTypes), core::behavior::TopologyAccessor);
 
     typedef core::behavior::ForceField<DataTypes> Inherited;
     typedef typename DataTypes::VecCoord VecCoord;
@@ -86,6 +85,8 @@ public:
     void reinit() override;
     void addForce(const core::MechanicalParams* mparams, DataVecDeriv& f, const DataVecCoord& x, const DataVecDeriv& v) override;
     void addDForce(const core::MechanicalParams* mparams, DataVecDeriv& df, const DataVecDeriv& dx) override;
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix) override;
+    void buildDampingMatrix(core::behavior::DampingMatrix* /*matrix*/) final;
     SReal getPotentialEnergy(const core::MechanicalParams* mparams, const DataVecCoord& x) const override;
 /// Class to store FEM information on each quad, for topology modification handling
     class QuadInformation
@@ -165,13 +166,13 @@ public:
         }
     };
 
-/// Topology Data
-    core::topology::QuadData<sofa::type::vector<QuadInformation> > quadInfo;
-    core::topology::PointData<sofa::type::vector<VertexInformation> > vertexInfo; ///< Internal point data
-    core::topology::EdgeData<sofa::type::vector<EdgeInformation> > edgeInfo; ///< Internal edge data
+    /// Topology Data
+    core::topology::QuadData<sofa::type::vector<QuadInformation> > d_quadInfo;
+    core::topology::PointData<sofa::type::vector<VertexInformation> > d_vertexInfo; ///< Internal point data
+    core::topology::EdgeData<sofa::type::vector<EdgeInformation> > d_edgeInfo; ///< Internal edge data
 
     /** Method to initialize @sa QuadInformation when a new Quad is created.
-    * Will be set as creation callback in the QuadData @sa quadInfo
+    * Will be set as creation callback in the QuadData @sa d_quadInfo
     */
     void createQuadInformation(unsigned int quadIndex, QuadInformation&,
         const core::topology::BaseMeshTopology::Quad& t,
@@ -181,17 +182,17 @@ public:
     sofa::core::topology::BaseMeshTopology* m_topology;
     
     /// Get/Set methods
-    Real getPoisson() { return (f_poisson.getValue())[0]; }
+    Real getPoisson() { return (d_poisson.getValue())[0]; }
     void setPoisson(Real val)
     {
         type::vector<Real> newP(1, val);
-        f_poisson.setValue(newP);
+        d_poisson.setValue(newP);
     }
-    Real getYoung() { return (f_young.getValue())[0]; }
+    Real getYoung() { return (d_young.getValue())[0]; }
     void setYoung(Real val)
     {
         type::vector<Real> newY(1, val);
-        f_young.setValue(newY);
+        d_young.setValue(newY);
     }
     int  getMethod() { return method; }
     void setMethod(int val) { method = val; }
@@ -199,8 +200,8 @@ public:
 protected : 
     /// Forcefiled computations
     void computeDisplacementSmall(Displacement &D, Index elementIndex, const VecCoord &p);
-    void computeBendingStrainDisplacement(StrainDisplacement &Jb, /*Index elementIndex,*/ float gauss1, float gauss2, float l, float h);
-    void computeShearStrainDisplacement(StrainDisplacement &Js, /*Index elementIndex,*/ float l, float h);
+    void computeBendingStrainDisplacement(StrainDisplacement &Jb, /*Index elementIndex,*/ Real gauss1, Real gauss2, Real l, Real h);
+    void computeShearStrainDisplacement(StrainDisplacement &Js, /*Index elementIndex,*/ Real l, Real h);
     void computeElementStiffness( Stiffness &K, Index elementIndex);
     void computeForce(Displacement &F, Index elementIndex, Displacement &D);
     
@@ -217,18 +218,15 @@ protected :
 
 public:
 
-    /// Forcefield intern paramaters
+    /// Forcefield intern parameters
     int method;
-    Data<std::string> f_method; ///< large: large displacements, small: small displacements
-    Data<type::vector<Real> > f_poisson; ///< Poisson ratio in Hooke's law (vector)
-    Data<type::vector<Real> > f_young; ///< Young modulus in Hooke's law (vector)
-    Data<Real> f_thickness; ///< Thickness of the elements
 
-    /// Link to be set to the topology container in the component graph.
-    SingleLink<QuadBendingFEMForceField<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
-    
+    Data<std::string> d_method; ///< large: large displacements, small: small displacements
+    Data<type::vector<Real> > d_poisson; ///< Poisson ratio in Hooke's law (vector)
+    Data<type::vector<Real> > d_young; ///< Young modulus in Hooke's law (vector)
+    Data<Real> d_thickness; ///< Thickness of the elements
 };
-#if  !defined(SOFA_COMPONENT_FORCEFIELD_QUADBENDINGFEMFORCEFIELD_CPP)
+#if !defined(SOFA_COMPONENT_FORCEFIELD_QUADBENDINGFEMFORCEFIELD_CPP)
 
 extern template class SOFA_MISC_FEM_API QuadBendingFEMForceField<defaulttype::Vec3Types>;
 

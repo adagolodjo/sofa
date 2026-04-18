@@ -1,10 +1,9 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 
 project(Sofa.Component.Topology.Container.Grid_test)
 
 set(SOURCE_FILES
     CylinderGridTopology_test.cpp
-    RegularGridNodeCreation.h
     RegularGridTopology_test.cpp
     SparseGridTopology_test.cpp
     SphereGridTopology_test.cpp

@@ -23,9 +23,9 @@
 
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/core/visual/VisualParams.h>
-#include <sofa/component/collision/geometry/CubeModel.h>
-#include <sofa/component/collision/geometry/TriangleOctreeModel.h>
-#include <sofa/component/collision/geometry/TriangleModel.h>
+#include <sofa/component/collision/geometry/CubeCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleOctreeCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
 
 namespace sofa::component::collision::detection::algorithm
 {
@@ -34,12 +34,11 @@ using namespace sofa::component::collision::geometry;
 using sofa::core::collision::TDetectionOutputVector;
 using sofa::helper::TriangleOctree;
 
-
-int RayTraceNarrowPhaseClass = core::RegisterObject("Collision detection using TriangleOctreeModel").add < RayTraceNarrowPhase > ();
-
-RayTraceNarrowPhase::RayTraceNarrowPhase()
-:bDraw (initData(&bDraw, false, "draw","enable/disable display of results"))
-{}
+void registerRayTraceNarrowPhase(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Narrow phase of the collision detection using TriangleOctreeModel")
+        .add < RayTraceNarrowPhase >());
+}
 
 void RayTraceNarrowPhase::findPairsVolume (CubeCollisionModel * cm1, CubeCollisionModel * cm2)
 {
@@ -53,7 +52,7 @@ void RayTraceNarrowPhase::findPairsVolume (CubeCollisionModel * cm1, CubeCollisi
         return;
 
 
-    /*construct the octree of both models, when it still doesn't exisits */
+    /*construct the octree of both models, when it still doesn't exists */
     if (!tm1->octreeRoot)
     {
 
@@ -90,12 +89,12 @@ void RayTraceNarrowPhase::findPairsVolume (CubeCollisionModel * cm1, CubeCollisi
             TriangleOctreeModel > *>(contacts);
 
     Cube cube1 (cm1, 0);
-    Cube cube2 (cm2, 0);
+    const Cube cube2 (cm2, 0);
 
 
     const auto& minVect2 = cube2.minVect ();
     const auto& maxVect2 = cube2.maxVect ();
-    int size = tm1->getSize ();
+    const int size = tm1->getSize ();
 
     for (int j = 0; j < size; j++)
     {
@@ -111,15 +110,15 @@ void RayTraceNarrowPhase::findPairsVolume (CubeCollisionModel * cm1, CubeCollisi
         /*resTriangle and resTriangle2 will store the triangle result from the trace method */
         int resTriangle = -1;
         int resTriangle2 = -1;
-        sofa::type::Vector3 trianglePoints[4];
+        sofa::type::Vec3 trianglePoints[4];
         //bool found = false;
         int nPoints = 0;
-        sofa::type::Vector3 normau[3];
+        sofa::type::Vec3 normau[3];
         /*if it fails to find a correspondence between the triangles it tries the raytracing procedure */
         /*test if this triangle was tested before */
 
         /*set the triangle as tested */
-        int flags = tri1.flags();
+        const int flags = tri1.flags();
 
         /*test only the points related to this triangle */
         if (flags & TriangleCollisionModel<sofa::defaulttype::Vec3Types>::FLAG_P1)
@@ -185,7 +184,7 @@ void RayTraceNarrowPhase::findPairsVolume (CubeCollisionModel * cm1, CubeCollisi
             if (cosAngle2 > 0)
                 continue;
 
-            sofa::type::Vector3 Q =
+            const sofa::type::Vec3 Q =
                     (triang2.p1 () * (1.0 - res.u - res.v)) +
                     (triang2.p2 () * res.u) + (triang2.p3 () * res.v);
 
@@ -226,46 +225,6 @@ void RayTraceNarrowPhase::addCollisionPair (const std::pair <
         findPairsVolume (cm1, cm2);
         findPairsVolume (cm2, cm1);
     }
-}
-
-
-void RayTraceNarrowPhase::draw (const core::visual::VisualParams* vparams)
-{
-    if (!bDraw.getValue ())
-        return;
-
-    vparams->drawTool()->saveLastState();
-    vparams->drawTool()->disableLighting();
-
-    constexpr sofa::type::RGBAColor color = sofa::type::RGBAColor::magenta();
-    vparams->drawTool()->setPolygonMode(0, true);
-    std::vector<sofa::type::Vector3> vertices;
-
-    const DetectionOutputMap& outputsMap = this->getDetectionOutputs();
-
-    for (DetectionOutputMap::const_iterator it = outputsMap.begin ();
-         it != outputsMap.end (); ++it)
-    {
-        TDetectionOutputVector < TriangleOctreeModel,
-        TriangleOctreeModel > *outputs =
-                static_cast <
-                        sofa::core::collision::TDetectionOutputVector <
-                                TriangleOctreeModel, TriangleOctreeModel > *>(it->second);
-        for (TDetectionOutputVector < TriangleOctreeModel,
-                TriangleOctreeModel >::iterator it2 = (outputs)->begin ();
-             it2 != outputs->end (); ++it2)
-        {
-            vertices.push_back(sofa::type::Vector3(it2->point[0][0], it2->point[0][1],it2->point[0][2]));
-            vertices.push_back(sofa::type::Vector3(it2->point[1][0], it2->point[1][1],it2->point[1][2]));
-
-            msg_error() << it2->point[0] << " " << it2->point[0];
-
-            it2->elem.first.draw(vparams);
-            it2->elem.second.draw(vparams);
-        }
-    }
-    vparams->drawTool()->drawLines(vertices,3,color);
-    vparams->drawTool()->restoreLastState();
 }
 
 } // namespace sofa::component::collision::detection::algorithm

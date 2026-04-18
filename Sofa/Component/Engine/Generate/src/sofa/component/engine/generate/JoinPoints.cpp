@@ -20,8 +20,8 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_JOINPOINTS_CPP
-#include "JoinPoints.inl"
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/component/engine/generate/JoinPoints.inl>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/ObjectFactory.h>
 
 namespace sofa::component::engine::generate
@@ -29,12 +29,12 @@ namespace sofa::component::engine::generate
 
 using namespace sofa::defaulttype;
 
-int JoinPointsClass = core::RegisterObject("?")
-        .add< JoinPoints<Vec3Types> >()
- 
-        ;
+void registerJoinPoints(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Merge points from a set of points within a given distance.")
+        .add< JoinPoints<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_GENERATE_API JoinPoints<Vec3Types>;
- 
 
 } //namespace sofa::component::engine::generate

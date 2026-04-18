@@ -24,7 +24,7 @@
 
 #include <sofa/type/Vec.h>
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/defaulttype/RigidTypes.h>
 #include <sofa/helper/OptionsGroup.h>
@@ -60,13 +60,6 @@ public:
 
     void doUpdate() override;
 
-    /// Implementing the GetCustomTemplateName is mandatory to have a custom template name paremters
-    /// instead of the default one generated automatically by the SOFA_CLASS() macro.
-    static std::string GetCustomTemplateName()
-    {
-        return Data<Value>::templateName();
-    }
-
     Data<unsigned int> f_nbInputs; ///< Number of input values
     type::vector<Data<VecValue>*> vf_inputs;
     sofa::core::objectmodel::Data< sofa::helper::OptionsGroup > f_op; ///< Selected operation to apply
@@ -76,18 +69,18 @@ protected:
     void createInputs(int nb = -1);
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_MATHOP_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_MATHOP_CPP)
 
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< type::vector<int> >;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< type::vector<bool> >;
-extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< type::vector<double> >;
-extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< type::vector<type::Vec2d> >;
-extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< type::vector<type::Vec3d> >;
+extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< type::vector<SReal> >;
+extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< type::vector<type::Vec2> >;
+extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< type::vector<type::Vec3> >;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< defaulttype::Rigid2Types::VecCoord >;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< defaulttype::Rigid2Types::VecDeriv >;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< defaulttype::Rigid3Types::VecCoord >;
 extern template class SOFA_COMPONENT_ENGINE_TRANSFORM_API MathOp< defaulttype::Rigid3Types::VecDeriv >;
- 
+
 #endif
 
 } //namespace sofa::component::engine::transform

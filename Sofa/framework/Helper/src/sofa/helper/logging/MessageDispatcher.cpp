@@ -38,10 +38,10 @@ using std::string ;
 #include <algorithm>
 using std::remove ;
 
-#include "MessageDispatcher.h"
+#include <sofa/helper/logging/MessageDispatcher.h>
 
-#include "MessageHandler.h"
-#include "ConsoleMessageHandler.h"
+#include <sofa/helper/logging/MessageHandler.h>
+#include <sofa/helper/logging/ConsoleMessageHandler.h>
 
 #include <sofa/helper/logging/DefaultStyleMessageFormatter.h>
 using sofa::helper::logging::DefaultStyleMessageFormatter;
@@ -50,13 +50,8 @@ using sofa::helper::logging::DefaultStyleMessageFormatter;
 using std::lock_guard ;
 using std::mutex;
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 #define PUBLIC_API_ENTRY_POINT_MUTEX lock_guard<mutex> guard(getMainInstance()->getMutex()) ;
@@ -69,11 +64,9 @@ namespace logging
 ///     some of them are duplicated
 ///     other get a weak reference
 
-std::vector<MessageHandler*> getDefaultMessageHandlers(){
-    std::vector<MessageHandler*> messageHandlers;
-    static ConsoleMessageHandler s_consoleMessageHandler(&DefaultStyleMessageFormatter::getInstance());
-    messageHandlers.push_back(&s_consoleMessageHandler);
-    return messageHandlers;
+std::vector<MessageHandler*> getDefaultMessageHandlers()
+{
+    return { &sofa::helper::logging::MainConsoleMessageHandler::getInstance() };
 }
 
 class MessageDispatcherImpl
@@ -198,8 +191,5 @@ MessageDispatcher::LoggerStream::~LoggerStream()
 }
 
 
-} // logging
-} // helper
-} // sofa
-
+}
 

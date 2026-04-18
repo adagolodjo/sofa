@@ -22,7 +22,7 @@
 #pragma once
 #include <sofa/component/io/mesh/config.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/core/objectmodel/DataFileName.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
@@ -30,18 +30,16 @@
 #include <sofa/simulation/BaseSimulationExporter.h>
 
 ///////////////////////////// FORWARD DECLARATION //////////////////////////////////////////////////
-namespace sofa {
-    namespace core {
-        namespace objectmodel {
-            class BaseMechanicalState;
-            class Event ;
-        }
-        namespace visual {
-            class VisualModel ;
-        }
-    }
+namespace sofa::core
+{
+namespace objectmodel {
+    class BaseMechanicalState;
+    class Event ;
 }
-
+namespace visual {
+    class VisualModel ;
+}
+}
 
 
 ////////////////////////////////// DECLARATION /////////////////////////////////////////////////////
@@ -59,7 +57,7 @@ class SOFA_COMPONENT_IO_MESH_API STLExporter : public BaseSimulationExporter
 public:
     SOFA_CLASS(STLExporter, BaseSimulationExporter);
 
-    Data<bool> d_binaryFormat;      //0 for Ascii Formats, 1 for Binary File Format
+    Data<bool> d_binaryFormat; ///< if true, save in binary format, otherwise in ascii
     Data<defaulttype::Vec3Types::VecCoord>               d_position; ///< points coordinates
     Data< type::vector< BaseMeshTopology::Triangle > > d_triangle; ///< triangles indices
     Data< type::vector< BaseMeshTopology::Quad > >     d_quad; ///< quads indices

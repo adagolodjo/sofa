@@ -22,6 +22,7 @@
 #pragma once
 
 #include <sofa/component/solidmechanics/fem/nonuniform/NonUniformHexahedronFEMForceFieldAndMass.h>
+#include <sofa/component/solidmechanics/fem/elastic/HexahedronFEMForceFieldAndMass.inl>
 #include <sofa/core/visual/VisualParams.h>
 
 namespace sofa::component::solidmechanics::fem::nonuniform
@@ -33,7 +34,6 @@ NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::NonUniformHexahedronFEMForc
     , d_nbVirtualFinerLevels(initData(&d_nbVirtualFinerLevels,0,"nbVirtualFinerLevels","use virtual finer levels, in order to compte non-uniform stiffness"))
     , d_useMass(initData(&d_useMass,true,"useMass","Using this ForceField like a Mass? (rather than using a separated Mass)"))
     , d_totalMass(initData(&d_totalMass,(Real)0.0,"totalMass",""))
-    , l_topology(initLink("topology", "link to the topology container"))
 {
 }
 
@@ -44,43 +44,31 @@ void NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::init()
     else this->_alreadyInit=true;
 
 
-    this->core::behavior::ForceField<DataTypes>::init();
+    elastic::BaseLinearElasticityFEMForceField<DataTypes>::init();
 
-    if (l_topology.empty())
+    if (this->d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
     {
-        msg_info() << "link to Topology container should be set to ensure right behavior. First Topology found in current context will be used.";
-        l_topology.set(this->getContext()->getMeshTopologyLink());
-    }
-
-    this->m_topology = l_topology.get();
-    msg_info() << "Topology path used: '" << l_topology.getLinkedPath() << "'";
-
-    if (this->m_topology == nullptr)
-    {
-        msg_error() << "No topology component found at path: " << l_topology.getLinkedPath() << ", nor in current context: " << this->getContext()->name;
-        this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
 
-
-    if(this->m_topology->getNbHexahedra()<=0 )
+    if(this->l_topology->getNbHexahedra()<=0 )
     {
         msg_error() << "NonUniformHexahedronFEMForceFieldDensity: object must have a hexahedric MeshTopology.\n"
-                    << this->m_topology->getName() << "\n"
-                    << this->m_topology->getTypeName() << "\n"
-                    << this->m_topology->getNbPoints() << "\n";
+                    << this->l_topology->getName() << "\n"
+                    << this->l_topology->getTypeName() << "\n"
+                    << this->l_topology->getNbPoints() << "\n";
         this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
 
-    this->_sparseGrid = dynamic_cast<topology::SparseGridTopology*>(this->m_topology);
+    this->_sparseGrid = dynamic_cast<topology::container::grid::SparseGridTopology*>(this->l_topology.get());
 
 
 
-    if (this->_initialPoints.getValue().size() == 0)
+    if (this->d_initialPoints.getValue().size() == 0)
     {
-        const VecCoord& p = this->mstate->read(core::ConstVecCoordId::position())->getValue();
-        this->_initialPoints.setValue(p);
+        const VecCoord& p = this->mstate->read(core::vec_id::read_access::position)->getValue();
+        this->d_initialPoints.setValue(p);
     }
 
     this->_materialsStiffnesses.resize(this->getIndexedElements()->size() );
@@ -106,7 +94,7 @@ void NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::init()
 
 
 
-    this->_elementStiffnesses.beginEdit()->resize(this->getIndexedElements()->size());
+    this->d_elementStiffnesses.beginEdit()->resize(this->getIndexedElements()->size());
     this->d_elementMasses.beginEdit()->resize(this->getIndexedElements()->size());
 
 
@@ -114,16 +102,16 @@ void NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::init()
     //////////////////////
 
 
-    if (this->f_method.getValue() == "large")
+    if (this->d_method.getValue() == "large")
         this->setMethod(HexahedronFEMForceFieldT::LARGE);
-    else if (this->f_method.getValue() == "polar")
+    else if (this->d_method.getValue() == "polar")
         this->setMethod(HexahedronFEMForceFieldT::POLAR);
 
     for (unsigned int i=0; i<this->getIndexedElements()->size(); ++i)
     {
         sofa::type::Vec<8,Coord> nodes;
         for(int w=0; w<8; ++w)
-            nodes[w] = this->_initialPoints.getValue()[(*this->getIndexedElements())[i][w]];
+            nodes[w] = this->d_initialPoints.getValue()[(*this->getIndexedElements())[i][w]];
 
 
         // compute initial configuration in order to compute corotationnal deformations
@@ -138,19 +126,19 @@ void NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::init()
         else
             this->computeRotationPolar( this->_rotations[i], nodes);
         for(int w=0; w<8; ++w)
-            this->_rotatedInitialElements[i][w] = this->_rotations[i]*this->_initialPoints.getValue()[(*this->getIndexedElements())[i][w]];
+            this->_rotatedInitialElements[i][w] = this->_rotations[i]*this->d_initialPoints.getValue()[(*this->getIndexedElements())[i][w]];
     }
     //////////////////////
 
 
-    // compute mechanichal matrices (mass and stiffness) by condensating from _nbVirtualFinerLevels
+    // compute mechanichal matrices (mass and stiffness) by condensating from d_nbVirtualFinerLevels
     computeMechanicalMatricesByCondensation( );
     // hack to use true mass matrices or masses concentrated in particules
     if(d_useMass.getValue() )
     {
 
         MassT::init();
-        this->_particleMasses.resize( this->_initialPoints.getValue().size() );
+        this->_particleMasses.resize( this->d_initialPoints.getValue().size() );
 
 
         int i=0;
@@ -158,7 +146,7 @@ void NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::init()
         {
             sofa::type::Vec<8,Coord> nodes;
             for(int w=0; w<8; ++w)
-                nodes[w] = this->_initialPoints.getValue()[(*it)[w]];
+                nodes[w] = this->d_initialPoints.getValue()[(*it)[w]];
 
             // volume of a element
             Real volume = (nodes[1]-nodes[0]).norm()*(nodes[3]-nodes[0]).norm()*(nodes[4]-nodes[0]).norm();
@@ -180,7 +168,7 @@ void NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::init()
 
         if( this->d_lumpedMass.getValue() )
         {
-            this->_lumpedMasses.resize( this->_initialPoints.getValue().size() );
+            this->_lumpedMasses.resize( this->d_initialPoints.getValue().size() );
             i=0;
             for(typename VecElement::const_iterator it = this->getIndexedElements()->begin() ; it != this->getIndexedElements()->end() ; ++it, ++i)
             {
@@ -191,9 +179,9 @@ void NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::init()
                 {
                     for(int j=0; j<8*3; ++j)
                     {
-                        this->_lumpedMasses[ (*it)[w] ][0] += mass[w*3  ][j];
-                        this->_lumpedMasses[ (*it)[w] ][1] += mass[w*3+1][j];
-                        this->_lumpedMasses[ (*it)[w] ][2] += mass[w*3+2][j];
+                        this->_lumpedMasses[ (*it)[w] ][0] += mass(w*3  ,j);
+                        this->_lumpedMasses[ (*it)[w] ][1] += mass(w*3+1,j);
+                        this->_lumpedMasses[ (*it)[w] ][2] += mass(w*3+2,j);
                     }
                 }
             }
@@ -210,7 +198,7 @@ void NonUniformHexahedronFEMForceFieldAndMass<DataTypes>::init()
     }
     else
     {
-        this->_particleMasses.resize( this->_initialPoints.getValue().size() );
+        this->_particleMasses.resize( this->d_initialPoints.getValue().size() );
         Real mass = d_totalMass.getValue() / Real(this->getIndexedElements()->size());
         for(unsigned i=0; i<this->_particleMasses.size(); ++i)
             this->_particleMasses[ i ] = mass;
@@ -229,7 +217,7 @@ void NonUniformHexahedronFEMForceFieldAndMass<T>::computeMechanicalMatricesByCon
 {
     for (unsigned int i=0; i<this->getIndexedElements()->size(); ++i)
     {
-        computeMechanicalMatricesByCondensation( (*this->_elementStiffnesses.beginEdit())[i],
+        computeMechanicalMatricesByCondensation( (*this->d_elementStiffnesses.beginEdit())[i],
                 (*this->d_elementMasses.beginEdit())[i],i,0);
     }
 }
@@ -242,7 +230,7 @@ void NonUniformHexahedronFEMForceFieldAndMass<T>::computeMechanicalMatricesByCon
         computeClassicalMechanicalMatrices(K,M,elementIndice,this->_sparseGrid->getNbVirtualFinerLevels()-level);
     else
     {
-        type::fixed_array<int,8> finerChildren;
+        type::fixed_array<Index, 8> finerChildren;
         if (level == 0)
         {
             finerChildren = this->_sparseGrid->_hierarchicalCubeMap[elementIndice];
@@ -254,7 +242,7 @@ void NonUniformHexahedronFEMForceFieldAndMass<T>::computeMechanicalMatricesByCon
 
         for ( int i=0; i<8; ++i) //for 8 virtual finer element
         {
-            if (finerChildren[i] != -1)
+            if (finerChildren[i] != sofa::InvalidID)
             {
                 ElementStiffness finerK;
                 ElementMass finerM;
@@ -283,7 +271,7 @@ void NonUniformHexahedronFEMForceFieldAndMass<T>::computeClassicalMechanicalMatr
     //       //given an elementIndice, find the 8 others from the sparse grid
     //       //compute MaterialStiffness
     MaterialStiffness material;
-    computeMaterialStiffness(material, this->f_youngModulus.getValue(),this->f_poissonRatio.getValue());
+    computeMaterialStiffness(material, this->getYoungModulusInElement(0), this->getPoissonRatioInElement(0));
 
     //Nodes are found using Sparse Grid
     Real stiffnessCoef = this->_sparseGrid->_virtualFinerLevels[level]->getStiffnessCoef(elementIndice);
@@ -304,15 +292,15 @@ void NonUniformHexahedronFEMForceFieldAndMass<T>::addFineToCoarse( ElementStiffn
     for(int i=0; i<24; i++)
         for(int j=0; j<24; j++)
         {
-            A[i][j] = j%3==0 ? fine[i][0] *(Real) FINE_TO_COARSE[indice][0][j/3] : Real(0.0);
+            A(i,j) = j%3==0 ? fine(i,0) *(Real) FINE_TO_COARSE[indice][0][j/3] : Real(0.0);
             for(int k=1; k<24; k++)
-                A[i][j] += j%3==k%3  ? fine[i][k] * (Real)FINE_TO_COARSE[indice][k/3][j/3] : Real(0.0);
+                A(i,j) += j%3==k%3  ? fine(i,k) * (Real)FINE_TO_COARSE[indice][k/3][j/3] : Real(0.0);
         }
 
     for(int i=0; i<24; i++)
         for(int j=0; j<24; j++)
             for(int k=0; k<24; k++)
-                coarse[i][j] += i%3==k%3  ? (Real)FINE_TO_COARSE[indice][k/3][i/3] * A[k][j] : Real(0.0);   // FINE_TO_COARSE[indice] transposed
+                coarse(i,j) += i%3==k%3  ? (Real)FINE_TO_COARSE[indice][k/3][i/3] * A(k,j) : Real(0.0);   // FINE_TO_COARSE[indice] transposed
 }
 
 
@@ -413,15 +401,15 @@ const float NonUniformHexahedronFEMForceFieldAndMass<T>::FINE_TO_COARSE[8][8][8]
 template<class T>
 void NonUniformHexahedronFEMForceFieldAndMass<T>::computeMaterialStiffness(MaterialStiffness &m, double youngModulus, double poissonRatio)
 {
-    m[0][0] = m[1][1] = m[2][2] = 1;
-    m[0][1] = m[0][2] = m[1][0]= m[1][2] = m[2][0] =  m[2][1] = (Real)(poissonRatio/(1-poissonRatio));
-    m[0][3] = m[0][4] =	m[0][5] = 0;
-    m[1][3] = m[1][4] =	m[1][5] = 0;
-    m[2][3] = m[2][4] =	m[2][5] = 0;
-    m[3][0] = m[3][1] = m[3][2] = m[3][4] =	m[3][5] = 0;
-    m[4][0] = m[4][1] = m[4][2] = m[4][3] =	m[4][5] = 0;
-    m[5][0] = m[5][1] = m[5][2] = m[5][3] =	m[5][4] = 0;
-    m[3][3] = m[4][4] = m[5][5] = (Real)((1-2*poissonRatio)/(2*(1-poissonRatio)));
+    m(0,0) = m(1,1) = m(2,2) = 1;
+    m(0,1) = m(0,2) = m(1,0)= m(1,2) = m(2,0) =  m(2,1) = (Real)(poissonRatio/(1-poissonRatio));
+    m(0,3) = m(0,4) =	m(0,5) = 0;
+    m(1,3) = m(1,4) =	m(1,5) = 0;
+    m(2,3) = m(2,4) =	m(2,5) = 0;
+    m(3,0) = m(3,1) = m(3,2) = m(3,4) =	m(3,5) = 0;
+    m(4,0) = m(4,1) = m(4,2) = m(4,3) =	m(4,5) = 0;
+    m(5,0) = m(5,1) = m(5,2) = m(5,3) =	m(5,4) = 0;
+    m(3,3) = m(4,4) = m(5,5) = (Real)((1-2*poissonRatio)/(2*(1-poissonRatio)));
     m *= (Real)((youngModulus*(1-poissonRatio))/((1+poissonRatio)*(1-2*poissonRatio)));
 }
 

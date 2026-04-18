@@ -22,6 +22,7 @@
 #pragma once
 
 #include <sofa/component/solidmechanics/fem/nonuniform/HexahedronCompositeFEMForceFieldAndMass.h>
+#include <sofa/component/solidmechanics/fem/nonuniform/NonUniformHexahedronFEMForceFieldAndMass.inl>
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/component/topology/container/grid/SparseGridRamificationTopology.h>
 #include <iomanip>
@@ -64,7 +65,7 @@ const bool HexahedronCompositeFEMForceFieldAndMass<DataTypes>::IS_CONSTRAINED_27
 
 template <class DataTypes>
 const int HexahedronCompositeFEMForceFieldAndMass<DataTypes>::FineHexa_FineNode_IndiceForCutAssembling_27[27]=
-{0,	0,	1,	1,	2,	3,	3,	4,	2,	5,	6,	7	,8,	9,	10,	11,	12,	13,	4	,14,	5,	15,	16,	17,	7,	18,	6};
+{0,    0,    1,    1,    2,    3,    3,    4,    2,    5,    6,    7    ,8,    9,    10,    11,    12,    13,    4    ,14,    5,    15,    16,    17,    7,    18,    6};
 
 
 
@@ -372,17 +373,17 @@ const float HexahedronCompositeFEMForceFieldAndMass<DataTypes>::MIDDLE_INTERPOLA
 template <class DataTypes>
 const int HexahedronCompositeFEMForceFieldAndMass<DataTypes>::MIDDLE_AXES[27]=
 {
-    0,   	1,          	0,
-    2,  		3,		        2,
-    0,		1,				0,
+    0,       1,              0,
+    2,          3,                2,
+    0,        1,                0,
 
-    3,			2,		3,
-    1,	0,			 1,
-    3,			2,		3,
+    3,            2,        3,
+    1,    0,             1,
+    3,            2,        3,
 
-    0,   	1,          	0,
-    2,  		3,		2,
-    0,   	1,          	0
+    0,       1,              0,
+    2,          3,        2,
+    0,       1,              0
 };
 
 
@@ -438,7 +439,7 @@ void HexahedronCompositeFEMForceFieldAndMass<DataTypes>::init()
     NonUniformHexahedronFEMForceFieldAndMassT::init();
 
 
-    if(d_drawSize.getValue()==-1)
+    if(d_drawSize.getValue()==-1 && this->_sparseGrid != nullptr)
         d_drawSize.setValue( (float)((this->_sparseGrid->getMax()[0]-this->_sparseGrid->getMin()[0]) * .004f) );
 
 }
@@ -474,10 +475,10 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesByCond
             //       //given an elementIndice, find the 8 others from the sparse grid
             //       //compute MaterialStiffness
             MaterialStiffness material;
-            this->computeMaterialStiffness(material, this->f_youngModulus.getValue(),this->f_poissonRatio.getValue());
+            this->computeMaterialStiffness(material, this->getYoungModulusInElement(i), this->getPoissonRatioInElement(i));
 
 
-            HexahedronFEMForceFieldAndMassT::computeElementStiffness((*this->_elementStiffnesses.beginEdit())[i],material,nodes,i, this->_sparseGrid->getStiffnessCoef( i )); // classical stiffness
+            HexahedronFEMForceFieldAndMassT::computeElementStiffness((*this->d_elementStiffnesses.beginEdit())[i], material, nodes, i, this->_sparseGrid->getStiffnessCoef(i )); // classical stiffness
 
             HexahedronFEMForceFieldAndMassT::computeElementMass((*this->d_elementMasses.beginEdit())[i],nodes,i,this->_sparseGrid->getMassCoef( i ));
         }
@@ -489,7 +490,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesByCond
 
 
     _weights.resize( this->d_nbVirtualFinerLevels.getValue() );
-    int finestLevel = this->_sparseGrid->getNbVirtualFinerLevels()-this->d_nbVirtualFinerLevels.getValue();
+    const int finestLevel = this->_sparseGrid->getNbVirtualFinerLevels()-this->d_nbVirtualFinerLevels.getValue();
 
     for(int i=0; i<this->d_nbVirtualFinerLevels.getValue(); ++i)
     {
@@ -501,14 +502,14 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesByCond
 
     if( d_finestToCoarse.getValue() )
         for (unsigned int i=0; i<this->getIndexedElements()->size(); ++i)
-            computeMechanicalMatricesDirectlyFromTheFinestToCoarse( (*this->_elementStiffnesses.beginEdit())[i], (*this->d_elementMasses.beginEdit())[i], i );
+            computeMechanicalMatricesDirectlyFromTheFinestToCoarse((*this->d_elementStiffnesses.beginEdit())[i], (*this->d_elementMasses.beginEdit())[i], i );
     else
     {
         auto* sparseGridRamification = dynamic_cast<component::topology::container::grid::SparseGridRamificationTopology*>( this->_sparseGrid );
         if( d_useRamification.getValue() && sparseGridRamification )
         {
             for (unsigned int i=0; i<this->getIndexedElements()->size(); ++i)
-                computeMechanicalMatricesRecursivelyWithRamifications( (*this->_elementStiffnesses.beginEdit())[i], (*this->d_elementMasses.beginEdit())[i], i, 0 );
+                computeMechanicalMatricesRecursivelyWithRamifications((*this->d_elementStiffnesses.beginEdit())[i], (*this->d_elementMasses.beginEdit())[i], i, 0 );
 
 
             for (unsigned int i=0; i<this->getIndexedElements()->size(); ++i)
@@ -526,7 +527,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesByCond
         else
         {
             for (unsigned int i=0; i<this->getIndexedElements()->size(); ++i)
-                computeMechanicalMatricesRecursively( (*this->_elementStiffnesses.beginEdit())[i], (*this->d_elementMasses.beginEdit())[i], i, 0 );
+                computeMechanicalMatricesRecursively((*this->d_elementStiffnesses.beginEdit())[i], (*this->d_elementMasses.beginEdit())[i], i, 0 );
 
             for (unsigned int i=0; i<this->getIndexedElements()->size(); ++i)
             {
@@ -595,7 +596,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesDirect
             // idx for assembly
             if( !map_idxq_idxass[ hexa[w] ] )
             {
-                map_idxq_idxass[ hexa[w] ] = /*FineHexa_FineNode_IndiceForAssembling[i][w];*/idxass;
+                map_idxq_idxass[ hexa[w] ] = /*FineHexa_FineNode_IndiceForAssembling(i,w);*/idxass;
                 idxass++;
             }
         }
@@ -614,8 +615,8 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesDirect
                 for(int m=0; m<3; ++m)
                     for(int n=0; n<3; ++n)
                     {
-                        assembledStiffness(v1 * 3 + m, v2 * 3 + n) += finestStiffnesses[i][j*3+m][k*3+n];
-                        assembledMass(v1 * 3 + m, v2 * 3 + n) += finestMasses[i][j*3+m][k*3+n];
+                        assembledStiffness(v1 * 3 + m, v2 * 3 + n) += finestStiffnesses[i](j*3+m,k*3+n);
+                        assembledMass(v1 * 3 + m, v2 * 3 + n) += finestMasses[i](j*3+m,k*3+n);
                     }
             }
         }
@@ -661,7 +662,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesDirect
 
 
     EigenMatrix Kg = EigenMatrix::Zero(sizeass * 3, 8 * 3); // stiffness of contrained nodes
-    EigenMatrix A = EigenMatrix::Zero(sizeass * 3, sizeass * 3); // [Kf -G] ==  Kf (stiffness of free nodes) with the constaints
+    EigenMatrix A = EigenMatrix::Zero(sizeass * 3, sizeass * 3); // [Kf -G] ==  Kf (stiffness of free nodes) with the constraints
 
     for ( std::size_t i=0; i<sizeass; ++i)
     {
@@ -771,7 +772,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesDirect
     {
         for(Size j=0; j<8*3; ++j)
         {
-            if( mask(i,j) /*WEIGHT_MASK[i][j]*/ )
+            if( mask(i,j) /*WEIGHT_MASK(i,j)*/ )
                 WBmeca(i,j) = WB(i,j);
         }
     }
@@ -798,8 +799,8 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesDirect
     for(int i=0; i<8*3; ++i)
         for(int j=0; j<8*3; ++j)
         {
-            K[i][j]=(Real)Kc(i,j);
-            M[i][j]=(Real)Mc(i,j);
+            K(i,j)=(Real)Kc(i,j);
+            M(i,j)=(Real)Mc(i,j);
         }
     if( !d_completeInterpolation.getValue() ) // take WBmeca as the object interpolation
     {
@@ -813,9 +814,9 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesDirect
         {
             for( int k=0; k<8*3; ++k)
             {
-                _finalWeights[finestChildren[i]].second[j*3  ][k] = (Real)WB( map_idxq_idxass[ hexa[j] ]*3   ,k);
-                _finalWeights[finestChildren[i]].second[j*3+1][k] = (Real)WB( map_idxq_idxass[ hexa[j] ]*3+1 ,k);
-                _finalWeights[finestChildren[i]].second[j*3+2][k] = (Real)WB( map_idxq_idxass[ hexa[j] ]*3+2 ,k);
+                _finalWeights[finestChildren[i]].second(j*3  ,k) = (Real)WB( map_idxq_idxass[ hexa[j] ]*3   ,k);
+                _finalWeights[finestChildren[i]].second(j*3+1,k) = (Real)WB( map_idxq_idxass[ hexa[j] ]*3+1 ,k);
+                _finalWeights[finestChildren[i]].second(j*3+2,k) = (Real)WB( map_idxq_idxass[ hexa[j] ]*3+2 ,k);
             }
         }
         _finalWeights[finestChildren[i]].first = elementIndice;
@@ -868,7 +869,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
     {
         type::fixed_array<Index,8> finerChildren;
 
-        topology::SparseGridTopology::SPtr sparseGrid, finerSparseGrid;
+        topology::container::grid::SparseGridTopology::SPtr sparseGrid, finerSparseGrid;
 
         if (level == 0)
         {
@@ -916,9 +917,9 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
                         for(int m=0; m<3; ++m)
                             for(int n=0; n<3; ++n)
                             {
-                                assembledStiffness[ v1*3+m ][ v2*3+n ] += finerK[i][j*3+m][k*3+n];
-                                assembledStiffnessWithRigidVoid[ v1*3+m ][ v2*3+n ] += finerK[i][j*3+m][k*3+n];
-                                assembledMass[ v1*3+m ][ v2*3+n ] += finerM[i][j*3+m][k*3+n];
+                                assembledStiffness( v1*3+m , v2*3+n ) += finerK[i](j*3+m,k*3+n);
+                                assembledStiffnessWithRigidVoid( v1*3+m , v2*3+n ) += finerK[i](j*3+m,k*3+n);
+                                assembledMass( v1*3+m , v2*3+n ) += finerM[i](j*3+m,k*3+n);
                             }
                     }
                 }
@@ -936,7 +937,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
                         for(int m=0; m<3; ++m)
                             for(int n=0; n<3; ++n)
                             {
-                                assembledStiffnessWithRigidVoid[ v1*3+m ][ v2*3+n ] += RIGID_STIFFNESS[j*3+m][k*3+n];
+                                assembledStiffnessWithRigidVoid( v1*3+m , v2*3+n ) += RIGID_STIFFNESS[j*3+m][k*3+n];
                             }
                     }
                 }
@@ -945,7 +946,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
 
 
         type::Mat<27*3, 8*3, Real> Kg; // stiffness of contrained nodes
-        type::Mat<27*3, 27*3, Real> A; // [Kf -G]  Kf (stiffness of free nodes) with the constaints
+        type::Mat<27*3, 27*3, Real> A; // [Kf -G]  Kf (stiffness of free nodes) with the constraints
         type::Mat<27*3, 27*3, Real> Ainv;
 
 
@@ -959,7 +960,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
                 {
                     for(int m=0; m<3; ++m)
                         for(int n=0; n<3; ++n)
-                            Kg[ lig*3+m ][ col*3+n ] = assembledStiffnessWithRigidVoid[lig*3+m][i*3+n];
+                            Kg( lig*3+m , col*3+n ) = assembledStiffnessWithRigidVoid(lig*3+m,i*3+n);
                 }
             }
             else
@@ -968,7 +969,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
                 {
                     for(int m=0; m<3; ++m)
                         for(int n=0; n<3; ++n)
-                            A[ lig*3+m ][ col*3+n ] = assembledStiffnessWithRigidVoid[lig*3+m][i*3+n];
+                            A( lig*3+m , col*3+n ) = assembledStiffnessWithRigidVoid(lig*3+m,i*3+n);
                 }
             }
 
@@ -978,9 +979,9 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
         // put -G entries into A
         for(int i=0; i<8; ++i) // for all constrained nodes
         {
-            A[ CoarseToFine[i]*3   ][ (27-8+i)*3   ] = -1.0;
-            A[ CoarseToFine[i]*3+1 ][ (27-8+i)*3+1 ] = -1.0;
-            A[ CoarseToFine[i]*3+2 ][ (27-8+i)*3+2 ] = -1.0;
+            A( CoarseToFine[i]*3   , (27-8+i)*3   ) = -1.0;
+            A( CoarseToFine[i]*3+1 , (27-8+i)*3+1 ) = -1.0;
+            A( CoarseToFine[i]*3+2 , (27-8+i)*3+2 ) = -1.0;
         }
         const bool canInvert = Ainv.invert(A);
         assert(canInvert);
@@ -989,7 +990,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
         for(int i=0; i<27-8; ++i)
         {
             for(int m=0; m<3; ++m)
-                Ainvf[i*3+m] = - Ainv.line( i*3+m );
+                Ainvf(i*3+m) = - Ainv.line( i*3+m );
         }
 
         type::Mat<(27-8)*3, 8*3, Real> W;
@@ -1002,9 +1003,9 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
             int idx = i/3;
             int mod = i%3;
             if( IS_CONSTRAINED_27[idx] )
-                WB[ i ][ FineHexa_FineNode_IndiceForCutAssembling_27[idx]*3+mod ] = 1.0;
+                WB( i )[ FineHexa_FineNode_IndiceForCutAssembling_27[idx]*3+mod ] = 1.0;
             else
-                WB[ i ] = W[ FineHexa_FineNode_IndiceForCutAssembling_27[idx]*3+mod ];
+                WB( i ) = W( FineHexa_FineNode_IndiceForCutAssembling_27[idx]*3+mod );
         }
 
         // apply the mask to take only concerned values (an edge stays an edge, a face stays a face, if corner=1 opposite borders=0....)
@@ -1014,7 +1015,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
             for(int j=0; j<8*3; ++j)
             {
                 if( WEIGHT_MASK[i][j] )
-                    WBmeca[i][j]=WB[i][j];
+                    WBmeca(i,j)=WB(i,j);
             }
         }
 
@@ -1025,11 +1026,11 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
         {
             for(int j=0; j<8*3; ++j)
             {
-                sum_wbmeca[i] += WBmeca[i][j];
+                sum_wbmeca[i] += WBmeca(i,j);
             }
             for(int j=0; j<8*3; ++j)
             {
-                WBmeca[i][j] /= sum_wbmeca[i];
+                WBmeca(i,j) /= sum_wbmeca[i];
             }
         }
 
@@ -1043,16 +1044,16 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
         }
         else
         {
-
+            const auto poissonRatio = this->getPoissonRatioInElement(0);
             for(int i=0; i<27*3; ++i)
             {
                 for(int j=0; j<8*3; ++j)
                 {
                     if( !WEIGHT_MASK_CROSSED_DIFF[i][j] )
-                        WB[i][j] = WBmeca[i][j];
+                        WB(i,j) = WBmeca(i,j);
                     else
                     {
-                        WB[i][j] = (Real)(WB[i][j]/fabs(WB[i][j]) * WEIGHT_MASK_CROSSED_DIFF[i][j] * this->f_poissonRatio.getValue() * .3);
+                        WB(i,j) = (Real)(WB(i,j) / fabs(WB(i,j)) * WEIGHT_MASK_CROSSED_DIFF[i][j] * poissonRatio * .3);
                     }
                 }
             }
@@ -1065,9 +1066,9 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
             {
                 for(int i=0; i<8; ++i)
                 {
-                    _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildren[elem]][i*3  ] = WB [ FineHexa_FineNode_IndiceForAssembling[ elem ][ i ]*3  ];
-                    _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildren[elem]][i*3+1] = WB [ FineHexa_FineNode_IndiceForAssembling[ elem ][ i ]*3+1];
-                    _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildren[elem]][i*3+2] = WB [ FineHexa_FineNode_IndiceForAssembling[ elem ][ i ]*3+2];
+                    _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildren[elem]](i*3  ) = WB ( FineHexa_FineNode_IndiceForAssembling[ elem ][ i ]*3  );
+                    _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildren[elem]](i*3+1) = WB ( FineHexa_FineNode_IndiceForAssembling[ elem ][ i ]*3+1);
+                    _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildren[elem]](i*3+2) = WB ( FineHexa_FineNode_IndiceForAssembling[ elem ][ i ]*3+2);
                 }
             }
         }
@@ -1245,9 +1246,9 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
                             for(int m=0; m<3; ++m)
                                 for(int n=0; n<3; ++n)
                                 {
-                                    assembledStiffness( v1*3+m, v2*3+n) += finerK[i][c][j*3+m][k*3+n];
-                                    assembledStiffnessStatic( v1*3+m, v2*3+n) += finerK[i][c][j*3+m][k*3+n];
-                                    assembledMass( v1*3+m, v2*3+n) += finerM[i][c][j*3+m][k*3+n];
+                                    assembledStiffness( v1*3+m, v2*3+n) += finerK[i][c](j*3+m, k*3+n);
+                                    assembledStiffnessStatic( v1*3+m, v2*3+n) += finerK[i][c](j*3+m, k*3+n);
+                                    assembledMass( v1*3+m, v2*3+n) += finerM[i][c](j*3+m, k*3+n);
                                 }
                         }
                     }
@@ -1331,7 +1332,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
         }
 
         EigenMatrix Kg = EigenMatrix::Zero(sizeass * 3, idxcutasscoarse * 3);// stiffness of contrained nodes
-        EigenMatrix A = EigenMatrix::Zero(sizeass * 3, sizeass * 3); // [Kf -G] ==  Kf (stiffness of free nodes) with the constaints
+        EigenMatrix A = EigenMatrix::Zero(sizeass * 3, sizeass * 3); // [Kf -G] ==  Kf (stiffness of free nodes) with the constraints
         
         for( auto it = map_idxq_idxcutass.begin(); it!=map_idxq_idxcutass.end(); ++it)
         {
@@ -1452,8 +1453,8 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
         for(int i=0; i<8*3; ++i)
             for(int j=0; j<8*3; ++j)
             {
-                K[i][j]=(Real)Kc(i,j);
-                M[i][j]=(Real)Mc(i,j);
+                K(i,j)=(Real)Kc(i,j);
+                M(i,j)=(Real)Mc(i,j);
             }
 
         if( !d_completeInterpolation.getValue() ) // take WBmeca as the object interpolation
@@ -1471,9 +1472,9 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeMechanicalMatricesRecurs
                 {
                     for( int l=0; l<8*3; ++l) // toutes les cols de W
                     {
-                        _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildrenRamificationOriginal[i][j]][k*3  ][l] = (Real)WB( map_idxq_idxass[ finehexa[k] ]*3   ,l);
-                        _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildrenRamificationOriginal[i][j]][k*3+1][l] = (Real)WB( map_idxq_idxass[ finehexa[k] ]*3+1 ,l);
-                        _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildrenRamificationOriginal[i][j]][k*3+2][l] = (Real)WB( map_idxq_idxass[ finehexa[k] ]*3+2 ,l);
+                        _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildrenRamificationOriginal[i][j]](k*3 , l) = (Real)WB( map_idxq_idxass[ finehexa[k] ]*3   ,l);
+                        _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildrenRamificationOriginal[i][j]](k*3+1 , l) = (Real)WB( map_idxq_idxass[ finehexa[k] ]*3+1 ,l);
+                        _weights[this->d_nbVirtualFinerLevels.getValue()-level-1][finerChildrenRamificationOriginal[i][j]](k*3+2 , l) = (Real)WB( map_idxq_idxass[ finehexa[k] ]*3+2 ,l);
                     }
                 }
             }
@@ -1500,7 +1501,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::computeFinalWeights( const Weig
     }
     else
     {
-        topology::SparseGridTopology::SPtr sparseGrid;
+        topology::container::grid::SparseGridTopology::SPtr sparseGrid;
 
         sparseGrid = this->_sparseGrid->_virtualFinerLevels[this->_sparseGrid->getNbVirtualFinerLevels()-level];
 
@@ -1555,9 +1556,9 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::draw(const core::visual::Visual
 
     if( d_drawType.getValue() == -1 ) return HexahedronFEMForceFieldAndMassT::draw(vparams);
 
-    vparams->drawTool()->saveLastState();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
-    const VecCoord& x = this->mstate->read(core::ConstVecCoordId::position())->getValue();
+    const VecCoord& x = this->mstate->read(core::vec_id::read_access::position)->getValue();
 
 
     sofa::type::RGBAColor colour;
@@ -1594,7 +1595,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::draw(const core::visual::Visual
     }
     else
     {
-        std::vector< type::Vector3 > points;
+        std::vector< type::Vec3 > points;
 
         vparams->drawTool()->setLightingEnabled(false);
 
@@ -1614,7 +1615,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::draw(const core::visual::Visual
     {
         colour=sofa::type::RGBAColor(0.95f, 0.95f, 0.7f,1.0f);
 
-        std::vector< sofa::type::Vector3 > points;
+        std::vector< sofa::type::Vec3 > points;
         for(unsigned i=0; i<x.size(); ++i)
             points.push_back( x[i] );
         vparams->drawTool()->drawSpheres(points, d_drawSize.getValue()*1.5f,colour);
@@ -1626,7 +1627,7 @@ void HexahedronCompositeFEMForceFieldAndMass<T>::draw(const core::visual::Visual
 
     {
 
-        std::vector< sofa::type::Vector3 > points;
+        std::vector< sofa::type::Vec3 > points;
         for(unsigned i=0; i<sgr->getConnexions()->size(); ++i)
         {
             type::vector< topology::container::grid::SparseGridRamificationTopology::Connexion *>& con = (*sgr->getConnexions())[i];

@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -31,11 +31,10 @@
 
 /// @warning this can only manage one scene at a time
 /// (root singleton)
-namespace sofa
+
+namespace sofa::modeling
 {
-namespace modeling
-{
-using sofa::core::objectmodel::BaseObject ;
+using BaseObject [[deprecated("Use sofa::core::objectmodel::BaseObject instead.")]] = sofa::core::objectmodel::BaseObject;
 
 typedef SReal Scalar;
 typedef sofa::defaulttype::Vec3Types::Deriv Deriv3;
@@ -66,13 +65,13 @@ SOFA_SCENECREATOR_API simulation::Node::SPtr createObstacle(simulation::Node::SP
 /// Create a collision node using Barycentric Mapping, using a 3d model specified by filename.
 /// elements is a vector of type of collision models (Triangle, Line, Point, Sphere)
 /// an initial transformation can be performed
-SOFA_SCENECREATOR_API simulation::Node::SPtr createCollisionNodeVec3(simulation::Node::SPtr parent, BaseObject::SPtr dof,
+SOFA_SCENECREATOR_API simulation::Node::SPtr createCollisionNodeVec3(simulation::Node::SPtr parent, sofa::core::objectmodel::BaseObject::SPtr dof,
                                                                      const std::string &filename,
                                                                      const std::vector<std::string> &elements,
                                                                      const Deriv3& translation=Deriv3(),
                                                                      const Deriv3 &rotation=Deriv3());
 
-SOFA_SCENECREATOR_API simulation::Node::SPtr createVisualNodeVec3(simulation::Node::SPtr parent, BaseObject::SPtr dof,
+SOFA_SCENECREATOR_API simulation::Node::SPtr createVisualNodeVec3(simulation::Node::SPtr parent, sofa::core::objectmodel::BaseObject::SPtr dof,
                                                                   const std::string &filename, const std::string& color,
                                                                   const Deriv3& translation=Deriv3(),
                                                                   const Deriv3 &rotation=Deriv3(),
@@ -83,14 +82,14 @@ SOFA_SCENECREATOR_API simulation::Node::SPtr createVisualNodeVec3(simulation::No
 /// elements is a vector of type of collision models (Triangle, Line, Point, Sphere)
 /// an initial transformation can be performed
 SOFA_SCENECREATOR_API simulation::Node::SPtr createCollisionNodeRigid(simulation::Node::SPtr parent,
-                                                                      BaseObject::SPtr dofRigid,
+                                                                      sofa::core::objectmodel::BaseObject::SPtr dofRigid,
                                                                       const std::string &filename,
                                                                       const std::vector<std::string> &elements,
                                                                       const Deriv3& translation=Deriv3(),
                                                                       const Deriv3 &rotation=Deriv3());
 
 SOFA_SCENECREATOR_API simulation::Node::SPtr createVisualNodeRigid(simulation::Node::SPtr parent,
-                                                                   BaseObject::SPtr  dofRigid,
+                                                                   sofa::core::objectmodel::BaseObject::SPtr  dofRigid,
                                                                    const std::string &filename,
                                                                    const std::string& color,
                                                                    const Deriv3& translation=Deriv3(),
@@ -210,8 +209,6 @@ SOFA_SCENECREATOR_API simulation::Node::SPtr clearScene();
 /// Create a link from source to target.
 SOFA_SCENECREATOR_API void setDataLink(core::objectmodel::BaseData* source, core::objectmodel::BaseData* target);
 
-}// modeling
-
-}// sofa
+}
 
 #endif

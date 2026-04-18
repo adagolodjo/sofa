@@ -21,18 +21,17 @@
 ******************************************************************************/
 #pragma once
 
-#include <sofa/component/mass/config.h>
-
-#include <sofa/type/vector.h>
-#include <sofa/type/Vec.h>
-#include <sofa/defaulttype/VecTypes.h>
-#include <sofa/defaulttype/RigidTypes.h>
-#include <sofa/core/behavior/Mass.h>
-#include <sofa/core/topology/TopologyData.h>
-#include <sofa/core/objectmodel/DataFileName.h>
-
-#include <sofa/component/mass/VecMassType.h>
 #include <sofa/component/mass/RigidMassType.h>
+#include <sofa/component/mass/VecMassType.h>
+#include <sofa/component/mass/config.h>
+#include <sofa/core/behavior/Mass.h>
+#include <sofa/core/behavior/TopologyAccessor.h>
+#include <sofa/core/objectmodel/DataFileName.h>
+#include <sofa/core/topology/TopologyData.h>
+#include <sofa/defaulttype/RigidTypes.h>
+#include <sofa/defaulttype/VecTypes.h>
+#include <sofa/type/Vec.h>
+#include <sofa/type/vector.h>
 
 #include <type_traits>
 
@@ -55,15 +54,14 @@ public :
 * @class    DiagonalMass
 * @brief    This component computes the integral of this mass density over the volume of the object geometry but it supposes that the Mass matrix is diagonal.
 * @remark   Similar to MeshMatrixMass but it does not simplify the Mass Matrix as diagonal.
-* @remark   https://www.sofa-framework.org/community/doc/components/masses/diagonalmass/
 * @tparam   DataTypes type of the state associated with this mass
 * @tparam   GeometricalTypes type of the geometry, i.e type of the state associated with the topology (if the topology and the mass relates to the same state, this will be the same as DataTypes)
 */
 template <class DataTypes, class GeometricalTypes = DataTypes>
-class DiagonalMass : public core::behavior::Mass<DataTypes>
+class DiagonalMass : public core::behavior::Mass<DataTypes>, public virtual sofa::core::behavior::TopologyAccessor
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE2(DiagonalMass,DataTypes, GeometricalTypes), SOFA_TEMPLATE(core::behavior::Mass,DataTypes));
+    SOFA_CLASS2(SOFA_TEMPLATE2(DiagonalMass,DataTypes, GeometricalTypes), SOFA_TEMPLATE(core::behavior::Mass,DataTypes), sofa::core::behavior::TopologyAccessor);
 
     using TMassType = typename sofa::component::mass::MassType<DataTypes>::type;
 
@@ -107,14 +105,12 @@ public:
     /// to display the center of gravity of the system
     Data< bool > d_showCenterOfGravity;
 
-    Data< float > d_showAxisSize; ///< factor length of the axis displayed (only used for rigids)
+    Data< float > d_showAxisSize; ///< Factor length of the axis displayed (only used for rigids)
     core::objectmodel::DataFileName d_fileMass; ///< an Xsp3.0 file to specify the mass parameters
 
     /// value defining the initialization process of the mass (0 : totalMass, 1 : massDensity, 2 : vertexMass)
     int m_initializationProcess;
 
-    /// Link to be set to the topology container in the component graph. 
-    SingleLink<DiagonalMass<DataTypes, GeometricalTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
     /// Link to be set to the MechanicalObject associated with the geometry
     SingleLink<DiagonalMass<DataTypes, GeometricalTypes>, sofa::core::behavior::MechanicalState<GeometricalTypes>, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_geometryState;
 
@@ -125,7 +121,7 @@ protected:
     /// otherwise any access to the base::attribute would require
     /// the "this->" approach.
     using core::behavior::ForceField<DataTypes>::mstate ;
-    using core::objectmodel::BaseObject::getContext;
+    using core::objectmodel::BaseComponent::getContext;
     ////////////////////////////////////////////////////////////////////////////
 
 
@@ -262,12 +258,8 @@ public:
     SReal getTotalMass() const { return d_totalMass.getValue(); }
     std::size_t getMassCount() { return d_vertexMass.getValue().size(); }
 
-    /// Print key mass informations (totalMass, vertexMass and massDensity)
+    /// Print key mass information (totalMass, vertexMass and massDensity)
     void printMass();
-
-    /// Compute the mass from input values
-    SOFA_ATTRIBUTE_DISABLED("v21.06", "v21.12", "ComputeMass should not be called from outside. Changing one of the Data: density, totalMass or vertexMass will recompute the mass.")
-    void computeMass() = delete;
 
     /// @name Read and write access functions in mass information
     /// @{
@@ -309,13 +301,15 @@ public:
 
     SReal getPotentialEnergy(const core::MechanicalParams* mparams, const DataVecCoord& x) const override;   ///< Mgx potential in a uniform gravity field, null at origin
 
-    type::Vector6 getMomentum(const core::MechanicalParams* mparams, const DataVecCoord& x, const DataVecDeriv& v) const override;  ///< (Mv,cross(x,Mv)+Iw) override
+    type::Vec6 getMomentum(const core::MechanicalParams* mparams, const DataVecCoord& x, const DataVecDeriv& v) const override;  ///< (Mv,cross(x,Mv)+Iw) override
 
     void addGravityToV(const core::MechanicalParams* mparams, DataVecDeriv& d_v) override;
 
     /// Add Mass contribution to global Matrix assembling
-    void addMToMatrix(const core::MechanicalParams *mparams, const sofa::core::behavior::MultiMatrixAccessor* matrix) override;
-
+    void addMToMatrix(sofa::linearalgebra::BaseMatrix * mat, SReal mFact, unsigned int &offset) override;
+    void buildMassMatrix(sofa::core::behavior::MassMatrixAccumulator* matrices) override;
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* /* matrix */) override {}
+    void buildDampingMatrix(core::behavior::DampingMatrix* /* matrices */) override {}
 
     SReal getElementMass(sofa::Index index) const override;
     void getElementMass(sofa::Index, linearalgebra::BaseMatrix *m) const override;
@@ -328,21 +322,7 @@ public:
     void parse(sofa::core::objectmodel::BaseObjectDescription* arg) override
     {
         Inherited::parse(arg);
-
-        if (arg->getAttribute("template"))
-        {
-            auto splitTemplates = sofa::helper::split(std::string(arg->getAttribute("template")), ',');
-            if (splitTemplates.size() > 1)
-            {
-                // check if the given 2nd template is the deprecated MassType one
-                if (splitTemplates[1] == "float" || splitTemplates[1] == "double" || splitTemplates[1].find("RigidMass") != std::string::npos)
-                {
-                    msg_warning() << "MassType is not required anymore and the template is deprecated, please delete it from your scene." << msgendl
-                        << "As your mass is templated on " << DataTypes::Name() << ", MassType has been defined as " << sofa::helper::NameDecoder::getTypeName<MassType>() << " .";
-                    msg_warning() << "If you want to set the template, you must write now \"template='" << DataTypes::Name() << "'\" .";
-                }
-            }
-        }
+        parseMassTemplate<MassType>(arg, this);
         if (arg->getAttribute("mass"))
         {
             msg_warning() << "input data 'mass' changed for 'vertexMass', please update your scene (see PR#637)";
@@ -364,12 +344,12 @@ private:
     void initRigidImpl() ;
 
     template <class T>
-    type::Vector6 getMomentumRigid3Impl ( const core::MechanicalParams*,
+    type::Vec6 getMomentumRigid3Impl ( const core::MechanicalParams*,
                                                  const DataVecCoord& vx,
                                                  const DataVecDeriv& vv ) const ;
 
     template <class T>
-    type::Vector6 getMomentumVec3Impl ( const core::MechanicalParams*,
+    type::Vec6 getMomentumVec3Impl ( const core::MechanicalParams*,
                                                const DataVecCoord& vx,
                                                const DataVecDeriv& vv ) const ;
 };
@@ -393,13 +373,13 @@ void DiagonalMass<defaulttype::Rigid2Types>::init();
 template <>
 void DiagonalMass<defaulttype::Rigid2Types>::draw(const core::visual::VisualParams* vparams);
 template <>
-type::Vector6 DiagonalMass<defaulttype::Vec3Types>::getMomentum ( const core::MechanicalParams*, const DataVecCoord& vx, const DataVecDeriv& vv ) const;
+type::Vec6 DiagonalMass<defaulttype::Vec3Types>::getMomentum ( const core::MechanicalParams*, const DataVecCoord& vx, const DataVecDeriv& vv ) const;
 template <>
-type::Vector6 DiagonalMass<defaulttype::Rigid3Types>::getMomentum ( const core::MechanicalParams*, const DataVecCoord& vx, const DataVecDeriv& vv ) const;
+type::Vec6 DiagonalMass<defaulttype::Rigid3Types>::getMomentum ( const core::MechanicalParams*, const DataVecCoord& vx, const DataVecDeriv& vv ) const;
 
 
 
-#if  !defined(SOFA_COMPONENT_MASS_DIAGONALMASS_CPP)
+#if !defined(SOFA_COMPONENT_MASS_DIAGONALMASS_CPP)
 extern template class SOFA_COMPONENT_MASS_API DiagonalMass<defaulttype::Vec3Types>;
 extern template class SOFA_COMPONENT_MASS_API DiagonalMass<defaulttype::Vec2Types>;
 extern template class SOFA_COMPONENT_MASS_API DiagonalMass<defaulttype::Vec2Types, defaulttype::Vec3Types>;

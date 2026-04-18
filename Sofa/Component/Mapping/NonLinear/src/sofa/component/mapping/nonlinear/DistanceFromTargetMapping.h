@@ -22,8 +22,8 @@
 #pragma once
 
 #include <sofa/component/mapping/nonlinear/config.h>
-
-#include <sofa/core/Mapping.h>
+#include <sofa/component/mapping/nonlinear/BaseNonLinearMapping.h>
+#include <sofa/component/mapping/nonlinear/NonLinearMappingData.h>
 #include <sofa/linearalgebra/EigenSparseMatrix.h>
 #include <sofa/type/Mat.h>
 #include <sofa/type/Vec.h>
@@ -33,7 +33,7 @@
 namespace sofa::component::mapping::nonlinear
 {
 
-/// This class can be overridden if needed for additionnal storage within template specializations.
+/// This class can be overridden if needed for additional storage within template specializations.
 template<class InDataTypes, class OutDataTypes>
 class DistanceFromTargetMappingInternalData
 {
@@ -43,53 +43,41 @@ public:
 
 struct BaseDistanceFromTargetMapping
 {
+    virtual ~BaseDistanceFromTargetMapping() = default;
     virtual void updateTarget( unsigned index, SReal x, SReal y, SReal z ) = 0;
 };
 
 
 
 /** Maps point positions to distances from target points.
-    Only a subset of the parent points is mapped. This can be used to constrain the trajectories of one or several particles.
+ *   Only a subset of the parent points is mapped. This can be used to constrain the trajectories of one or several particles.
 
-    In: parent point positions
+ *   @tparam TIn: parent point positions
+ *   @tparam TOut: distance from each point to a target position, minus a rest distance.
 
-    Out: distance from each point to a target position, minus a rest distance.
-
-    (changed class name on Feb. 4, 2014, previous name was DistanceMapping)
-
-
-
-  @author Francois Faure
+ *   (changed class name on Feb. 4, 2014, previous name was DistanceMapping)
+ * @author Francois Faure
   */
 template <class TIn, class TOut>
-class DistanceFromTargetMapping : public core::Mapping<TIn, TOut>, public BaseDistanceFromTargetMapping
+class DistanceFromTargetMapping : public BaseNonLinearMapping<TIn, TOut, true>, public BaseDistanceFromTargetMapping
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE2(DistanceFromTargetMapping,TIn,TOut), SOFA_TEMPLATE2(core::Mapping,TIn,TOut));
+    SOFA_CLASS(SOFA_TEMPLATE2(DistanceFromTargetMapping,TIn,TOut), SOFA_TEMPLATE3(BaseNonLinearMapping,TIn,TOut, true));
 
-    typedef core::Mapping<TIn, TOut> Inherit;
-    typedef TIn In;
-    typedef TOut Out;
-    typedef typename Out::VecCoord OutVecCoord;
-    typedef typename Out::VecDeriv OutVecDeriv;
-    typedef typename Out::Coord OutCoord;
-    typedef typename Out::Deriv OutDeriv;
-    typedef typename Out::MatrixDeriv OutMatrixDeriv;
-    typedef typename Out::Real Real;
-    typedef typename In::Deriv InDeriv;
-    typedef typename In::MatrixDeriv InMatrixDeriv;
-    typedef typename In::Coord InCoord;
-    typedef typename In::VecCoord InVecCoord;
-    typedef typename In::VecDeriv InVecDeriv;
-    typedef linearalgebra::EigenSparseMatrix<TIn,TOut>    SparseMatrixEigen;
-    typedef linearalgebra::EigenSparseMatrix<In,In>    SparseKMatrixEigen;
-    enum {Nin = In::deriv_total_size, Nout = Out::deriv_total_size };
+    using In = TIn;
+    using Out = TOut;
+    using Real = Real_t<Out>;
+    static constexpr auto Nin = In::deriv_total_size;
+    static constexpr auto Nout = Out::deriv_total_size;
+
+    using InCoord = Coord_t<In>;
+    using InVecCoord = VecCoord_t<In>;
+
     typedef type::Vec<In::deriv_total_size> Direction;
 
-    Data< type::vector<unsigned> > f_indices;         ///< indices of the parent points
-    Data< InVecCoord >       f_targetPositions; ///< positions the distances are measured from
-    Data< type::vector< Real > >   f_restDistances;   ///< rest distance from each position
-    Data< unsigned >         d_geometricStiffness; ///< how to compute geometric stiffness (0->no GS, 1->exact GS, 2->stabilized GS)
+    Data<type::vector<unsigned>> d_indices; ///< Indices of the parent points
+    Data<InVecCoord> d_targetPositions; ///< Positions to compute the distances from
+    Data<type::vector<Real>> d_restDistances; ///< Rest lengths of the connections
 
     /// Add a target with a desired distance
     void createTarget( unsigned index, const InCoord& position, Real distance);
@@ -103,21 +91,8 @@ public:
 
     void init() override;
 
-    void apply(const core::MechanicalParams *mparams, Data<OutVecCoord>& out, const Data<InVecCoord>& in) override;
-
-    void applyJ(const core::MechanicalParams *mparams, Data<OutVecDeriv>& out, const Data<InVecDeriv>& in) override;
-
-    void applyJT(const core::MechanicalParams *mparams, Data<InVecDeriv>& out, const Data<OutVecDeriv>& in) override;
-
-    void applyJT(const core::ConstraintParams *cparams, Data<InMatrixDeriv>& out, const Data<OutMatrixDeriv>& in) override;
-
-    void applyDJT(const core::MechanicalParams* mparams, core::MultiVecDerivId parentForce, core::ConstMultiVecDerivId  childForce ) override;
-
-    const sofa::linearalgebra::BaseMatrix* getJ() override;
-    virtual const type::vector<sofa::linearalgebra::BaseMatrix*>* getJs() override;
-
-    void updateK( const core::MechanicalParams* mparams, core::ConstMultiVecDerivId childForce ) override;
-    const linearalgebra::BaseMatrix* getK() override;
+    void apply(const core::MechanicalParams *mparams, DataVecCoord_t<Out>& out, const DataVecCoord_t<In>& in) override;
+    void buildGeometricStiffnessMatrix(sofa::core::GeometricStiffnessMatrix* matrices) override;
 
     void draw(const core::visual::VisualParams* vparams) override;
     Data<float> d_showObjectScale; ///< Scale for object display
@@ -125,11 +100,19 @@ public:
 
 protected:
     DistanceFromTargetMapping();
-    virtual ~DistanceFromTargetMapping();
+    ~DistanceFromTargetMapping() override;
 
-    SparseMatrixEigen jacobian;                      ///< Jacobian of the mapping
-    type::vector<linearalgebra::BaseMatrix*> baseMatrices;   ///< Jacobian of the mapping, in a vector
-    SparseKMatrixEigen K;  ///< Assembled geometric stiffness matrix
+    void matrixFreeApplyDJT(const core::MechanicalParams* mparams, Real kFactor,
+                        Data<VecDeriv_t<In> >& parentForce,
+                        const Data<VecDeriv_t<In> >& parentDisplacement,
+                        const Data<VecDeriv_t<Out> >& childForce) override;
+
+    using typename Inherit1::SparseKMatrixEigen;
+
+    void doUpdateK(
+        const core::MechanicalParams* mparams, const Data<VecDeriv_t<Out> >& childForce,
+        SparseKMatrixEigen& matrix) override;
+
     type::vector<Direction> directions;                         ///< Unit vectors in the directions of the lines
     type::vector< Real > invlengths;                          ///< inverse of current distances. Null represents the infinity (null distance)
 
@@ -139,7 +122,7 @@ protected:
 };
 
 
-#if  !defined(SOFA_COMPONENT_MAPPING_DistanceFromTargetMapping_CPP)
+#if !defined(SOFA_COMPONENT_MAPPING_DistanceFromTargetMapping_CPP)
 extern template class SOFA_COMPONENT_MAPPING_NONLINEAR_API DistanceFromTargetMapping< defaulttype::Vec3Types, defaulttype::Vec1Types >;
 extern template class SOFA_COMPONENT_MAPPING_NONLINEAR_API DistanceFromTargetMapping< defaulttype::Vec1Types, defaulttype::Vec1Types >;
 extern template class SOFA_COMPONENT_MAPPING_NONLINEAR_API DistanceFromTargetMapping< defaulttype::Rigid3Types, defaulttype::Vec1Types >;

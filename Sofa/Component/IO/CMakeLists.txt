@@ -1,15 +1,11 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(Sofa.Component.IO LANGUAGES CXX)
 
 set(SOFACOMPONENTIO_SOURCE_DIR "src/sofa/component/io")
 
-set(SOFACOMPONENTIO_DIRS Mesh)
-set(SOFACOMPONENTIO_TARGETS)
-foreach(io_dir ${SOFACOMPONENTIO_DIRS})
-    sofang_add_component_subdirectory(${io_dir} ${PROJECT_NAME}.${io_dir})
-    list(APPEND SOFACOMPONENTIO_TARGETS ${PROJECT_NAME}.${io_dir})
-endforeach()
-
+sofa_add_subdirectory_modules(SOFACOMPONENTIO_TARGETS
+    DIRECTORIES Mesh
+)
 
 set(HEADER_FILES
     ${SOFACOMPONENTIO_SOURCE_DIR}/config.h.in

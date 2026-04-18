@@ -29,9 +29,8 @@
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/type/Vec.h>
 #include <sofa/type/Mat.h>
-#include "TriangularFEMForceField.h"
+#include <sofa/component/solidmechanics/fem/elastic/TriangularFEMForceField.h>
 #include <sofa/core/topology/TopologyData.h>
-
 
 namespace sofa::component::solidmechanics::fem::elastic
 {
@@ -72,20 +71,21 @@ public:
     void getFiberDir(int element, Deriv& dir);
 
     //Data<Real> f_poisson2;
-    //Data<Real> f_young2; ///< Young modulus along transverse direction
-    Data<type::vector<Real> > f_poisson2;
-    Data<type::vector<Real> > f_young2; ///< Young modulus along transverse direction
-    Data<Real> f_theta; ///< Fiber angle in global reference frame (in degrees)
-    Data<VecCoord> f_fiberCenter; ///< Concentric fiber center in global reference frame
-    Data<bool> showFiber; ///< Flag activating rendering of fiber directions within each triangle
+    //Data<Real> d_young2; ///< Young modulus along transverse direction
     typedef typename TriangularAnisotropicFEMForceField::Deriv TriangleFiberDirection;
-    core::topology::TriangleData < sofa::type::vector< TriangleFiberDirection > > localFiberDirection; ///< Computed fibers direction within each triangle
+
+    Data<type::vector<Real> > f_poisson2;
+    Data<type::vector<Real> > d_young2; ///< Young modulus along transverse direction
+    Data<Real> d_theta; ///< Fiber angle in global reference frame (in degrees)
+    Data<VecCoord> d_fiberCenter; ///< Concentric fiber center in global reference frame
+    Data<bool> d_showFiber; ///< Flag activating rendering of fiber directions within each triangle
+    core::topology::TriangleData < sofa::type::vector< TriangleFiberDirection > > d_localFiberDirection; ///< Computed fibers direction within each triangle
 
     /// Link to be set to the topology container in the component graph.
     using Inherit1::l_topology;
 
     /** Method to initialize @sa TriangleFiberDirection when a new Triangle is created.
-    * Will be set as creation callback in the TriangleData @sa localFiberDirection
+    * Will be set as creation callback in the TriangleData @sa d_localFiberDirection
     */
     void createTriangleInfo(Index triangleIndex,
         TriangleFiberDirection&,
@@ -93,14 +93,9 @@ public:
         const sofa::type::vector< unsigned int >&,
         const sofa::type::vector< SReal >&);
 
-    /// Inherited member
-    /// Bring inherited member in the current lookup context.
-    /// otherwise any access to the Inherit1::member would require "this->".
-    /// @see https://gcc.gnu.org/onlinedocs/gcc/Name-lookup.html
-    using Inherit1::m_topology;
 };
 
-#if  !defined(SOFA_COMPONENT_FORCEFIELD_TRIANGULARANISOTROPICFEMFORCEFIELD_CPP)
+#if !defined(SOFA_COMPONENT_FORCEFIELD_TRIANGULARANISOTROPICFEMFORCEFIELD_CPP)
 extern template class SOFA_COMPONENT_SOLIDMECHANICS_FEM_ELASTIC_API TriangularAnisotropicFEMForceField<defaulttype::Vec3Types>;
 
 #endif

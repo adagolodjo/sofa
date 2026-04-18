@@ -19,19 +19,13 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_COLLISION_INTERSECTION_H
-#define SOFA_CORE_COLLISION_INTERSECTION_H
+#pragma once
 
 #include <sofa/core/CollisionModel.h>
 #include <sofa/core/collision/DetectionOutput.h>
+#include <sofa/helper/OptionsGroup.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace collision
+namespace sofa::core::collision
 {
 
 class BaseIntersector
@@ -45,6 +39,7 @@ public:
     template<class Model1, class Model2>
     sofa::core::collision::TDetectionOutputVector<Model1,Model2>* createOutputVector(Model1*, Model2*)
     {
+        // NOTE: this raw pointer is stored in NarrowPhaseDetection's m_outputsMap and cleaned up when NarrowPhaseDetection is destroyed
         return new sofa::core::collision::TDetectionOutputVector<Model1,Model2>;
     }
 
@@ -74,15 +69,15 @@ public:
     virtual ~ElementIntersector() {}
 
     /// Test if 2 elements can collide. Note that this can be conservative (i.e. return true even when no collision is present)
-    virtual bool canIntersect(core::CollisionElementIterator elem1, core::CollisionElementIterator elem2) = 0;
+    virtual bool canIntersect(core::CollisionElementIterator elem1, core::CollisionElementIterator elem2, const core::collision::Intersection* currentIntersection) = 0;
 
     /// Begin intersection tests between two collision models. Return the number of contacts written in the contacts vector.
     /// If the given contacts vector is nullptr, then this method should allocate it.
     virtual int beginIntersect(core::CollisionModel* model1, core::CollisionModel* model2, DetectionOutputVector*& contacts) = 0;
 
     /// Compute the intersection between 2 elements. Return the number of contacts written in the contacts vector.
-    virtual int intersect(core::CollisionElementIterator elem1, core::CollisionElementIterator elem2, DetectionOutputVector* contacts) = 0;
-
+    virtual int intersect(core::CollisionElementIterator elem1, core::CollisionElementIterator elem2, DetectionOutputVector* contacts, const core::collision::Intersection* currentIntersection) = 0;
+    
     /// End intersection tests between two collision models. Return the number of contacts written in the contacts vector.
     virtual int endIntersect(core::CollisionModel* model1, core::CollisionModel* model2, DetectionOutputVector* contacts) = 0;
 
@@ -128,19 +123,21 @@ protected:
 /** @brief Given 2 collision elements, test if an intersection is possible (for bounding volumes), or compute intersection points if any
 */
 
-class SOFA_CORE_API Intersection : public virtual objectmodel::BaseObject
+class SOFA_CORE_API Intersection : public virtual objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(Intersection, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(Intersection, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(Intersection)
+
+
 protected:
-    Intersection() {}
+    Intersection();
     ~Intersection() override;
-	
+
 private:
-	Intersection(const Intersection& n) ;
-	Intersection& operator=(const Intersection& n) ;
-	
+    Intersection(const Intersection& n) = delete;
+    Intersection& operator=(const Intersection& n) = delete;
+
 public:
     /// Return the intersector class handling the given pair of collision models, or nullptr if not supported.
     /// @param swapModels output value set to true if the collision models must be swapped before calling the intersector.
@@ -153,8 +150,11 @@ public:
     /// returns true if algorithm uses proximity detection
     virtual bool useProximity() const { return false; }
 
-    /// returns true if algorithm uses continous detection
+    /// returns true if algorithm uses continuous detection
     virtual bool useContinuous() const { return false; }
+
+    /// returns the continuous detection type flag
+    virtual CollisionModel::ContinuousIntersectionTypeFlag continuousIntersectionType() const { return  CollisionModel::ContinuousIntersectionTypeFlag::None; }
 
     /// Return the alarm distance (must return 0 if useProximity() is false)
     virtual SReal getAlarmDistance() const { return (SReal)0.0; }
@@ -191,11 +191,4 @@ public:
 
 
 };
-
-} // namespace collision
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core::collision

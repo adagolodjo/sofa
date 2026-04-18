@@ -25,21 +25,20 @@ using sofa::testing::BaseSimulationTest;
 
 #include <sofa/helper/BackTrace.h>
 
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 using sofa::simulation::Simulation ;
 using sofa::simulation::Node ;
-using sofa::simulation::setSimulation ;
 using sofa::core::objectmodel::New ;
 using sofa::core::objectmodel::BaseData ;
 using sofa::simulation::graph::DAGSimulation;
 
-#include <SofaGeneralEngine/PlaneROI.h>
-using sofa::component::engine::PlaneROI ;
+#include <sofa/component/engine/select/PlaneROI.h>
+using sofa::component::engine::select::PlaneROI ;
 
 #include <sofa/core/visual/VisualParams.h>
 using sofa::core::visual::VisualParams;
 
-#include <SofaSimulationCommon/SceneLoaderXML.h>
+#include <sofa/simulation/common/SceneLoaderXML.h>
 using sofa::simulation::SceneLoaderXML ;
 
 using std::vector;
@@ -62,17 +61,21 @@ struct PlaneROI_test : public BaseSimulationTest,
     Node::SPtr m_node1, m_node2;
     typename ThisClass::SPtr m_thisObject;
 
-    void SetUp() override
+    void doSetUp() override
     {
         // SetUp1
-        setSimulation(m_simu = new DAGSimulation());
+        m_simu = sofa::simulation::getSimulation();
+        ASSERT_NE(m_simu, nullptr);
+
         m_thisObject = New<ThisClass >();
         m_node1 = m_simu->createNewGraph("root");
         m_node1->addObject(m_thisObject);
 
+        this->loadPlugins({Sofa.Component.Engine.Select});
+
 
         // SetUp2
-        string scene1 =
+        const string scene1 =
         "<?xml version='1.0'?>"
         "<Node 	name='Root' gravity='0 0 0' time='0' animate='0'   >       "
         "   <Node name='node'>                                             "
@@ -80,9 +83,7 @@ struct PlaneROI_test : public BaseSimulationTest,
         "   </Node>                                                        "
         "</Node>                                                           " ;
 
-        m_node2 = SceneLoaderXML::loadFromMemory ("testscene",
-                                                  scene1.c_str(),
-                                                  scene1.size()) ;
+        m_node2 = SceneLoaderXML::loadFromMemory ("testscene", scene1.c_str());
     }
 
 

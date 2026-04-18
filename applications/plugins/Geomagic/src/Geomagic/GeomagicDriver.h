@@ -25,21 +25,22 @@
 #include <Geomagic/config.h>
 #include <sofa/type/Vec.h>
 #include <sofa/type/Quat.h>
-#include <SofaUserInteraction/Controller.h>
+#include <sofa/component/controller/Controller.h>
 
 //force feedback
-#include <SofaHaptics/ForceFeedback.h>
+#include <sofa/component/haptics/ForceFeedback.h>
 
 #if GEOMAGIC_HAVE_OPENHAPTICS
 #include <HD/hd.h>
 #endif
 
-namespace sofa::component::controller
+namespace geomagic
 {
 
 
 class GeomagicVisualModel;
 
+using namespace sofa::component::controller;
 
 /**
 * Class providing a driver API to handle Geomagic haptic device and the servo loop scheduler.
@@ -52,22 +53,24 @@ class SOFA_GEOMAGIC_API GeomagicDriver : public Controller
 
 public:
     SOFA_CLASS(GeomagicDriver, Controller);
-    typedef sofa::defaulttype::RigidTypes::Coord Coord;
-    typedef sofa::defaulttype::RigidTypes::VecCoord VecCoord;
 
-#if GEOMAGIC_HAVE_OPENHAPTICS
-    typedef HDdouble SHDdouble;
-    typedef HDSchedulerHandle SHDSchedulerHandle;
-    typedef HHD SHHD;
-#else // This is just a compatibility layer to be able to compile the plugin without Openhaptics for the continuous integration. The plugin won't work without Openhaptics. 
-    typedef double SHDdouble;
-    typedef unsigned long SHDSchedulerHandle;
-    typedef unsigned int SHHD;
-    unsigned int HD_INVALID_HANDLE = 0;
-#endif
+    // Geomagic driver is based on Rigid Coord
+    using Coord = sofa::defaulttype::RigidTypes::Coord;
+    using VecCoord = sofa::defaulttype::RigidTypes::VecCoord;
 
     using Vec3 = sofa::type::Vec3d;
     using Quat = sofa::type::Quat<SReal>;
+    
+#if GEOMAGIC_HAVE_OPENHAPTICS
+    using SHDdouble = HDdouble;
+    using SHDSchedulerHandle = HDSchedulerHandle;
+    using SHHD = HHD;
+#else // This is just a compatibility layer to be able to compile the plugin without Openhaptics for the continuous integration. The plugin won't work without Openhaptics. 
+    using SHDdouble = double;
+    using SHDSchedulerHandle = unsigned long;
+    using SHHD = unsigned int;
+    unsigned int HD_INVALID_HANDLE = 0;
+#endif
     
     GeomagicDriver();
     virtual ~GeomagicDriver();
@@ -82,7 +85,7 @@ public:
     /// Public method to init tool. Can be called from thirdparty if @sa d_manualStart is set to true
     virtual void initDevice();
     
-    /// Method to clear sheduler and free device. Called by default at driver destruction
+    /// Method to clear scheduler and free device. Called by default at driver destruction
     virtual void clearDevice();
 
 
@@ -99,37 +102,37 @@ protected:
 public:
     //Input Data
     Data< std::string > d_deviceName; ///< Name of device Configuration
-    Data<Vec3> d_positionBase; ///< Input Position of the device base in the scene world coordinates
-    Data<Quat> d_orientationBase; ///< Input Orientation of the device base in the scene world coordinates
-    Data<Quat> d_orientationTool; ///< Input Orientation of the tool
-    Data<SReal> d_scale; ///< Default scale applied to the device Coordinates
-    Data<SReal> d_forceScale; ///< Default forceScale applied to the force feedback. 
+    Data<Vec3> d_positionBase; ///< Position of the device base in the SOFA scene world coordinates
+    Data<Quat> d_orientationBase; ///< Orientation of the device base in the SOFA scene world coordinates
+    Data<Quat> d_orientationTool; ///< Orientation of the tool in the SOFA scene world coordinates
+    Data<SReal> d_scale; ///< Default scale applied to the Device coordinates
+    Data<SReal> d_forceScale; ///< Default scaling factor applied to the force feedback
     Data<SReal> d_maxInputForceFeedback; ///< Maximum value of the normed input force feedback for device security
     Data<Vec3> d_inputForceFeedback; ///< Input force feedback in case of no LCPForceFeedback is found (manual setting)
 
     // Input parameters
-    Data<bool> d_manualStart; ///< Bool to unactive the automatic start of the device at init. initDevice need to be called manually. False by default.
-    Data<bool> d_emitButtonEvent; ///< Bool to send event through the graph when button are pushed/released
+    Data<bool> d_manualStart; ///< If true, will not automatically initDevice at component init phase.
+    Data<bool> d_emitButtonEvent; ///< If true, will send event through the graph when button are pushed/released
     Data<bool> d_frameVisu; ///< Visualize the frame corresponding to the device tooltip
-    Data<bool> d_omniVisu; ///< Visualize the frame of the interface in the virtual scene
+    Data<bool> d_omniVisu; ///< Visualize the Geomagic device in the virtual scene
 
     //Output Data
     Data<Coord> d_posDevice; ///< position of the base of the part of the device
-    Data<type::Vector6> d_angle; ///< Angluar values of joint (rad)
+    Data<type::Vec6> d_angle; ///< Angular values of joint (rad)
     Data<bool> d_button_1; ///< Button state 1
     Data<bool> d_button_2; ///< Button state 2
     
     // Pointer to the forceFeedBack component
-    ForceFeedback::SPtr m_forceFeedback;
+    sofa::component::haptics::ForceFeedback::SPtr m_forceFeedback;
     // link to the forceFeedBack component, if not set will search through graph and take first one encountered
-    SingleLink<GeomagicDriver, ForceFeedback, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_forceFeedback;
+    SingleLink<GeomagicDriver, sofa::component::haptics::ForceFeedback, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_forceFeedback;
 
     /// This static bool is used to know if HD scheduler is already running. No mechanism provided by Hd lib.
     inline static bool s_schedulerRunning = false;
 
 protected:
     // Pointer to the Geomagic visual model to draw device in scene
-    std::unique_ptr<GeomagicVisualModel> m_GeomagicVisualModel;
+    std::unique_ptr<GeomagicVisualModel> m_GeomagicVisualModel = nullptr;
    
 public:
     ///These data are written by the omni they cnnot be accessed in the simulation loop
@@ -144,10 +147,11 @@ public:
     // Public members exchanged between Driver and HD scheduler
     bool m_simulationStarted; ///< Boolean to warn scheduler when SOFA has started the simulation (changed by AnimateBeginEvent)
     bool m_isInContact; ///< Boolean to warn SOFA side when scheduler has computer contact (forcefeedback no null)
+    bool m_logThreadSpeed = false; ///< Boolean to enable/disable logging of the scheduler thread speed (for debug purpose), will be set to f_printLog
     DeviceData m_hapticData; ///< data structure used by scheduler
     DeviceData m_simuData; ///< data structure used by SOFA loop, values are copied from @sa m_hapticData
     SHHD m_hHD; ///< ID the device
     std::vector< SHDSchedulerHandle > m_hStateHandles; ///< List of ref to the workers scheduled
 };
 
-} // namespace sofa::component::controller
+} // namespace geomagic

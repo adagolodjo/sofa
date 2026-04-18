@@ -20,23 +20,38 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #include <sofa/component/visual/init.h>
+#include <sofa/core/ObjectFactory.h>
+#include <sofa/helper/system/PluginManager.h>
 
 namespace sofa::component::visual
 {
-    
+
+extern void registerCamera(sofa::core::ObjectFactory* factory);
+extern void registerCylinderVisualModel(sofa::core::ObjectFactory* factory);
+extern void registerInteractiveCamera(sofa::core::ObjectFactory* factory);
+extern void registerLineAxis(sofa::core::ObjectFactory* factory);
+extern void registerRecordedCamera(sofa::core::ObjectFactory* factory);
+extern void registerTrailRenderer(sofa::core::ObjectFactory* factory);
+extern void registerVisual3DText(sofa::core::ObjectFactory* factory);
+extern void registerVisualBoundingBox(sofa::core::ObjectFactory* factory);
+extern void registerVisualGrid(sofa::core::ObjectFactory* factory);
+extern void registerVisualModelImpl(sofa::core::ObjectFactory* factory);
+extern void registerVisualPointCloud(sofa::core::ObjectFactory* factory);
+extern void registerVisualStyle(sofa::core::ObjectFactory* factory);
+extern void registerVisualTransform(sofa::core::ObjectFactory* factory);
+extern void registerVisualVectorField(sofa::core::ObjectFactory* factory);
+extern void registerVisualMesh(sofa::core::ObjectFactory* factory);
+
 extern "C" {
     SOFA_EXPORT_DYNAMIC_LIBRARY void initExternalModule();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleName();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleVersion();
+    SOFA_EXPORT_DYNAMIC_LIBRARY void registerObjects(sofa::core::ObjectFactory* factory);
 }
 
 void initExternalModule()
 {
-    static bool first = true;
-    if (first)
-    {
-        first = false;
-    }
+    init();
 }
 
 const char* getModuleName()
@@ -49,9 +64,35 @@ const char* getModuleVersion()
     return MODULE_VERSION;
 }
 
+void registerObjects(sofa::core::ObjectFactory* factory)
+{
+    registerCamera(factory);
+    registerCylinderVisualModel(factory);
+    registerInteractiveCamera(factory);
+    registerLineAxis(factory);
+    registerRecordedCamera(factory);
+    registerTrailRenderer(factory);
+    registerVisual3DText(factory);
+    registerVisualBoundingBox(factory);
+    registerVisualGrid(factory);
+    registerVisualModelImpl(factory);
+    registerVisualPointCloud(factory);
+    registerVisualStyle(factory);
+    registerVisualTransform(factory);
+    registerVisualVectorField(factory);
+    registerVisualMesh(factory);
+}
+
 void init()
 {
-    initExternalModule();
+    static bool first = true;
+    if (first)
+    {
+        // make sure that this plugin is registered into the PluginManager
+        sofa::helper::system::PluginManager::getInstance().registerPlugin(MODULE_NAME);
+
+        first = false;
+    }
 }
 
 } // namespace sofa::component::visual

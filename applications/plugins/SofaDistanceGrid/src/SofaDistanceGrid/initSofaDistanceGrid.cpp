@@ -19,43 +19,61 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "initSofaDistanceGrid.h"
+#include <SofaDistanceGrid/initSofaDistanceGrid.h>
 #include "components/collision/DistanceGridCollisionModel.h"
 #include "components/forcefield/DistanceGridForceField.h"
 #include "RegisterModelToCollisionFactory.h"
 
-namespace sofa
-{
+#include <sofa/core/ObjectFactory.h>
+#include <sofa/helper/system/PluginManager.h>
 
-namespace component
+namespace sofa::component::forcefield
+{
+    extern void registerDistanceGridForceField(sofa::core::ObjectFactory* factory);
+}
+namespace sofa::component::collision
+{
+    extern void registerRigidDistanceGridCollisionModel(sofa::core::ObjectFactory* factory);
+    extern void registerFFDDistanceGridCollisionModel(sofa::core::ObjectFactory* factory);
+}
+
+namespace sofadistancegrid
 {
 extern "C" {
-SOFA_SOFADISTANCEGRID_API void initExternalModule();
-SOFA_SOFADISTANCEGRID_API const char* getModuleName();
-SOFA_SOFADISTANCEGRID_API const char* getModuleVersion();
-SOFA_SOFADISTANCEGRID_API const char* getModuleLicense();
-SOFA_SOFADISTANCEGRID_API const char* getModuleDescription();
-SOFA_SOFADISTANCEGRID_API const char* getModuleComponentList();
+    SOFA_SOFADISTANCEGRID_API void initExternalModule();
+    SOFA_SOFADISTANCEGRID_API const char* getModuleName();
+    SOFA_SOFADISTANCEGRID_API const char* getModuleVersion();
+    SOFA_SOFADISTANCEGRID_API const char* getModuleLicense();
+    SOFA_SOFADISTANCEGRID_API const char* getModuleDescription();
+    SOFA_SOFADISTANCEGRID_API void registerObjects(sofa::core::ObjectFactory* factory);
 }
 
 void initExternalModule()
+{
+    initSofaDistanceGrid();
+}
+
+void initSofaDistanceGrid()
 {
     static bool first = true;
     if (first)
     {
         first = false;
     }
+    // make sure that this plugin is registered into the PluginManager
+    sofa::helper::system::PluginManager::getInstance().registerPlugin(MODULE_NAME);
+
     sofa::component::collision::registerDistanceGridCollisionModel();
 }
 
 const char* getModuleName()
 {
-    return "SofaDistanceGrid";
+    return sofadistancegrid::MODULE_NAME;
 }
 
 const char* getModuleVersion()
 {
-    return "1.0";
+    return sofadistancegrid::MODULE_VERSION;
 }
 
 const char* getModuleLicense()
@@ -70,13 +88,11 @@ const char* getModuleDescription()
            "point in space. This is why it is often used to implement collisions.     ";
 }
 
-const char* getModuleComponentList()
+void registerObjects(sofa::core::ObjectFactory* factory)
 {
-    return "DistanceGridCollisionModel FFDDistanceGridDiscreteIntersection RayDistanceGridContact "
-           "RigidDistanceGridDiscreteIntersection DistanceGridForceField";
+    sofa::component::forcefield::registerDistanceGridForceField(factory);
+    sofa::component::collision::registerRigidDistanceGridCollisionModel(factory);
+    sofa::component::collision::registerFFDDistanceGridCollisionModel(factory);
 }
 
-} /// component
-
-} /// sofa
-
+} /// namespace sofadistancegrid

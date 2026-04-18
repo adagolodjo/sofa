@@ -42,19 +42,17 @@ public:
     typedef core::DataEngine Inherited;
 
     SOFA_CLASS(ROIValueMapper,Inherited);
-    typedef SReal Real;
-    typedef unsigned int Index;
 
     //Input
     Data<unsigned int> nbROIs; ///< size of indices/value vector
-    core::objectmodel::vectorData<type::vector<Index> > f_indices;
-    core::objectmodel::vectorData<Real> f_value;
+    core::objectmodel::vectorData<type::vector<sofa::Index> > f_indices;
+    core::objectmodel::vectorData<SReal> f_value;
 
     //Output
-    Data<sofa::type::vector<Real> > f_outputValues; ///< New vector of values
+    Data<sofa::type::vector<SReal> > f_outputValues; ///< New vector of values
 
     //Parameter
-    Data<Real> p_defaultValue; ///< Default value for indices out of ROIs
+    Data<SReal> p_defaultValue; ///< Default value for indices out of ROIs
 
     void init() override
     {
@@ -95,7 +93,7 @@ protected:
         , f_indices(this, "indices", "ROIs", sofa::core::objectmodel::DataEngineDataType::DataEngineInput)
         , f_value(this, "value", "Values", sofa::core::objectmodel::DataEngineDataType::DataEngineInput)
         , f_outputValues(initData(&f_outputValues, "outputValues", "New vector of values"))
-        , p_defaultValue(initData(&p_defaultValue, (Real) 0.0, "defaultValue", "Default value for indices out of ROIs"))
+        , p_defaultValue(initData(&p_defaultValue, (SReal) 0.0, "defaultValue", "Default value for indices out of ROIs"))
     {
         addInput(&nbROIs);
         addOutput(&f_outputValues);
@@ -105,28 +103,25 @@ protected:
 
     void doUpdate() override
     {
-        size_t nb = nbROIs.getValue();
+        const unsigned int nb = nbROIs.getValue();
         f_indices.resize(nb);
         f_value.resize(nb);
         if(!nb) return;
 
-        const Real& defaultValue = p_defaultValue.getValue();
-        helper::WriteOnlyAccessor< Data< type::vector<Real> > > outputValues = f_outputValues;
+        const SReal& defaultValue = p_defaultValue.getValue();
+        helper::WriteOnlyAccessor< Data< type::vector<SReal> > > outputValues = f_outputValues;
         outputValues.clear();
 
         for(size_t j=0; j<nb;j++)
         {
-            helper::ReadAccessor< Data< type::vector<Index> > > indices = f_indices[j];
-            const Real& value = f_value[j]->getValue();
+            helper::ReadAccessor< Data< type::vector<sofa::Index> > > indices = f_indices[j];
+            const SReal& value = f_value[j]->getValue();
 
-            for(size_t i=0 ; i<indices.size() ; i++)
+            for (const sofa::Index ind : indices)
             {
-                Index ind = indices[i];
                 if (ind >= outputValues.size())
                 {
-                    size_t oldSize = outputValues.size();
-                    outputValues.resize(ind+1);
-                    for (size_t j=oldSize ; j<ind+1 ; j++) outputValues[j] = defaultValue;
+                    outputValues.wref().resize(ind+1, defaultValue);
                 }
                 outputValues[ind] = value;
             }

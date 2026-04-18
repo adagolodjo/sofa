@@ -24,19 +24,18 @@ using sofa::testing::BaseSimulationTest;
 
 
 #include <sofa/helper/BackTrace.h>
-#include <SofaBaseMechanics/MechanicalObject.h>
-using sofa::component::container::MechanicalObject ;
+#include <sofa/component/statecontainer/MechanicalObject.h>
+using sofa::component::statecontainer::MechanicalObject ;
 
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 using sofa::simulation::Simulation ;
 using sofa::simulation::Node ;
-using sofa::simulation::setSimulation ;
 using sofa::core::objectmodel::New ;
 using sofa::core::objectmodel::BaseData ;
 using sofa::simulation::graph::DAGSimulation;
 
-#include <SofaGeneralEngine/AverageCoord.h>
-using sofa::component::engine::AverageCoord ;
+#include <sofa/component/engine/analyze/AverageCoord.h>
+using sofa::component::engine::analyze::AverageCoord ;
 
 using sofa::type::vector;
 
@@ -58,9 +57,11 @@ struct AverageCoord_test : public BaseSimulationTest,
     typename MechanicalObject<DataTypes>::SPtr m_mecaobject;
 
 
-    void SetUp() override
+    void doSetUp() override
     {
-        setSimulation(m_simu = new DAGSimulation());
+        m_simu = sofa::simulation::getSimulation();
+        ASSERT_NE(m_simu, nullptr);
+
         m_node = m_simu->createNewGraph("root");
         m_thisObject = New<ThisClass>() ;
         m_mecaobject = New<MechanicalObject<DataTypes>>() ;
@@ -82,7 +83,6 @@ struct AverageCoord_test : public BaseSimulationTest,
         EXPECT_TRUE( m_thisObject->findData("average") != nullptr ) ;
 
         EXPECT_NO_THROW( m_thisObject->init() ) ;
-        EXPECT_NO_THROW( m_thisObject->bwdInit() ) ;
         EXPECT_NO_THROW( m_thisObject->reinit() ) ;
         EXPECT_NO_THROW( m_thisObject->reset() ) ;
 

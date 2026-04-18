@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 
 project(Sofa.DefaultType_test)
 
@@ -9,11 +9,14 @@ set(HEADER_FILES
 
 set(SOURCE_FILES
     MapMapSparseMatrixEigenUtils_test.cpp
-    TypeInfo_test.cpp
+    QuaternionIntegration_test.cpp
+    RigidCoord_test.cpp
+    RigidDeriv_test.cpp
+    RigidMass_test.cpp
     TypeInfoRepository_test.cpp
     TypeInfoRepository_tu1_test.cpp
+    TypeInfo_test.cpp
     TypeInfoRepository_tu2_test.cpp
-    QuaternionIntegration_test.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})

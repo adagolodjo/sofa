@@ -22,7 +22,6 @@
 #include <sofa/component/collision/detection/intersection/RayDiscreteIntersection.inl>
 
 #include <sofa/core/collision/Intersection.inl>
-#include <sofa/helper/proximity.h>
 #include <iostream>
 #include <algorithm>
 #include <sofa/core/collision/IntersectorFactory.h>
@@ -42,8 +41,7 @@ IntersectorCreator<DiscreteIntersection, RayDiscreteIntersection> RayDiscreteInt
 // since MinProximityIntersection inherits from DiscreteIntersection, should not this line be implicit? (but it is not the case...)
 IntersectorCreator<MinProximityIntersection, RayDiscreteIntersection> RayMinProximityIntersectors("Ray");
 
-RayDiscreteIntersection::RayDiscreteIntersection(DiscreteIntersection* object, bool addSelf)
-    : intersection(object)
+RayDiscreteIntersection::RayDiscreteIntersection(DiscreteIntersection* intersection, bool addSelf)
 {
     if (addSelf)
     {
@@ -56,36 +54,36 @@ RayDiscreteIntersection::RayDiscreteIntersection(DiscreteIntersection* object, b
     }
 }
 
-bool RayDiscreteIntersection::testIntersection(Ray&, Triangle&)
+bool RayDiscreteIntersection::testIntersection(Ray&, Triangle&, const sofa::core::collision::Intersection*)
 {
     return true;
 }
 
-int RayDiscreteIntersection::computeIntersection(Ray& e1, Triangle& e2, OutputVector* contacts)
+int RayDiscreteIntersection::computeIntersection(Ray& e1, Triangle& e2, OutputVector* contacts, const sofa::core::collision::Intersection*)
 {
-    Vector3 A = e2.p1();
-    Vector3 AB = e2.p2()-A;
-    Vector3 AC = e2.p3()-A;
-    Vector3 P = e1.origin();
-    Vector3 PQ = e1.direction();
+    Vec3 A = e2.p1();
+    Vec3 AB = e2.p2()-A;
+    Vec3 AC = e2.p3()-A;
+    Vec3 P = e1.origin();
+    Vec3 PQ = e1.direction();
     Matrix3 M, Minv;
-    Vector3 right;
+    Vec3 right;
     for (int i=0; i<3; i++)
     {
-        M[i][0] = AB[i];
-        M[i][1] = AC[i];
-        M[i][2] = -PQ[i];
+        M(i,0) = AB[i];
+        M(i,1) = AC[i];
+        M(i,2) = -PQ[i];
         right[i] = P[i]-A[i];
     }
     if (!Minv.invert(M))
         return 0;
-    Vector3 baryCoords = Minv * right;
+    Vec3 baryCoords = Minv * right;
     if (baryCoords[0] < 0 || baryCoords[1] < 0 || baryCoords[0]+baryCoords[1] > 1)
         return 0; // out of the triangle
     if (baryCoords[2] < 0 || baryCoords[2] > e1.l())
         return 0; // out of the line
 
-    Vector3 X = P+PQ*baryCoords[2];
+    const Vec3 X = P+PQ*baryCoords[2];
 
     contacts->resize(contacts->size()+1);
     DetectionOutput *detection = &*(contacts->end()-1);

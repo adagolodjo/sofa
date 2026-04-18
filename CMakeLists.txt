@@ -1,26 +1,31 @@
-cmake_minimum_required(VERSION 3.12)
-project(Sofa) # Cannot use VERSION with patch like "00"
+cmake_minimum_required(VERSION 3.22)
+project(Sofa
+    HOMEPAGE_URL https://www.sofa-framework.org/
+) # Cannot use VERSION with patch like "00"
 
 include(CMakeDependentOption)
 
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0") 
+    set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)
+    # https://cmake.org/cmake/help/latest/variable/CMAKE_FIND_PACKAGE_TARGETS_GLOBAL.html
+endif()
+
 # Manually define VERSION
-set(Sofa_VERSION_MAJOR 22)
+set(Sofa_VERSION_MAJOR 26)
 set(Sofa_VERSION_MINOR 06)
 set(Sofa_VERSION_PATCH 99)
 set(Sofa_VERSION ${Sofa_VERSION_MAJOR}.${Sofa_VERSION_MINOR}.${Sofa_VERSION_PATCH})
 
+set(SOFA_URL "${CMAKE_PROJECT_HOMEPAGE_URL}")
+
 set(SOFA_VERSION_STR "\"${Sofa_VERSION}\"")
 set(SOFA_VERSION "${Sofa_VERSION_MAJOR}${Sofa_VERSION_MINOR}${Sofa_VERSION_PATCH}")
 
-set(SOFA_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SofaKernel" CACHE STRING "Path to SofaKernel")
-if(NOT EXISTS ${SOFA_KERNEL_SOURCE_DIR})
-    message(WARNING "SofaKernel is not present or is inaccessible. Check if ${SOFA_KERNEL_SOURCE_DIR} exists or is accessible. Backing up to default value.")
-    set(SOFA_KERNEL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SofaKernel" CACHE STRING "Path to SofaKernel" FORCE)
-endif()
-
 ## Default build type
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to Release as none was specified.")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 endif()
 
 # Output Directories definition
@@ -36,19 +41,32 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${ARCHIVE_OUTPUT_DIRECTOR
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${RUNTIME_OUTPUT_DIRECTORY})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${LIBRARY_OUTPUT_DIRECTORY})
 
+set(SOFA_APPLICATIONS_RELOCATABLE_PATH "applications" CACHE STRING "Relocatable path that will be used ot install applications")
+set(SOFA_PLUGINS_RELOCATABLE_PATH "plugins" CACHE STRING "Relocatable path that will be used ot install plugins")
+set(SOFA_PROJECTS_RELOCATABLE_PATH "projects" CACHE STRING "Relocatable path that will be used ot install projects")
+
+
+
 # Option for packaging
 option(SOFA_BUILD_RELEASE_PACKAGE "Run package specific configure" OFF)
+
+# Option to allow some dependencies such as cxxopts to be fetched by cmake if
+# the package is not found
+option(SOFA_ALLOW_FETCH_DEPENDENCIES "Allow compatible dependencies to be fetched if the package is not found by cmake.
+  List of dependencies that can be fetched: cxxopts, gtest, metis, CImg, nlohmann json" ON)
 
 # Option to accelerate the compilation
 # see https://cmake.org/cmake/help/v3.16/command/target_precompile_headers.html
 # and https://cmake.org/cmake/help/v3.16/prop_tgt/DISABLE_PRECOMPILE_HEADERS.html
-cmake_dependent_option(SOFA_BUILD_WITH_PCH_ENABLED 
-    "Compile SOFA using precompiled header (to accelerate the build process)" OFF
-    "CMAKE_VERSION VERSION_GREATER_EQUAL 3.16" OFF)
+
+# https://cmake.org/cmake/help/latest/policy/CMP0127.html
+cmake_policy(SET CMP0127 NEW)
+
+option(SOFA_BUILD_WITH_PCH_ENABLED "Compile SOFA using precompiled header (to accelerate the build process)" OFF)
 if(SOFA_BUILD_WITH_PCH_ENABLED)
     message("-- Precompiled headers: enabled (SOFA_BUILD_WITH_PCH_ENABLED is ON).")
 else()
-    message("-- Precompiled headers: disabled (SOFA_BUILD_WITH_PCH_ENABLED is OFF or CMake < 3.16).")
+    message("-- Precompiled headers: disabled (SOFA_BUILD_WITH_PCH_ENABLED is OFF).")
     set(DISABLE_PRECOMPILE_HEADERS ON)
 endif()
 
@@ -75,18 +93,20 @@ file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/lib/cmake)
 # adding paths to disabled plugins.
 file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/etc/sofa/python.d)
 
-# Sofa.Config sets the environment (options, compiler flags, global variables)
-add_subdirectory(Sofa/framework/Config ${CMAKE_CURRENT_BINARY_DIR}/Sofa.Config)
-
 ## Custom Environment
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
-list(APPEND CMAKE_IGNORE_PATH "${CMAKE_INSTALL_PREFIX}") # ignore install directory for findXXX commands
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Sofa/framework/Config/cmake")
+include(SofaMacros)
 
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindEigen3.cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/macdeployqt.cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/windeployqt.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindTinyXML2.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindPNG.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindPCRE2.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindZSTD.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindZLIB.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindQGLViewer.cmake"
     DESTINATION lib/cmake/Modules
     COMPONENT headers
     )
@@ -119,27 +139,25 @@ if(UNIX)
     endif()
 endif(UNIX)
 
+
 ### Windows config
 if(MSVC)
+    option(SOFA_USE_DEPENDENCY_PACK "Enable the use of the Windows Dependency Pack" ON)
     # WinDepPack
-    set(SOFA_DEPENDENCY_PACK_DIR "${CMAKE_SOURCE_DIR}" CACHE PATH "Directory containing Windows Dependency Pack")
-    if(NOT EXISTS ${SOFA_DEPENDENCY_PACK_DIR})
-        # force back to default value
-        set(SOFA_DEPENDENCY_PACK_DIR "${CMAKE_SOURCE_DIR}" CACHE PATH "Directory containing Windows Dependency Pack" FORCE)
-    endif()
-    list(APPEND CMAKE_INCLUDE_PATH ${SOFA_DEPENDENCY_PACK_DIR}/include)
-    if(CMAKE_CL_64)
-        list(APPEND CMAKE_LIBRARY_PATH ${SOFA_DEPENDENCY_PACK_DIR}/lib/win64)
-    else()
-        list(APPEND CMAKE_LIBRARY_PATH ${SOFA_DEPENDENCY_PACK_DIR}/lib/win32)
-    endif()
-    install(DIRECTORY ${SOFA_DEPENDENCY_PACK_DIR}/include/ DESTINATION include/extlibs/WinDepPack COMPONENT headers)
-    install(DIRECTORY ${SOFA_DEPENDENCY_PACK_DIR}/licenses/ DESTINATION licenses COMPONENT applications)
+    if(SOFA_USE_DEPENDENCY_PACK)
+        set(SOFA_DEPENDENCY_PACK_DIR "" CACHE PATH "Directory containing Windows Dependency Pack")
+        if(SOFA_DEPENDENCY_PACK_DIR AND EXISTS ${SOFA_DEPENDENCY_PACK_DIR})
+            add_subdirectory(${SOFA_DEPENDENCY_PACK_DIR} ${CMAKE_BINARY_DIR}/extlibs/SofaDependencyPack)
+        else ()
+            message(STATUS "Fetching WinDepPack")
+            sofa_fetch_dependency(WinDepPack GIT_REPOSITORY "https://github.com/sofa-framework/WinDepPack.git" GIT_TAG "master" DONT_BUILD)
+            add_subdirectory("${CMAKE_BINARY_DIR}/external_directories/fetched/WinDepPack" "${CMAKE_BINARY_DIR}/extlibs/WinDepPack")
+        endif()
+    endif ()
 endif()
 
-
 ### Testing
-option(SOFA_BUILD_TESTS "Compile the automatic tests for Sofa, along with the gtest library." ON)
+option(SOFA_BUILD_TESTS "Compile the automatic tests for Sofa, along with the gtest library." OFF)
 
 ## Active or not the use of ccache
 option(SOFA_USE_CCACHE "Compile using ccache optimization" OFF)
@@ -159,77 +177,40 @@ endif()
 ### Ninja build pools
 option(SOFA_NINJA_BUILD_POOLS "Activate the Ninja build pools feature, to limit the cores used by specific targets" OFF)
 
+### Warn the user that the legacy option has been deleted and is useless now
+if(DEFINED SOFA_ENABLE_LEGACY_HEADERS)
+    message(WARNING "SOFA_ENABLE_LEGACY_HEADERS cmake option has been deleted in v24.12 and is now meaningless.")
+endif()
+### Warn the user that HeadlessRecorder option has been renamed (due to its move into applications/plguins)
+if(DEFINED PLUGIN_SOFA_GUI_HEADLESSRECORDER AND PLUGIN_SOFA_GUI_HEADLESSRECORDER)
+    message(WARNING "HeadlessRecorder has been moved to applications/plugins in v24.12, thus its cmake option is named PLUGIN_HEADLESSRECORDER now.")
+endif()
+
+
+# Sofa.Config sets the environment (options, compiler flags, global variables)
+sofa_add_subdirectory(library Sofa/framework/Config Sofa.Config ON)
+
 ### Extlibs
 add_subdirectory(extlibs)
 
-# SOFA-NG
+### SOFA (framework and components)
 add_subdirectory(Sofa)
 
-# Deprecated (hollow) modules
-add_subdirectory(${SOFA_KERNEL_SOURCE_DIR}/SofaFramework)
-add_subdirectory(${SOFA_KERNEL_SOURCE_DIR}/SofaSimulation)
-add_subdirectory(${SOFA_KERNEL_SOURCE_DIR}/SofaBase)
+# SceneCreator plugin
+# Library used by SOFA_BUILD_TESTS
+sofa_add_subdirectory(plugin applications/plugins/SceneCreator SceneCreator OFF
+    WHEN_TO_SHOW "NOT SOFA_BUILD_SCENECREATOR AND NOT SOFA_BUILD_TESTS AND NOT SOFA_BUILD_RELEASE_PACKAGE"
+    VALUE_IF_HIDDEN "ON")
 
-# SOFA-NG Plugins
-option(SOFA_WITH_OPENGL "Compile Sofa with OpenGL support. This will define the SOFA_WITH_OPENGL and SOFA_NO_OPENGL CMake variables." ON)
-if(SOFA_WITH_OPENGL)
-    add_subdirectory(${SOFA_KERNEL_SOURCE_DIR}/modules/Sofa.GL)
+## add SofaPython3, guis, plugins, projects
+add_subdirectory(applications)
+
+## SimpleAPI examples
+option(SOFA_BUILD_SIMPLEAPI_EXAMPLES "Build SOFA scenes based on SimpleAPI." OFF)
+if(SOFA_BUILD_SIMPLEAPI_EXAMPLES)
+    add_subdirectory(examples/SimpleAPI)
 endif()
 
-add_subdirectory(Sofa/GUI)
-
-## Modules
-## in the consortium convention a module is a similar to a plugin the difference is that
-## a module is hosted and managed by the consortium while plugins are hosted and managed by third parties.
-add_subdirectory(${SOFA_KERNEL_SOURCE_DIR}/modules)
-add_subdirectory(modules)
-
-# This is all the applications GUI stuff. As there is a dependency to this one
-# In scene creator ...it is located here.
-add_subdirectory(SofaGui)
-
-## Collections
-## A collection is a "meta module" and containing several modules (usable at find level [find_package] and include/link level [add_library])
-# SofaAdvanced is legacy and deprecated since 20.06
-set(SOFA_LIST_OF_DEPRECATED_COLLECTIONS ${SOFA_KERNEL_SOURCE_DIR}/SofaCommon SofaGeneral SofaAdvanced SofaMisc)
-option(SOFA_BUILD_DEPRECATED_COLLECTIONS "Build legacy collections (${SOFA_LIST_OF_DEPRECATED_COLLECTIONS})." ON)
-if(SOFA_BUILD_DEPRECATED_COLLECTIONS)
-    foreach(deprecated_collection ${SOFA_LIST_OF_DEPRECATED_COLLECTIONS})
-        add_subdirectory(${deprecated_collection})
-    endforeach()
-endif()
-## Customized collections
-# SofaComponentAll is a convenient collection to get all Sofa features
-add_subdirectory(applications/collections)
-
-## Scene creator option
-option(SOFA_BUILD_SCENECREATOR "Compile the C++ API located in applications/plugins/SceneCreator" OFF)
-
-## Tutorials option
-option(SOFA_BUILD_TUTORIALS "Build (most of) the tutorials available." OFF)
-
-# Activate SceneCreator when required
-if(SOFA_BUILD_TESTS OR SOFA_BUILD_TUTORIALS OR SOFA_BUILD_RELEASE_PACKAGE)
-    set(SOFA_BUILD_SCENECREATOR ON CACHE BOOL "" FORCE)
-endif()
-
-
-# Library used by SOFA_BUILD_TESTS and SOFA_BUILD_TUTORIALS
-if(SOFA_BUILD_SCENECREATOR)
-    add_subdirectory(applications/plugins/SceneCreator)
-endif()
-
-## Plugins
-add_subdirectory(applications/plugins)
-
-## Applications
-add_subdirectory(applications/projects)
-
-
-# Tutorial add subdirectory
-if(SOFA_BUILD_TUTORIALS)
-    add_subdirectory(applications/tutorials)
-endif()
 
 ## SOFA scenes
 option(SOFA_BUILD_ADD_SCENES "Add SOFA scenes as a project of the build." OFF)
@@ -253,11 +234,6 @@ if(NOT "${SOFA_EXTERNAL_DIRECTORIES}" STREQUAL "")
     endforeach()
 endif()
 
-## Custom
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/custom.cmake")
-    message("Adding custom file")
-    include( "custom.cmake" )
-endif()
 
 ## IDE directories
 # Sofa.Component
@@ -282,18 +258,24 @@ endif()
 #install(FILES "${CMAKE_BINARY_DIR}/CMakeCache.txt" DESTINATION . COMPONENT headers)
 install(FILES "${CMAKE_SOURCE_DIR}/README.md" DESTINATION . COMPONENT applications)
 install(FILES "${CMAKE_SOURCE_DIR}/CHANGELOG.md" DESTINATION . COMPONENT applications)
-install(FILES "${CMAKE_SOURCE_DIR}/LICENSE.LGPL.txt" DESTINATION . COMPONENT applications)
+install(FILES "${CMAKE_SOURCE_DIR}/LICENSE-LGPL.md" DESTINATION . COMPONENT applications)
 install(FILES "${CMAKE_SOURCE_DIR}/Authors.txt" DESTINATION . COMPONENT applications)
 
-option(SOFA_INSTALL_RESOURCES_FILES "Copy resources files (etc/, share/, examples/) when installing" ON)
+option(SOFA_INSTALL_RESOURCES_FILES "Copy resources files (share/, examples/) when installing" ON)
 ## Install resource files
 if(SOFA_INSTALL_RESOURCES_FILES)
     install(DIRECTORY share/ DESTINATION share/sofa COMPONENT resources)
     install(DIRECTORY examples/ DESTINATION share/sofa/examples COMPONENT resources)
 endif()
 
-file(WRITE "${CMAKE_BINARY_DIR}/plugins/README.txt" "This folder will be automatically scanned by the Plugin Manager.")
+file(WRITE "${CMAKE_BINARY_DIR}/plugins/README.txt"
+    "This folder will be automatically scanned by the Plugin Manager.\n"
+    "For all info about plugins, see https://www.sofa-framework.org/community/doc/using-sofa/lexicography/#plugin")
 install(DIRECTORY ${CMAKE_BINARY_DIR}/plugins/ DESTINATION plugins COMPONENT resources)
+file(WRITE "${CMAKE_BINARY_DIR}/collections/README.txt"
+    "This folder will be automatically scanned by the Plugin Manager.\n"
+    "For all info about collections, see https://www.sofa-framework.org/community/doc/using-sofa/lexicography/#collection")
+install(DIRECTORY ${CMAKE_BINARY_DIR}/collections/ DESTINATION collections COMPONENT resources)
 
 sofa_install_git_infos(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -301,6 +283,14 @@ sofa_install_git_infos(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(tools/postinstall-fixup)
 
 if(SOFA_BUILD_RELEASE_PACKAGE)
+    # if building release package using Pixi, build a bundle of licence files of all 
+    # dependencies that will be embedded in the package
+    if($ENV{SOFA_BUILD_RELEASE_PACKAGE_WITH_PIXI})
+        message("Build SOFA release package using Pixi, bunding licenses...")
+        execute_process(COMMAND conda-deny bundle -e $ENV{PIXI_ENVIRONMENT_NAME} -p $ENV{PIXI_CURRENT_PLATFORM} -d ${CMAKE_BINARY_DIR}/licenses)
+        install(DIRECTORY ${CMAKE_BINARY_DIR}/licenses/ DESTINATION licenses COMPONENT applications)
+    endif()
+
     #######################
     # CPack configuration #
     #######################
@@ -308,9 +298,6 @@ if(SOFA_BUILD_RELEASE_PACKAGE)
     ################
     # Package config
     include(CPackComponent)
-    if(WIN32 AND ${CMAKE_VERSION} VERSION_LESS "3.13.0")
-        include(CPackNSIS)
-    endif()
     include(CPackIFW)
     set(CPACK_PACKAGE_VERSION "${Sofa_VERSION}")
     set(CPACK_PACKAGE_NAME "SOFA v${CPACK_PACKAGE_VERSION}")
@@ -339,7 +326,7 @@ if(SOFA_BUILD_RELEASE_PACKAGE)
             set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}_Linux")
         endif()
     endif()
-    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.LGPL.txt")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE-LGPL.md")
     set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
     set(CPACK_RESOURCE_FILE_WELCOME "${CMAKE_SOURCE_DIR}/README.md")
     ################
@@ -407,12 +394,6 @@ if(SOFA_BUILD_RELEASE_PACKAGE)
              set(CPACK_IFW_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/applications/projects/runSofa/runSofa.icns")
         endif()
 
-        cpack_ifw_configure_component_group(runtime
-            SORTING_PRIORITY 50
-            DEFAULT TRUE
-            EXPANDED
-            SCRIPT "${CMAKE_SOURCE_DIR}/scripts/qtifw/install.qs"
-            )
         cpack_ifw_configure_component_group(development
             SORTING_PRIORITY 10
             DEFAULT TRUE
@@ -460,8 +441,8 @@ if(SOFA_BUILD_RELEASE_PACKAGE)
         set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "${EXTRA_INSTALL_COMMAND}")
         set(CPACK_NSIS_MENU_LINKS
             "https://www.sofa-framework.org/documentation/" "SOFA User Documentation"
-            "https://www.sofa-framework.org/api/" "SOFA Developper API"
-            "https://www.sofa-framework.org/community/forum/" "SOFA Forum")
+            "https://www.sofa-framework.org/api/" "SOFA Developer API"
+            "https://github.com/sofa-framework/sofa/discussions" "SOFA Support")
     endif()
     #######################
 
@@ -478,6 +459,9 @@ if(SOFA_BUILD_RELEASE_PACKAGE)
         set(CPACK_SET_DESTDIR TRUE)
         set(CPACK_INSTALL_PREFIX "/runSofa.app/Contents/MacOS")
     endif()
+
+    configure_file(${CMAKE_SOURCE_DIR}/tools/postinstall-fixup/generate-stubfiles.cmake postinstall-scripts/generate-stubfiles.cmake @ONLY)
+    set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/postinstall-scripts/generate-stubfiles.cmake)
 
     include(CPack)
 endif()

@@ -22,7 +22,7 @@
 #pragma once
 #include <sofa/component/visual/config.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/type/Vec.h>
 #include <sofa/type/Ray.h>
 #include <sofa/type/Quat.h>
@@ -30,19 +30,13 @@
 #include <sofa/core/fwd.h>
 #include <sofa/helper/OptionsGroup.h>
 
-
 namespace sofa::component::visual
 {
 
-class SOFA_COMPONENT_VISUAL_API BaseCamera : public core::objectmodel::BaseObject
+class SOFA_COMPONENT_VISUAL_API BaseCamera : public core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(BaseCamera, core::objectmodel::BaseObject);
-
-    typedef type::Ray Ray;
-    using Vec2 = sofa::type::Vec<2, SReal>;
-    using Vec3 = sofa::type::Vec3;
-    using Vec4 = sofa::type::Vec<4, SReal>;
+    SOFA_CLASS(BaseCamera, core::objectmodel::BaseComponent);
 
     typedef type::Quat<SReal> Quat;
 
@@ -67,26 +61,26 @@ public:
 
     };
 
-    Data<Vec3> p_position; ///< Camera's position
-    Data<Quat> p_orientation; ///< Camera's orientation
-    Data<Vec3> p_lookAt; ///< Camera's look at
-    Data<double> p_distance; ///< Distance between camera and look at
+    Data<type::Vec3> d_position; ///< Camera's position
+    Data<Quat> d_orientation; ///< Camera's orientation
+    Data<type::Vec3> d_lookAt; ///< Camera's look at
+    Data<double> d_distance; ///< Distance between camera and look at
 
-    Data<double> p_fieldOfView; ///< Camera's FOV
-    Data<double> p_zNear; ///< Camera's zNear
-    Data<double> p_zFar; ///< Camera's zFar
-    Data<bool> p_computeZClip; ///< Compute Z clip planes (Near and Far) according to the bounding box
-    Data<Vec3> p_minBBox; ///< minBBox
-    Data<Vec3> p_maxBBox; ///< maxBBox
-    Data<unsigned int> p_widthViewport; ///< widthViewport
-    Data<unsigned int> p_heightViewport; ///< heightViewport
-    Data<sofa::helper::OptionsGroup> p_type; ///< Camera Type (0 = Perspective, 1 = Orthographic)
+    Data<double> d_fieldOfView; ///< Camera's FOV
+    Data<double> d_zNear; ///< Camera's zNear
+    Data<double> d_zFar; ///< Camera's zFar
+    Data<bool> d_computeZClip; ///< Compute Z clip planes (Near and Far) according to the bounding box
+    Data<type::Vec3> d_minBBox; ///< minBBox
+    Data<type::Vec3> d_maxBBox; ///< maxBBox
+    Data<unsigned int> d_widthViewport; ///< widthViewport
+    Data<unsigned int> d_heightViewport; ///< heightViewport
+    Data<sofa::helper::OptionsGroup> d_type; ///< Camera Type (0 = Perspective, 1 = Orthographic)
 
-    Data<bool> p_activated; ///< Camera activated ?
-	Data<bool> p_fixedLookAtPoint; ///< keep the lookAt point always fixed
-    
-    Data<type::vector<SReal> > p_modelViewMatrix; ///< ModelView Matrix
-    Data<type::vector<SReal> > p_projectionMatrix; ///< Projection Matrix
+    Data<bool> d_activated; ///< Camera activated ?
+    Data<bool> d_fixedLookAtPoint; ///< keep the lookAt point always fixed
+
+    Data<type::vector<SReal> > d_modelViewMatrix; ///< ModelView Matrix
+    Data<type::vector<SReal> > d_projectionMatrix; ///< Projection Matrix
 
     BaseCamera();
     ~BaseCamera() override;
@@ -99,113 +93,112 @@ public:
     void desactivate();
     bool isActivated();
 
-    bool exportParametersInFile(const std::string& viewFilename);
+    bool exportParametersInFile(const std::string& viewFilename) const;
     bool importParametersFromFile(const std::string& viewFilename);
 
-    void translate(const Vec3& t);
-    void translateLookAt(const Vec3& t);
+    void translate(const type::Vec3& t);
+    void translateLookAt(const type::Vec3& t);
     void rotate(const Quat& r);
-    void moveCamera(const Vec3 &p, const Quat &q);
+    void moveCamera(const type::Vec3 &p, const Quat &q);
 
-    void rotateCameraAroundPoint( Quat& rotation, const Vec3& point);
-    virtual void rotateWorldAroundPoint( Quat& rotation, const Vec3& point, Quat orientationCam);
+    void rotateCameraAroundPoint( Quat& rotation, const type::Vec3& point);
+    virtual void rotateWorldAroundPoint(Quat& rotation, const type::Vec3& point, Quat orientationCam);
+    virtual void rotateWorldAroundPoint(Quat& rotation, const type::Vec3& point, Quat orientationCam, type::Vec3 positionCam);
 
-    Vec3 screenToViewportPoint(const Vec3& p) const;
-    Vec3 screenToWorldPoint(const Vec3& p);
+    type::Vec3 screenToViewportPoint(const type::Vec3& p) const;
+    type::Vec3 screenToWorldPoint(const type::Vec3& p);
 
-    Vec3 viewportToScreenPoint(const Vec3& p) const;
-    Vec3 viewportToWorldPoint(const Vec3& p);
+    type::Vec3 viewportToScreenPoint(const type::Vec3& p) const;
+    type::Vec3 viewportToWorldPoint(const type::Vec3& p);
 
-    Vec3 worldToScreenPoint(const Vec3& p);
-    Vec3 worldToViewportPoint(const Vec3& p);
+    type::Vec3 worldToScreenPoint(const type::Vec3& p);
+    type::Vec3 worldToViewportPoint(const type::Vec3& p);
 
-    Ray viewportPointToRay(const Vec3&p);
-    Ray screenPointToRay(const Vec3&p);
+    type::Ray viewportPointToRay(const type::Vec3&p);
+    type::Ray screenPointToRay(const type::Vec3&p);
 
-    Ray toRay() const;
-
-
-    Vec3 cameraToWorldCoordinates(const Vec3& p);
-    Vec3 worldToCameraCoordinates(const Vec3& p);
-    Vec3 cameraToWorldTransform(const Vec3& v);
-    Vec3 worldToCameraTransform(const Vec3& v);
-    Vec3 screenToWorldCoordinates(int x, int y);
-    Vec2 worldToScreenCoordinates(const Vec3& p);
-
-    void fitSphere(const Vec3& center, SReal radius);
-    void fitBoundingBox(const Vec3& min,const Vec3& max);
+    type::Ray toRay() const;
 
 
-    Vec3 getPosition()
+    type::Vec3 cameraToWorldCoordinates(const type::Vec3& p) const;
+    type::Vec3 worldToCameraCoordinates(const type::Vec3& p) const;
+    type::Vec3 cameraToWorldTransform(const type::Vec3& v) const;
+    type::Vec3 worldToCameraTransform(const type::Vec3& v) const;
+    type::Vec3 screenToWorldCoordinates(int x, int y);
+    type::Vec2 worldToScreenCoordinates(const type::Vec3& p);
+
+    void fitSphere(const type::Vec3& center, SReal radius);
+    void fitBoundingBox(const type::Vec3& min,const type::Vec3& max);
+
+
+    const type::Vec3& getPosition() const
     {
-        return p_position.getValue();
+        return d_position.getValue();
     }
 
-    Quat getOrientation() ;
-    Vec3 getLookAt()
+    Quat getOrientation();
+
+    const type::Vec3& getLookAt() const
     {
-        return p_lookAt.getValue();
+        return d_lookAt.getValue();
     }
 
     double getDistance()
     {
-        p_distance.setValue((p_lookAt.getValue() - p_position.getValue()).norm());
-        return p_distance.getValue();
+        d_distance.setValue((d_lookAt.getValue() - d_position.getValue()).norm());
+        return d_distance.getValue();
     }
 
-    double getFieldOfView()
+    double getFieldOfView() const
     {
-        return p_fieldOfView.getValue();
+        return d_fieldOfView.getValue();
     }
 
-    double getHorizontalFieldOfView() ;
+    double getHorizontalFieldOfView() const;
 
     unsigned int getCameraType() const ;
 
     void setCameraType(unsigned int type) ;
 
-    void setBoundingBox(const Vec3 &min, const Vec3 &max)
+    void setBoundingBox(const type::Vec3 &min, const type::Vec3 &max)
     {
-        p_minBBox.setValue(min);
-        p_maxBBox.setValue(max);
-
-        sceneCenter = (min + max)*0.5;
-        sceneRadius = 0.5*(max - min).norm();
+        d_minBBox.setValue(min);
+        d_maxBBox.setValue(max);
 
         computeZ();
     }
 
     void setViewport(unsigned int w, unsigned int h)
     {
-        p_widthViewport.setValue(w);
-        p_heightViewport.setValue(h);
+        d_widthViewport.setValue(w);
+        d_heightViewport.setValue(h);
     }
 
-    double getZNear()
+    double getZNear() const
     {
         return currentZNear;
     }
 
-    double getZFar()
+    double getZFar() const
     {
         return currentZFar;
     }
 
-    void setView(const Vec3& position, const Quat &orientation);
+    void setView(const type::Vec3& position, const Quat &orientation);
 
     //Camera will look at the center of the scene's bounding box
     //at a good distance to view all the scene. The up vector will
     //be according to the gravity.
-    void setDefaultView(const Vec3& gravity = Vec3(0, -9.81, 0));
+    void setDefaultView(const type::Vec3& gravity = type::Vec3(0, -9.81, 0));
 
     virtual void getModelViewMatrix(double mat[16]);
     virtual void getProjectionMatrix(double mat[16]);
     void getOpenGLModelViewMatrix(double mat[16]);
     void getOpenGLProjectionMatrix(double mat[16]);
 
-    Quat getOrientationFromLookAt(const Vec3 &pos, const Vec3& lookat);
-    Vec3 getLookAtFromOrientation(const Vec3 &pos, const double &distance,const Quat & orientation);
-    Vec3 getPositionFromOrientation(const Vec3 &lookAt, const double &distance, const Quat& orientation);
+    Quat getOrientationFromLookAt(const type::Vec3 &pos, const type::Vec3& lookat);
+    type::Vec3 getLookAtFromOrientation(const type::Vec3 &pos, const double &distance,const Quat & orientation);
+    type::Vec3 getPositionFromOrientation(const type::Vec3 &lookAt, const double &distance, const Quat& orientation);
 
     virtual void manageEvent(core::objectmodel::Event* event) = 0 ;
     virtual void internalUpdate() {}
@@ -265,14 +258,14 @@ public:
 protected:
     void updateOutputData();
 
-    Vec3 sceneCenter;
-    SReal sceneRadius;
+    type::Vec3 getSceneCenter() const;
+    SReal getSceneRadius() const;
 
     bool b_setDefaultParameters;
 
     //need to keep "internal" lookAt and distance for updating Data
     //better way to do that ?
-    Vec3 currentLookAt;
+    type::Vec3 currentLookAt;
     double currentDistance;
     double currentZNear, currentZFar;
 };

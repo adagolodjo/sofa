@@ -52,16 +52,13 @@ public:
 
     using Index = sofa::Index;
 
-    Data<Deriv> pressure; ///< Pressure force per unit area
+    Data<Deriv> d_pressure; ///< Pressure force per unit area
+    Data<sofa::type::vector<Index> > d_quadList; ///< Indices of quads separated with commas where a pressure is applied
+    Data<Deriv> d_normal; ///< the normal used to define the edge subjected to the pressure force.
 
-    Data<sofa::type::vector<Index> > quadList; ///< Indices of quads separated with commas where a pressure is applied
-
-    /// the normal used to define the edge subjected to the pressure force.
-    Data<Deriv> normal;
-
-    Data<Real> dmin; ///< coordinates min of the plane for the vertex selection
-    Data<Real> dmax;///< coordinates max of the plane for the vertex selection
-    Data<bool> p_showForces; ///< draw quads which have a given pressure
+    Data<Real> d_dmin; ///< Minimum distance from the origin along the normal direction
+    Data<Real> d_dmax; ///< Maximum distance from the origin along the normal direction
+    Data<bool> d_showForces; ///< draw quads which have a given pressure
 
     /// Link to be set to the topology container in the component graph.
     SingleLink<QuadPressureForceField<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
@@ -71,8 +68,8 @@ protected:
     class QuadPressureInformation
     {
     public:
-        Real area;
-        Deriv force;
+        Real area{};
+        Deriv force{};
 
         QuadPressureInformation() {}
         QuadPressureInformation(const QuadPressureInformation &e)
@@ -98,9 +95,9 @@ protected:
         }
     };
 
-    sofa::core::topology::QuadSubsetData<sofa::type::vector<QuadPressureInformation> > quadPressureMap; ///< map between quad indices and their pressure
+    sofa::core::topology::QuadSubsetData<sofa::type::vector<QuadPressureInformation> > d_quadPressureMap; ///< Map between quad indices and their pressure
 
-    /// Pointer to the current topology                                                                        /// Pointer to the current topology
+    /// Pointer to the current topology
     sofa::core::topology::BaseMeshTopology* m_topology;
 
     QuadPressureForceField();
@@ -118,13 +115,17 @@ public:
     /// Constant pressure has null variation
     void addKToMatrix(const core::MechanicalParams* /*mparams*/, const sofa::core::behavior::MultiMatrixAccessor* /*matrix*/ ) override {}
 
-    SReal getPotentialEnergy(const core::MechanicalParams* /*mparams*/, const DataVecCoord&  /* x */) const override { msg_warning() << "Method getPotentialEnergy not implemented yet."; return 0.0; }
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* /*matrix*/) override;
+    void buildDampingMatrix(core::behavior::DampingMatrix* /*matrix*/) final;
+
+    using Inherit1::getPotentialEnergy;
+    SReal getPotentialEnergy(const core::MechanicalParams* /*mparams*/, const DataVecCoord&  /* x */) const override;
 
     void draw(const core::visual::VisualParams* vparams) override;
 
-    void setDminAndDmax(const SReal _dmin, const SReal _dmax) {dmin.setValue((Real)_dmin); dmax.setValue((Real)_dmax);}
-    void setNormal(const Coord n) { normal.setValue(n);}
-    void setPressure(Deriv _pressure) { this->pressure = _pressure; updateQuadInformation(); }
+    void setDminAndDmax(const SReal _dmin, const SReal _dmax) {d_dmin.setValue((Real)_dmin); d_dmax.setValue((Real)_dmax);}
+    void setNormal(const Coord n) { d_normal.setValue(n);}
+    void setPressure(Deriv _pressure) { this->d_pressure = _pressure; updateQuadInformation(); }
 
 protected :
     void selectQuadsAlongPlane();
@@ -135,7 +136,7 @@ protected :
 };
 
 
-#if  !defined(SOFA_COMPONENT_FORCEFIELD_QUADPRESSUREFORCEFIELD_CPP)
+#if !defined(SOFA_COMPONENT_FORCEFIELD_QUADPRESSUREFORCEFIELD_CPP)
 extern template class SOFA_COMPONENT_MECHANICALLOAD_API QuadPressureForceField<defaulttype::Vec3Types>;
 
 

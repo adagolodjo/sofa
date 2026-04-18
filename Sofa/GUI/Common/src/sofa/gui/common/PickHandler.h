@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -21,7 +21,7 @@
 ******************************************************************************/
 #pragma once
 #include <sofa/gui/common/config.h>
-#include "OperationFactory.h"
+#include <sofa/gui/common/OperationFactory.h>
 
 #include <sofa/simulation/fwd.h>
 #include <sofa/simulation/Node.h>
@@ -90,7 +90,7 @@ public:
     void setPickingMethod(PickingMethod method) { pickingMethod = method; }
     bool useSelectionBufferMethod() const { return (pickingMethod == SELECTION_BUFFER); }
 
-    void updateRay(const sofa::type::Vector3 &position, const sofa::type::Vector3 &orientation);
+    void updateRay(const sofa::type::Vec3 &position, const sofa::type::Vec3 &orientation);
 
     void handleMouseEvent( MOUSE_STATUS status, MOUSE_BUTTON button);
 
@@ -115,8 +115,8 @@ public:
     type::vector< CallBackPicker* > getCallBackPicker() {return callbacks;}
     void clearCallBacks() {for (unsigned int i=0; i<callbacks.size(); ++i) callbacks.clear();}
 
-    static BodyPicked findCollisionUsingBruteForce(const type::Vector3& origin, const type::Vector3& direction, double maxLength, core::objectmodel::BaseNode* root);
-    virtual BodyPicked findCollisionUsingColourCoding(const type::Vector3& origin, const type::Vector3& direction);
+    static BodyPicked findCollisionUsingBruteForce(const type::Vec3& origin, const type::Vec3& direction, double maxLength, core::objectmodel::BaseNode* root);
+    virtual BodyPicked findCollisionUsingColourCoding(const type::Vec3& origin, const type::Vec3& direction);
 
     ComponentMouseInteraction           *getInteraction();
     BodyPicked                          *getLastPicked() {return &lastPicked;}

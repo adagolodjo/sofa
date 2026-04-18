@@ -40,7 +40,7 @@ class BlockJacobiPreconditionerInternalData
 };
 
 
-/// Linear solver based on a NxN bloc diagonal matrix (i.e. block Jacobi preconditioner)
+/// Linear solver based on a NxN block diagonal matrix (i.e. block Jacobi preconditioner)
 template<class TMatrix, class TVector>
 class BlockJacobiPreconditioner : public sofa::component::linearsolver::MatrixLinearSolver<TMatrix,TVector>
 {
@@ -52,7 +52,6 @@ public:
     typedef sofa::component::linearsolver::MatrixLinearSolver<TMatrix,TVector> Inherit;
     typedef typename TMatrix::Block SubMatrix;
 
-    Data<bool> f_verbose; ///< Dump system state at each iteration
 protected:
     BlockJacobiPreconditioner();
 public:
@@ -69,6 +68,7 @@ public:
         return TVector::Name();
     }
 
+    void parse(core::objectmodel::BaseObjectDescription *arg) override;
 };
 
 #if !defined(SOFA_COMPONENT_LINEARSOLVER_PRECONDITIONER_BLOCKJACOBIPRECONDITIONER_CPP)

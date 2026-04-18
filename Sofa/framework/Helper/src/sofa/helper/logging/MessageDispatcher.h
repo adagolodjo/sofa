@@ -27,15 +27,11 @@
 #define MESSAGEDISPATCHER_H
 
 #include <sofa/helper/config.h>
-#include "Message.h"
+#include <sofa/helper/logging/Message.h>
 #include <vector>
-#include <sofa/helper/system/SofaOStream.h>
 
-namespace sofa
-{
-namespace helper
-{
-namespace logging
+
+namespace sofa::helper::logging
 {
 
 // forward declaration
@@ -128,8 +124,6 @@ public:
 
 
 
-} // logging
-} // helper
-} // sofa
+}
 
 #endif // MESSAGEDISPATCHER_H

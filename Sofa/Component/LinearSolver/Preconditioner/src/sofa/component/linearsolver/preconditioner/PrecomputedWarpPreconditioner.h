@@ -105,27 +105,27 @@ public:
 
     typedef sofa::type::MatNoInit<3, 3, Real> Transformation;
 
-    Data<bool> jmjt_twostep; ///< Use two step algorithm to compute JMinvJt
-    Data<bool> f_verbose; ///< Dump system state at each iteration
-    Data<bool> use_file; ///< Dump system matrix in a file
-    Data<bool> share_matrix; ///< Share the compliance matrix in memory if they are related to the same file (WARNING: might require to reload Sofa when opening a new scene...)
-    Data <std::string> solverName; ///< Name of the solver to use to precompute the first matrix
-    Data<bool> use_rotations; ///< Use Rotations around the preconditioner
-    Data<double> draw_rotations_scale; ///< Scale rotations in draw function
+    Data<bool> d_jmjt_twostep; ///< Use two step algorithm to compute JMinvJt
+    Data<bool> d_use_file; ///< Dump system matrix in a file
+    Data<bool> d_share_matrix; ///< Share the compliance matrix in memory if they are related to the same file (WARNING: might require to reload Sofa when opening a new scene...)
+    SingleLink<PrecomputedWarpPreconditioner, sofa::core::behavior::LinearSolver, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_linearSolver; ///< Link towards the linear solver used to precompute the first matrix
+    Data<bool> d_use_rotations; ///< Use Rotations around the preconditioner
+    Data<double> d_draw_rotations_scale; ///< Scale rotations in draw function
 
     MState * mstate;
+
 protected:
     PrecomputedWarpPreconditioner();
+
+    void checkLinearSystem() override;
+
 public:
     void solve (TMatrix& M, TVector& x, TVector& b) override;
     void invert(TMatrix& M) override;
-    void setSystemMBKMatrix(const core::MechanicalParams* mparams) override;
     bool addJMInvJt(linearalgebra::BaseMatrix* result, linearalgebra::BaseMatrix* J, SReal fact) override;
     void draw(const core::visual::VisualParams* vparams) override;
     void init() override;
     void loadMatrix(TMatrix& M);
-
-    bool hasUpdatedMatrix() override {return false;}
 
     TBaseMatrix * getSystemMatrixInv()
     {
@@ -141,7 +141,7 @@ public:
             arg->logError(std::string("No mechanical state with the datatype '") + TDataTypes::Name() + "' found in the context node.");
             return false;
         }
-        return sofa::core::objectmodel::BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
 protected :
@@ -152,9 +152,7 @@ protected :
     PrecomputedWarpPreconditionerInternalData<TDataTypes> internalData;
 
     void rotateConstraints();
-#if SOFA_COMPONENT_LINEARSOLVER_DIRECT_HAVE_CSPARSE && !defined(SOFA_FLOAT)
-    void loadMatrixWithCSparse(TMatrix& M);
-#endif
+    void loadMatrixWithCholeskyDecomposition(TMatrix& M);
     void loadMatrixWithSolver();
 
     template<class JMatrix>

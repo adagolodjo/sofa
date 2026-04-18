@@ -22,14 +22,12 @@
 #include <sofa/simulation/ResetVisitor.h>
 #include <sofa/simulation/Node.h>
 
-namespace sofa
+
+namespace sofa::simulation
 {
 
-namespace simulation
-{
 
-
-void ResetVisitor::processObject(core::objectmodel::BaseObject* obj)
+void ResetVisitor::processObject(core::objectmodel::BaseComponent* obj)
 {
     obj->reset();
 }
@@ -48,7 +46,7 @@ void ResetVisitor::processNodeBottomUp(simulation::Node* /*node*/)
 {
 }
 
-void StoreResetStateVisitor::processObject(core::objectmodel::BaseObject* obj)
+void StoreResetStateVisitor::processObject(core::objectmodel::BaseComponent* obj)
 {
     obj->storeResetState();
 }
@@ -66,7 +64,7 @@ void StoreResetStateVisitor::processNodeBottomUp(simulation::Node* /*node*/)
 {
 }
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
+
 

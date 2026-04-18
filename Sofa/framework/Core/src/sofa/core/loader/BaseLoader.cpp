@@ -21,16 +21,10 @@
 ******************************************************************************/
 #include <fstream>
 
-#include "BaseLoader.h"
+#include <sofa/core/loader/BaseLoader.h>
 #include <sofa/helper/system/FileRepository.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace loader
+namespace sofa::core::loader
 {
 
 bool SOFA_CORE_API canLoad(const char* filename);
@@ -45,7 +39,7 @@ BaseLoader::~BaseLoader()
 
 void BaseLoader::parse(sofa::core::objectmodel::BaseObjectDescription *arg)
 {
-    objectmodel::BaseObject::parse(arg);
+    objectmodel::BaseComponent::parse(arg);
 
     bool success = false;
     if (canLoad())
@@ -128,10 +122,5 @@ bool BaseLoader::readLine(char* buf, int size, FILE* f)
         skipToEOL(f);
     return true;
 }
-
-} /// namespace loader
-
-} /// namespace core
-
-} /// namespace sofa
+} /// namespace sofa::core::loader
 

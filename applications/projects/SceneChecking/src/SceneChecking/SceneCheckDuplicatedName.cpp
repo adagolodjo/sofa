@@ -22,9 +22,12 @@
 #include "SceneCheckDuplicatedName.h"
 
 #include <sofa/simulation/Node.h>
+#include <sofa/simulation/SceneCheckMainRegistry.h>
 
 namespace sofa::_scenechecking_
 {
+
+const bool SceneCheckDuplicatedNameRegistered = sofa::simulation::SceneCheckMainRegistry::addToRegistry(SceneCheckDuplicatedName::newSPtr());
 
 using sofa::simulation::Node;
 
@@ -51,14 +54,14 @@ void SceneCheckDuplicatedName::doCheckOn(sofa::simulation::Node* node)
     std::map<std::string, int> duplicated;
     for (auto& object : node->object )
     {
-        if( duplicated.find(object->getName()) == duplicated.end() )
+        if(!duplicated.contains(object->getName()))
             duplicated[object->getName()] = 0;
         duplicated[object->getName()]++;
     }
 
     for (auto& child : node->child )
     {
-        if( duplicated.find(child->getName()) == duplicated.end() )
+        if(!duplicated.contains(child->getName()))
             duplicated[child->getName()] = 0;
         duplicated[child->getName()]++;
     }
@@ -83,7 +86,7 @@ void SceneCheckDuplicatedName::doPrintSummary()
 {
     if(m_hasDuplicates)
     {
-        msg_warning(this->getName()) << msgendl
+        scnchecking_warning(this->getName()) << msgendl
                                      << m_duplicatedMsg.str()
                                      << "Nodes with similar names at the same level in your scene can "
                                         "crash certain operations, please rename them";

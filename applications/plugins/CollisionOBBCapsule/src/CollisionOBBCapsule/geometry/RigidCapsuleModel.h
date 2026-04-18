@@ -114,44 +114,42 @@ protected:
 
     CapsuleCollisionModel();
     CapsuleCollisionModel(core::behavior::MechanicalState<DataTypes>* mstate );
+    void drawCollisionModel(const core::visual::VisualParams* vparams) override;
 public:
     void init() override;
 
     // -- CollisionModel interface
 
-    void resize(Size size) override;
+    void resize(sofa::Size size) override;
 
     void computeBoundingTree(int maxDepth=0) override;
 
     //virtual void computeContinuousBoundingTree(SReal dt, int maxDepth=0);
 
-    void draw(const core::visual::VisualParams* vparams, Index index) override;
-
-    void draw(const core::visual::VisualParams* vparams) override;
-
+    void draw(const core::visual::VisualParams* vparams, sofa::Index index) override;
 
     core::behavior::MechanicalState<DataTypes>* getMechanicalState() { return _mstate; }
 
-    Real radius(Index index) const;
+    Real radius(sofa::Index index) const;
 
-    const Coord & center(Index i)const;
+    const Coord & center(sofa::Index i)const;
 
-    Coord point1(Index index)const;
+    Coord point1(sofa::Index index)const;
 
-    Coord point2(Index index)const;
+    Coord point2(sofa::Index index)const;
 
     //Returns the point1-point2 normalized vector
-    Coord axis(Index index)const;
+    Coord axis(sofa::Index index)const;
 
-    const sofa::type::Quat<SReal> orientation(Index index)const;
+    const sofa::type::Quat<SReal> orientation(sofa::Index index)const;
 
-    Real height(Index index)const;
+    Real height(sofa::Index index)const;
 
-    inline Size nbCap()const;
+    inline sofa::Size nbCap()const;
 
     Real defaultRadius()const;
 
-    const Coord & velocity(Index index)const;
+    const Coord & velocity(sofa::Index index)const;
 
     /// Pre-construction check method called by ObjectFactory.
     /// Check that DataTypes matches the MechanicalState.
@@ -165,7 +163,7 @@ public:
             return false;
         }
 
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
     Data<VecReal > & writeRadii();

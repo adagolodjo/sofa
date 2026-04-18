@@ -46,13 +46,11 @@
 #include <sofa/simulation/mechanicalvisitor/MechanicalPropagateOnlyPositionAndVelocityVisitor.h>
 #include <sofa/simulation/Node.h>
 
-namespace sofa::component::controller
+namespace articulatedsystemplugin
 {
 
 using namespace sofa::helper;
 using sofa::core::behavior::MechanicalState;
-using sofa::component::controller::ArticulatedHierarchyContainer;
-
 
 ArticulatedHierarchyController::ArticulatedHierarchyController()
     : articulationsIndices( initData(&articulationsIndices, "articulationsIndices", "Indices of articulations controlled by the keyboard") )
@@ -135,7 +133,7 @@ void ArticulatedHierarchyController::buildPropagationArticulationsChain(void)
 void ArticulatedHierarchyController::buildArray(std::vector< int > &artIndices, Articulation *artRef, ArticulationCenter *artCenterParent)
 {
     ArtCenterVecIt artCenterIt = m_artCenterVec.begin();
-    ArtCenterVecIt artCenterItEnd = m_artCenterVec.end();
+    const ArtCenterVecIt artCenterItEnd = m_artCenterVec.end();
 
     bool childFound = false;
     while (artCenterIt != artCenterItEnd)
@@ -170,7 +168,7 @@ void ArticulatedHierarchyController::buildArray(std::vector< int > &artIndices, 
 void ArticulatedHierarchyController::dumpActiveArticulations(void) const
 {
     auto it = activeArticulations.begin();
-    auto itEnd = activeArticulations.end();
+    const auto itEnd = activeArticulations.end();
     int i=0;
     while (it != itEnd)
     {
@@ -188,13 +186,13 @@ void ArticulatedHierarchyController::dumpActiveArticulations(void) const
 
 void ArticulatedHierarchyController::dumpArticulationsAndBindingKeys(void) const
 {
-    msg_info() << "ARTICULATIONS_KEYBOARD_CONTROLER : Controled Articulations & Binding Keys" ;
+    msg_info() << "ARTICULATIONS_KEYBOARD_CONTROLER : Controlled Articulations & Binding Keys" ;
 
     auto articulationsIndicesIt = articulationsIndices.getValue().cbegin();
-    auto articulationsIndicesItEnd = articulationsIndices.getValue().cend();
+    const auto articulationsIndicesItEnd = articulationsIndices.getValue().cend();
 
     auto bindinKeysIt = bindingKeys.getValue().cbegin();
-    auto bindinKeysItEnd = bindingKeys.getValue().cend();
+    const auto bindinKeysItEnd = bindingKeys.getValue().cend();
 
     while (articulationsIndicesIt != articulationsIndicesItEnd)
     {
@@ -210,7 +208,7 @@ void ArticulatedHierarchyController::dumpArticulationsAndBindingKeys(void) const
 
 void ArticulatedHierarchyController::updateActiveArticulationsIndices(const char keyChar)
 {
-    unsigned int numKeys = bindingKeys.getValue().size();
+    const unsigned int numKeys = bindingKeys.getValue().size();
 
     if (numKeys != 0)
     {
@@ -232,7 +230,7 @@ void ArticulatedHierarchyController::updateActiveArticulationsIndices(const char
             {
                 // Set all but the new select one articulations as inactive
                 auto it = activeArticulations.begin();
-                auto itEnd = activeArticulations.end();
+                const auto itEnd = activeArticulations.end();
                 while (it != itEnd)
                 {
                     *it = false;
@@ -304,7 +302,7 @@ void ArticulatedHierarchyController::onBeginAnimationStep(const double /*dt*/)
 void ArticulatedHierarchyController::resetControler(void)
 {
     auto it = activeArticulations.begin();
-    auto itEnd = activeArticulations.end();
+    const auto itEnd = activeArticulations.end();
     while (it != itEnd)
     {
         *it = false;
@@ -343,11 +341,11 @@ void ArticulatedHierarchyController::applyController(void)
         if (i < activeArticulations.size())
         {
             std::vector< int > articulationPropagationChain;
-            auto iter = articulationsPropagationChains.find(articulationIndex);
+            const auto iter = articulationsPropagationChains.find(articulationIndex);
             if( iter != articulationsPropagationChains.end())
                 articulationPropagationChain = iter->second;
 
-            double distributedAngleDelta = angleDelta.getValue() / (double)(articulationPropagationChain.size() + 1);
+            const double distributedAngleDelta = angleDelta.getValue() / (double)(articulationPropagationChain.size() + 1);
 
             for (unsigned int j=0; j<articulationPropagationChain.size()+1; j++)
             {
@@ -373,15 +371,15 @@ void ArticulatedHierarchyController::applyController(void)
                             if (!articulatedObjects.empty())
                             {
                                 // Reference potential initial articulations value for interaction springs
-                                // and Current articulation value at the coresponding artculation
+                                // and Current articulation value at the corresponding artculation
 
                                 std::vector< MechanicalState<sofa::defaulttype::Vec1Types>* >::iterator articulatedObjIt = articulatedObjects.begin();
 //								std::vector< MechanicalState<sofa::defaulttype::Vec1dTypes>* >::iterator articulatedObjItEnd = articulatedObjects.end();
 
                                 //	while (articulatedObjIt != articulatedObjItEnd)
                                 {
-                                    helper::WriteAccessor<Data<sofa::defaulttype::Vec1Types::VecCoord> > x = *(*articulatedObjIt)->write(sofa::core::VecCoordId::position());
-                                    helper::WriteAccessor<Data<sofa::defaulttype::Vec1Types::VecCoord> > xfree = *(*articulatedObjIt)->write(sofa::core::VecCoordId::freePosition());
+                                    helper::WriteAccessor<Data<sofa::defaulttype::Vec1Types::VecCoord> > x = *(*articulatedObjIt)->write(sofa::core::vec_id::write_access::position);
+                                    helper::WriteAccessor<Data<sofa::defaulttype::Vec1Types::VecCoord> > xfree = *(*articulatedObjIt)->write(sofa::core::vec_id::write_access::freePosition);
                                     x[(*it)->articulationIndex.getValue()].x() += signFactor * distributedAngleDelta;
                                     xfree[(*it)->articulationIndex.getValue()].x() += signFactor * distributedAngleDelta;
                                     ++articulatedObjIt;
@@ -407,11 +405,12 @@ void ArticulatedHierarchyController::applyController(void)
     }
 }
 
-SOFA_DECL_CLASS(ArticulatedHierarchyController)
-
 // Register in the Factory
-int ArticulatedHierarchyControllerClass = core::RegisterObject("Implements an user interaction handler that controls the values of the articulations of an articulated hierarchy container.")
-        .add< ArticulatedHierarchyController >()
-        ;
+void registerArticulatedHierarchyController(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(sofa::core::ObjectRegistrationData("Implements an user interaction handler that controls the values of the articulations of an articulated hierarchy container.")
+    .add< ArticulatedHierarchyController >());
+}
 
-} // namespace sofa::component::controller
+} // namespace articulatedsystemplugin
+

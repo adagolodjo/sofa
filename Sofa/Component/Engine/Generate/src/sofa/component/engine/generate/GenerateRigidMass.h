@@ -48,8 +48,6 @@ public:
     void doUpdate() override;
 
 protected:
-
-    typedef type::Vector3 Vector3;
     typedef type::fixed_array <unsigned int,3> MTriangle;
     typedef type::fixed_array <unsigned int,4> MQuad;
     typedef type::vector<unsigned int> MPolygon;
@@ -63,10 +61,10 @@ protected:
       */
     /// input
     Data< Real > m_density; ///< kg * m^-3
-    Data< type::vector< Vector3 > > m_positions; ///< input: positions of the vertices
+    Data< type::vector< type::Vec3 > > m_positions; ///< input: positions of the vertices
     Data< type::vector< MTriangle > > m_triangles; ///< input: triangles of the mesh
     Data< type::vector< MQuad > > m_quads; ///< input: quads of the mesh
-    Data< type::vector< MPolygon > > m_polygons; ///< must be convex
+    Data< type::vector< MPolygon > > m_polygons; ///< input: polygons of the mesh
 
     /// output
     Data< MassType > rigidMass;
@@ -74,7 +72,7 @@ protected:
     Data< Real > volume; ///< output: volume of the mesh
     Data < Mat3x3 > inertiaMatrix; ///< output: the inertia matrix of the mesh
     Data< Vec3 > massCenter; ///< output: the gravity center of the mesh
-    Data< Vector3 > centerToOrigin; ///< output: vector going from the mass center to the space origin
+    Data< type::Vec3 > centerToOrigin; ///< output: vector going from the mass center to the space origin
 
     /**
       * Protected methods
@@ -82,7 +80,7 @@ protected:
     /// integrates the whole mesh
     void integrateMesh();
 
-    void integrateTriangle(Vector3 kV0,Vector3 kV1,Vector3 kV2);
+    void integrateTriangle(type::Vec3 kV0,type::Vec3 kV1,type::Vec3 kV2);
 
     /// generates the RigidMass from the mesh integral
     void generateRigid();
@@ -90,13 +88,13 @@ protected:
     type::fixed_array<SReal,10> afIntegral;
 
 public:
-    /// Implementing the GetCustomTemplateName is mandatory to have a custom template name paremters
+    /// Implementing the GetCustomTemplateName is mandatory to have a custom template name parameters
     /// instead of the default one generated automatically by the SOFA_CLASS() macro.
     static std::string GetCustomTemplateName();
 
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_GENERATERIGIDMASS_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_GENERATERIGIDMASS_CPP)
 extern template class SOFA_COMPONENT_ENGINE_GENERATE_API GenerateRigidMass<defaulttype::Rigid3Types, defaulttype::Rigid3Mass>;
 
 #endif

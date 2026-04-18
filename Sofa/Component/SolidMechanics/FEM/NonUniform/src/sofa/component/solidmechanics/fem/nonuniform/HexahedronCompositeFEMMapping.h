@@ -27,7 +27,7 @@
 
 #include <sofa/core/Mapping.h>
 #include <sofa/core/State.h>
-#include <SofaBaseTopology/SparseGridTopology.h>
+#include <sofa/component/topology/container/grid/SparseGridTopology.h>
 #include <sofa/component/solidmechanics/fem/nonuniform/HexahedronCompositeFEMForceFieldAndMass.h>
 
 #include <sofa/type/vector.h>
@@ -72,11 +72,11 @@ public:
     typedef Data<OutVecDeriv> OutDataVecDeriv;
     typedef Data<OutMatrixDeriv> OutDataMatrixDeriv;
 
-    typedef topology::SparseGridTopology SparseGridTopologyT;
+    typedef component::topology::container::grid::SparseGridTopology SparseGridTopologyT;
     typedef component::solidmechanics::fem::nonuniform::HexahedronCompositeFEMForceFieldAndMass<In> HexahedronCompositeFEMForceFieldAndMassT;
 
 
-    typedef type::Mat<3,8*3> Weight;
+    typedef type::Mat<3,8*3, SReal> Weight;
     typedef typename HexahedronCompositeFEMForceFieldAndMassT::Transformation Transformation;
     typedef type::fixed_array< InCoord, 8 > Nodes;
 
@@ -121,8 +121,8 @@ protected :
     // in order to treat large dispacements in translation (rotation is given by the corotational force field)
 // 	  InVecCoord _baycenters0;
 // 	  InCoord computeTranslation( const SparseGridTopologyT::Hexa& hexa, unsigned idx );
-    OutVecCoord _p0; // intial position of the interpolated vertices
-    InVecCoord _qCoarse0, _qFine0; // intial position of the element nodes
+    OutVecCoord _p0; // initial position of the interpolated vertices
+    InVecCoord _qCoarse0, _qFine0; // initial position of the element nodes
     InVecCoord _qFine; // only for drawing
 
 // 	  type::vector< type::Quat<Real> > _rotations;
@@ -144,7 +144,7 @@ protected :
 
 };
 
-#if  !defined(SOFA_COMPONENT_MAPPING_HEXAHEDRONCOMPOSITEFEMMAPPING_CPP)
+#if !defined(SOFA_COMPONENT_MAPPING_HEXAHEDRONCOMPOSITEFEMMAPPING_CPP)
 extern template class HexahedronCompositeFEMMapping< core::Mapping< defaulttype::Vec3Types, defaulttype::Vec3Types > >;
 
 

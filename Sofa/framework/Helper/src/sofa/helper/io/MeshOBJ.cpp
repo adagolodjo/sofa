@@ -25,15 +25,15 @@
 #include <sofa/helper/system/SetDirectory.h>
 #include <sofa/helper/system/Locale.h>
 #include <sofa/helper/logging/Messaging.h>
+#include <sofa/type/hardening.h>
+
 #include <istream>
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace io
+namespace sofa::helper::io
 {
 
 using namespace sofa::type;
@@ -173,7 +173,18 @@ void MeshOBJ::readOBJ (std::istream &stream, const std::string &filename)
                     }
 
                     if (!tmp.empty())
-                        vtn[j] = atoi(tmp.c_str()) - 1; // -1 because the numerotation begins at 1 and a vector begins at 0
+                    {
+                        int val{};
+                        if(sofa::type::hardening::safeStrToInt(tmp, val ))
+                        {
+                            vtn[j] = val - 1;
+                        }
+                        else
+                        {
+                            msg_error("MeshOBJ") << "Invalid index " << tmp;
+                            vtn[j] = -1;
+                        }
+                    }
                 }
 
                 vIndices.push_back(vtn[0]);
@@ -196,11 +207,11 @@ void MeshOBJ::readOBJ (std::istream &stream, const std::string &filename)
     if (m_vertices.size()>0)
     {
         // compute bbox
-        Vector3 minBB = m_vertices[0];
-        Vector3 maxBB = m_vertices[0];
+        type::Vec3 minBB = m_vertices[0];
+        type::Vec3 maxBB = m_vertices[0];
         for (unsigned int i=1; i<m_vertices.size(); ++i)
         {
-            Vector3 p = m_vertices[i];
+            type::Vec3 p = m_vertices[i];
             for (int c=0; c<3; ++c)
             {
                 if (minBB[c] > p[c])
@@ -232,7 +243,7 @@ void MeshOBJ::readMTL(const char* filename)
     bufScanFormat << "%" << (sizeof(buf) - 1) << "s";
 
     file = fopen(filename, "r");
-    Material *mat = nullptr;
+    std::unique_ptr<Material> mat;
     if (file)
     {
         /* now, read in the data */
@@ -257,10 +268,9 @@ void MeshOBJ::readMTL(const char* filename)
                 if (mat != nullptr)
                 {
                     materials.push_back(*mat);
-                    delete mat;
-                    mat = nullptr;
+                    mat.reset();
                 }
-                mat = new Material();
+                mat = std::make_unique<Material>();
                 if ( fgets(buf, sizeof(buf), file) == nullptr)
                 {
                     if (feof (file) )
@@ -268,8 +278,11 @@ void MeshOBJ::readMTL(const char* filename)
                     else
                         msg_error("MeshOBJ") << "fgets function has encountered an error." ;
                 }
-                sscanf(buf, "%s %s", buf, buf);
-                mat->name = buf;
+                {
+                    char matName[128] = {0};
+                    sscanf(buf, "%*127s %127s", matName);
+                    mat->name = matName;
+                }
                 break;
             case 'N':
                 switch (buf[1])
@@ -389,7 +402,7 @@ void MeshOBJ::readMTL(const char* filename)
                 }
 
 				break;
-            }            
+            }
             case 'b':
             {
                 if( !mat )
@@ -417,7 +430,7 @@ void MeshOBJ::readMTL(const char* filename)
                 }
 
 				break;
-            }            
+            }
             default:
                 /* eat up rest of line */
                 if ( fgets(buf, sizeof(buf), file) == nullptr)
@@ -437,14 +450,13 @@ void MeshOBJ::readMTL(const char* filename)
     if (mat != nullptr)
     {
         materials.push_back(*mat);
-        delete mat;
-        mat = nullptr;
+        mat.reset();
     }
 }
 
-} // namespace io
+} // namespace sofa::helper::io
 
-} // namespace helper
 
-} // namespace sofa
+
+
 

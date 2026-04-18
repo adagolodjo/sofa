@@ -24,12 +24,12 @@
 
 #include <sofa/core/visual/VisualParams.h>
 #include <QObject>
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 #include <image/ImageTypes.h>
 #include "sofa/defaulttype/config.h"
 #include "sofa/defaulttype/VecTypes.h"
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 
 
 #include <sofa/core/objectmodel/Event.h>
@@ -43,12 +43,9 @@
 
 namespace sofa
 {
-namespace gui
-{
 namespace qt
 {
 class SOFA_IMAGE_GUI_API LabelImageToolBoxAction;
-}
 }
 }
 
@@ -67,7 +64,7 @@ using type::Mat;
 using namespace cimg_library;
 
 /**
- * This class coorespond to a label visualized by imagetoolbox
+ * This class corresponds to a label visualized by imagetoolbox
  */
 
 class SOFA_IMAGE_GUI_API LabelImageToolBox : public core::DataEngine
@@ -114,7 +111,7 @@ protected:
 
 public:
     
-    virtual sofa::gui::qt::LabelImageToolBoxAction* createTBAction(QWidget* /*parent*/=nullptr )=0;
+    virtual sofa::qt::LabelImageToolBoxAction* createTBAction(QWidget* /*parent*/=nullptr )=0;
 
 };
 

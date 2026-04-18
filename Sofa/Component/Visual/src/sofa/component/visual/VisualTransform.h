@@ -47,11 +47,11 @@ public:
     void bwdDraw(sofa::core::visual::VisualParams* vparams) override;
 
     void draw(const sofa::core::visual::VisualParams* vparams) override;
-    void drawVisual(const sofa::core::visual::VisualParams* vparams) override;
+    void doDrawVisual(const sofa::core::visual::VisualParams* vparams) override;
     void drawTransparent(const sofa::core::visual::VisualParams* vparams) override;
 
-    Data<Coord> transform; ///< Transformation to apply
-    Data<bool> recursive; ///< True to apply transform to all nodes below
+    Data<Coord> d_transform; ///< Transformation to apply
+    Data<bool> d_recursive; ///< True to apply transform to all nodes below
 
     void push(const sofa::core::visual::VisualParams* vparams);
     void pop(const sofa::core::visual::VisualParams* vparams);

@@ -128,14 +128,13 @@ public:
      */
     void applyController(void);
 protected:
-
-    Data< unsigned int > index; ///< Controlled DOF index.
-    Data< bool > onlyTranslation; ///< Controlling the DOF only in translation
-    Data< bool > buttonDeviceState; ///< state of ths device button
+    Data< unsigned int > d_index; ///< Index of the controlled DOF
+    Data< bool > d_onlyTranslation; ///< Controlling the DOF only in translation
+    Data< bool > d_buttonDeviceState; ///< state of ths device button
 
     core::behavior::MechanicalState<DataTypes> *mState; ///< Controlled MechanicalState.
 
-    Data< sofa::type::Vec<3,Real> > mainDirection; ///< Direction corresponding to the Mouse vertical axis. Default value is (0.0,0.0,-1.0), Z axis.
+    Data< sofa::type::Vec<3,Real> > d_mainDirection; ///< Main direction and orientation of the controlled DOF
 
     enum MouseMode { None=0, BtLeft, BtRight, BtMiddle, Wheel }; ///< Mouse current mode.
     bool device;
@@ -144,12 +143,12 @@ protected:
     int eventX, eventY; ///< Mouse current position in pixel
     double deviceX, deviceY, deviceZ;
     int mouseSavedPosX, mouseSavedPosY; ///< Last recorded mouse position
-    sofa::type::Vector3 position;
+    sofa::type::Vec3 position;
     sofa::type::Quat<SReal> orientation;
     bool buttonDevice;
 };
 
-#if  !defined(SOFA_COMPONENT_CONTROLLER_MECHANICALSTATECONTROLLER_CPP)
+#if !defined(SOFA_COMPONENT_CONTROLLER_MECHANICALSTATECONTROLLER_CPP)
 extern template class SOFA_COMPONENT_CONTROLLER_API MechanicalStateController<defaulttype::Vec1Types>;
 extern template class SOFA_COMPONENT_CONTROLLER_API MechanicalStateController<defaulttype::Rigid3Types>;
 #endif

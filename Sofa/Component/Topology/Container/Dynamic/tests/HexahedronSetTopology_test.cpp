@@ -50,7 +50,7 @@ public:
 
 bool HexahedronSetTopology_test::testEmptyContainer()
 {
-    HexahedronSetTopologyContainer::SPtr topoCon = sofa::core::objectmodel::New< HexahedronSetTopologyContainer >();
+    const HexahedronSetTopologyContainer::SPtr topoCon = sofa::core::objectmodel::New< HexahedronSetTopologyContainer >();
     EXPECT_EQ(topoCon->getNbHexahedra(), 0);
     EXPECT_EQ(topoCon->getNumberOfElements(), 0);
     EXPECT_EQ(topoCon->getNumberOfHexahedra(), 0);
@@ -73,7 +73,7 @@ bool HexahedronSetTopology_test::testEmptyContainer()
 
 bool HexahedronSetTopology_test::testHexahedronBuffers()
 {
-    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::core::topology::TopologyElementType::HEXAHEDRON);
+    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::geometry::ElementType::HEXAHEDRON);
     HexahedronSetTopologyContainer* topoCon = dynamic_cast<HexahedronSetTopologyContainer*>(scene->getNode().get()->getMeshTopology());
 
     if (topoCon == nullptr)
@@ -103,8 +103,8 @@ bool HexahedronSetTopology_test::testHexahedronBuffers()
     EXPECT_EQ(topoCon->getEdges().size(), nbrEdge);
 
     // The first 2 elements in this file should be :
-    sofa::type::fixed_array<HexahedronSetTopologyContainer::PointID, 8> elemTruth0(0, 1, 5, 4, 16, 17, 21, 20);
-    sofa::type::fixed_array<HexahedronSetTopologyContainer::PointID, 8> elemTruth1(1, 2, 6, 5, 17, 18, 22, 21);
+    sofa::type::fixed_array<HexahedronSetTopologyContainer::PointID, 8> elemTruth0({0, 1, 5, 4, 16, 17, 21, 20});
+    sofa::type::fixed_array<HexahedronSetTopologyContainer::PointID, 8> elemTruth1({1, 2, 6, 5, 17, 18, 22, 21});
 
 
     // check topology element buffer
@@ -147,7 +147,7 @@ bool HexahedronSetTopology_test::testHexahedronBuffers()
 
 bool HexahedronSetTopology_test::testQuadBuffers()
 {
-    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::core::topology::TopologyElementType::HEXAHEDRON);
+    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::geometry::ElementType::HEXAHEDRON);
     HexahedronSetTopologyContainer* topoCon = dynamic_cast<HexahedronSetTopologyContainer*>(scene->getNode().get()->getMeshTopology());
 
     if (topoCon == nullptr)
@@ -188,7 +188,7 @@ bool HexahedronSetTopology_test::testQuadBuffers()
     EXPECT_EQ(elemAQuad[1], 1);
 
 
-    // check QuadsInHexahedron buffer acces
+    // check QuadsInHexahedron buffer access
     const sofa::type::vector< HexahedronSetTopologyContainer::QuadsInHexahedron > & quadInHexahedra = topoCon->getQuadsInHexahedronArray();
     EXPECT_EQ(quadInHexahedra.size(), nbrHexahedron);
 
@@ -199,7 +199,7 @@ bool HexahedronSetTopology_test::testQuadBuffers()
     for (size_t i = 0; i < quadInElem.size(); i++)
         EXPECT_EQ(quadInElem[i], quadInElemM[i]);
 
-    sofa::type::fixed_array<int, 6> quadInElemTruth(6, 7, 8, 9, 10, 3);
+    sofa::type::fixed_array<int, 6> quadInElemTruth({6, 7, 8, 9, 10, 3});
     for (size_t i = 0; i<quadInElemTruth.size(); ++i)
         EXPECT_EQ(quadInElem[i], quadInElemTruth[i]);
 
@@ -245,7 +245,7 @@ bool HexahedronSetTopology_test::testQuadBuffers()
 
 bool HexahedronSetTopology_test::testEdgeBuffers()
 {
-    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::core::topology::TopologyElementType::HEXAHEDRON);
+    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::geometry::ElementType::HEXAHEDRON);
     HexahedronSetTopologyContainer* topoCon = dynamic_cast<HexahedronSetTopologyContainer*>(scene->getNode().get()->getMeshTopology());
 
     if (topoCon == nullptr)
@@ -283,7 +283,7 @@ bool HexahedronSetTopology_test::testEdgeBuffers()
     EXPECT_EQ(elemAEdge[1], 2);
 
 
-    // check EdgesInHexahedron buffer acces
+    // check EdgesInHexahedron buffer access
     const sofa::type::vector< HexahedronSetTopologyContainer::EdgesInHexahedron > & edgeInHexahedra = topoCon->getEdgesInHexahedronArray();
     EXPECT_EQ(edgeInHexahedra.size(), nbrHexahedron);
 
@@ -294,7 +294,7 @@ bool HexahedronSetTopology_test::testEdgeBuffers()
     for (size_t i = 0; i < edgeInElem.size(); i++)
         EXPECT_EQ(edgeInElem[i], edgeInElemM[i]);
     
-    sofa::type::fixed_array<int, 10> edgeInElemTruth(22, 13, 18, 21, 26, 20, 27, 19, 25, 15); // Test only 10 out of 12 edges as no fixed_array<12>
+    sofa::type::fixed_array<int, 10> edgeInElemTruth({22, 13, 18, 21, 26, 20, 27, 19, 25, 15}); // Test only 10 out of 12 edges as no fixed_array<12>
     for (size_t i = 0; i<edgeInElemTruth.size(); ++i)
         EXPECT_EQ(edgeInElem[i], edgeInElemTruth[i]);
     
@@ -340,7 +340,7 @@ bool HexahedronSetTopology_test::testEdgeBuffers()
 
 bool HexahedronSetTopology_test::testVertexBuffers()
 {
-    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::core::topology::TopologyElementType::HEXAHEDRON);
+    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::geometry::ElementType::HEXAHEDRON);
     HexahedronSetTopologyContainer* topoCon = dynamic_cast<HexahedronSetTopologyContainer*>(scene->getNode().get()->getMeshTopology());
 
     if (topoCon == nullptr)
@@ -385,8 +385,8 @@ bool HexahedronSetTopology_test::testVertexBuffers()
 
 bool HexahedronSetTopology_test::checkTopology()
 {
-    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::core::topology::TopologyElementType::HEXAHEDRON);
-    HexahedronSetTopologyContainer* topoCon = dynamic_cast<HexahedronSetTopologyContainer*>(scene->getNode().get()->getMeshTopology());
+    fake_TopologyScene* scene = new fake_TopologyScene("mesh/nine_hexa.msh", sofa::geometry::ElementType::HEXAHEDRON);
+    const HexahedronSetTopologyContainer* topoCon = dynamic_cast<HexahedronSetTopologyContainer*>(scene->getNode().get()->getMeshTopology());
 
     if (topoCon == nullptr)
     {
@@ -395,7 +395,7 @@ bool HexahedronSetTopology_test::checkTopology()
         return false;
     }
 
-    bool res = topoCon->checkTopology();
+    const bool res = topoCon->checkTopology();
     
     if (scene != nullptr)
         delete scene;

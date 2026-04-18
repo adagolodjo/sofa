@@ -22,6 +22,7 @@
 #pragma once
 
 #include <sofa/core/behavior/StateAccessor.h>
+#include <sofa/core/behavior/MechanicalState.h>
 
 namespace sofa::core::behavior
 {
@@ -36,36 +37,27 @@ class SingleStateAccessor : public virtual StateAccessor
 public:
     SOFA_ABSTRACT_CLASS(SOFA_TEMPLATE(SingleStateAccessor, DataTypes), StateAccessor);
 
-    void init() override
-    {
-        Inherit1::init();
+    void init() override;
 
-        if (!mstate.get())
-        {
-            mstate.set(dynamic_cast< MechanicalState<DataTypes>* >(getContext()->getMechanicalState()));
-
-            msg_error_when(!mstate) << "No compatible MechanicalState found in the current context. "
-                "This may be because there is no MechanicalState in the local context, "
-                "or because the type is not compatible.";
-        }
-
-        l_mechanicalStates.clear();
-        l_mechanicalStates.add(mstate);
-    }
-
-    MechanicalState<DataTypes>* getMState() { return mstate.get(); }
-    const MechanicalState<DataTypes>* getMState() const { return mstate.get(); }
+    MechanicalState<DataTypes>* getMState();
+    const MechanicalState<DataTypes>* getMState() const;
 
 protected:
 
-    explicit SingleStateAccessor(MechanicalState<DataTypes> *mm = nullptr)
-        : Inherit1()
-        , mstate(initLink("mstate", "MechanicalState used by this component"), mm)
-    {}
+    explicit SingleStateAccessor(MechanicalState<DataTypes>* mm = nullptr);
 
     ~SingleStateAccessor() override = default;
 
     SingleLink<SingleStateAccessor<DataTypes>, MechanicalState<DataTypes>, BaseLink::FLAG_STRONGLINK> mstate;
 };
+
+#if !defined(SOFA_CORE_BEHAVIOR_SINGLESTATEACCESSOR_CPP)
+extern template class SOFA_CORE_API SingleStateAccessor<sofa::defaulttype::Vec1Types>;
+extern template class SOFA_CORE_API SingleStateAccessor<sofa::defaulttype::Vec2Types>;
+extern template class SOFA_CORE_API SingleStateAccessor<sofa::defaulttype::Vec3Types>;
+extern template class SOFA_CORE_API SingleStateAccessor<sofa::defaulttype::Vec6Types>;
+extern template class SOFA_CORE_API SingleStateAccessor<sofa::defaulttype::Rigid2Types>;
+extern template class SOFA_CORE_API SingleStateAccessor<sofa::defaulttype::Rigid3Types>;
+#endif
 
 }

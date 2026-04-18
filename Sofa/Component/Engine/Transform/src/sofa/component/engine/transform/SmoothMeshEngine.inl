@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
-#include "SmoothMeshEngine.h"
+#include <sofa/component/engine/transform/SmoothMeshEngine.h>
 
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/type/RGBAColor.h>
@@ -58,7 +58,7 @@ void SmoothMeshEngine<DataTypes>::init()
     if (m_topology == nullptr)
     {
         msg_error() << "No topology component found at path: " << l_topology.getLinkedPath() << ", nor in current context: " << this->getContext()->name;
-        sofa::core::objectmodel::BaseObject::d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+        this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
 
@@ -79,7 +79,7 @@ void SmoothMeshEngine<DataTypes>::doUpdate()
     if (!m_topology) return;
 
     helper::ReadAccessor< Data<VecCoord> > in(input_position);
-    helper::ReadAccessor< Data<type::vector<unsigned int > > > indices(input_indices);
+    const helper::ReadAccessor< Data<type::vector<unsigned int > > > indices(input_indices);
     helper::WriteAccessor< Data<VecCoord> > out(output_position);
 
     out.resize(in.size());
@@ -140,20 +140,13 @@ void SmoothMeshEngine<DataTypes>::computeBBox(const core::ExecParams*, bool only
 
 	helper::ReadAccessor< Data<VecCoord> > x(input_position);
 
-	static const Real max_real = std::numeric_limits<Real>::max();
-	static const Real min_real = std::numeric_limits<Real>::lowest();
-	Real maxBBox[3] = {min_real,min_real,min_real};
-	Real minBBox[3] = {max_real,max_real,max_real};
-	for (size_t i=0; i<x.size(); i++)
-	{
-		for (int c=0; c<3; c++)
-		{
-			if (x[i][c] > maxBBox[c]) maxBBox[c] = (Real)x[i][c];
-			else if (x[i][c] < minBBox[c]) minBBox[c] = (Real)x[i][c];
-		}
-	}
+    type::BoundingBox bbox;
+    for (const auto& p : x )
+    {
+        bbox.include(p);
+    }
 
-	this->f_bbox.setValue(sofa::type::TBoundingBox<Real>(minBBox,maxBBox));
+    this->f_bbox.setValue(bbox);
 }
 
 template <class DataTypes>
@@ -162,11 +155,11 @@ void SmoothMeshEngine<DataTypes>::draw(const core::visual::VisualParams* vparams
     if (!vparams->displayFlags().getShowVisualModels() || m_topology == nullptr) return;
 
     using sofa::type::Vec;
-    vparams->drawTool()->saveLastState();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
-    bool wireframe=vparams->displayFlags().getShowWireFrame();
+    const bool wireframe=vparams->displayFlags().getShowWireFrame();
 
-    sofa::core::topology::BaseMeshTopology::SeqTriangles tri = m_topology->getTriangles();
+    const sofa::core::topology::BaseMeshTopology::SeqTriangles& tri = m_topology->getTriangles();
 
     vparams->drawTool()->enableLighting();
 
@@ -175,7 +168,7 @@ void SmoothMeshEngine<DataTypes>::draw(const core::visual::VisualParams* vparams
 
     if (this->showInput.getValue())
     {
-        std::vector<sofa::type::Vector3> vertices;
+        std::vector<sofa::type::Vec3> vertices;
         helper::ReadAccessor< Data<VecCoord> > in(input_position);
 
         constexpr sofa::type::RGBAColor color(1.0f, 0.76078431372f, 0.0f, 1.0f);
@@ -195,7 +188,7 @@ void SmoothMeshEngine<DataTypes>::draw(const core::visual::VisualParams* vparams
 
     if (this->showOutput.getValue())
     {
-        std::vector<sofa::type::Vector3> vertices;
+        std::vector<sofa::type::Vec3> vertices;
         helper::ReadAccessor< Data<VecCoord> > out(output_position);
         constexpr sofa::type::RGBAColor color(0.0f, 0.6f, 0.8f, 1.0f);
 
@@ -214,7 +207,7 @@ void SmoothMeshEngine<DataTypes>::draw(const core::visual::VisualParams* vparams
     if (wireframe)
         vparams->drawTool()->setPolygonMode(0, false);
 
-    vparams->drawTool()->restoreLastState();
+
 }
 
 } //namespace sofa::component::engine::transform

@@ -26,15 +26,10 @@
 #ifndef SILENTMESSAGEHANDLER_H
 #define SILENTMESSAGEHANDLER_H
 
-#include "MessageHandler.h"
+#include <sofa/helper/logging/MessageHandler.h>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 class Message;
@@ -45,11 +40,10 @@ class SOFA_HELPER_API SilentMessageHandler : public MessageHandler
 {
 public:
     void process(Message& /*m*/) override;
+    std::string getName() const override { return "SilentMessageHandler"; }
 };
 
 
-} // logging
-} // helper
-} // sofa
+}
 
 #endif // CONSOLEMESSAGEHANDLER_H

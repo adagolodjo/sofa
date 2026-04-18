@@ -37,9 +37,11 @@ using namespace sofa::defaulttype;
 using namespace sofa::core::collision;
 using namespace sofa::component::collision::geometry;
 
-int DiscreteIntersectionClass = core::RegisterObject("TODO-DiscreteIntersectionClass")
-        .add< DiscreteIntersection >()
-        ;
+void registerDiscreteIntersection(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Detect intersection using discrete methods.")
+        .add< DiscreteIntersection >());
+}
 
 DiscreteIntersection::DiscreteIntersection()
 {
@@ -62,19 +64,19 @@ ElementIntersector* DiscreteIntersection::findIntersector(core::CollisionModel* 
     return intersectors.get(object1, object2, swapModels);
 }
 
-bool DiscreteIntersection::testIntersection(Cube& cube1, Cube& cube2)
+bool DiscreteIntersection::testIntersection(Cube& cube1, Cube& cube2, const core::collision::Intersection* currentIntersection)
 {
-    const SReal alarmDist = this->getAlarmDistance();
+    const SReal alarmDist = currentIntersection->getAlarmDistance();
 
     if (cube1 == cube2)
     {
         return cube1.getConeAngle() >= M_PI / 2;
     }
 
-    const type::Vector3& minVect1 = cube1.minVect();
-    const type::Vector3& minVect2 = cube2.minVect();
-    const type::Vector3& maxVect1 = cube1.maxVect();
-    const type::Vector3& maxVect2 = cube2.maxVect();
+    const type::Vec3& minVect1 = cube1.minVect();
+    const type::Vec3& minVect2 = cube2.minVect();
+    const type::Vec3& maxVect1 = cube1.maxVect();
+    const type::Vec3& maxVect2 = cube2.maxVect();
 
     for (int i = 0; i < 3; i++)
     {
@@ -85,43 +87,44 @@ bool DiscreteIntersection::testIntersection(Cube& cube1, Cube& cube2)
     return true;
 }
 
-int DiscreteIntersection::computeIntersection(Cube& cube1, Cube& cube2, OutputVector* contacts)
+int DiscreteIntersection::computeIntersection(Cube& cube1, Cube& cube2, OutputVector* contacts, const core::collision::Intersection* currentIntersection)
 {
     SOFA_UNUSED(cube1);
     SOFA_UNUSED(cube2);
     SOFA_UNUSED(contacts);
+    SOFA_UNUSED(currentIntersection);
 
     return 0;
 }
 
-bool DiscreteIntersection::testIntersection(Sphere& sph1, Sphere& sph2)
+bool DiscreteIntersection::testIntersection(Sphere& sph1, Sphere& sph2, const core::collision::Intersection* currentIntersection)
 {
-    return testIntersectionSphere(sph1, sph2, this->getAlarmDistance());
+    return testIntersectionSphere(sph1, sph2, currentIntersection->getAlarmDistance());
 }
 
-int DiscreteIntersection::computeIntersection(Sphere& sph1, Sphere& sph2, OutputVector* contacts)
+int DiscreteIntersection::computeIntersection(Sphere& sph1, Sphere& sph2, OutputVector* contacts, const core::collision::Intersection* currentIntersection)
 {
-    return computeIntersectionSphere(sph1, sph2, contacts, this->getAlarmDistance(), this->getContactDistance());
+    return computeIntersectionSphere(sph1, sph2, contacts, currentIntersection->getAlarmDistance(), currentIntersection->getContactDistance());
 }
 
-bool DiscreteIntersection::testIntersection(RigidSphere& sph1, RigidSphere& sph2)
+bool DiscreteIntersection::testIntersection(RigidSphere& sph1, RigidSphere& sph2, const core::collision::Intersection* currentIntersection)
 {
-    return testIntersectionSphere(sph1, sph2, this->getAlarmDistance());
+    return testIntersectionSphere(sph1, sph2, currentIntersection->getAlarmDistance());
 }
 
-int DiscreteIntersection::computeIntersection(RigidSphere& sph1, RigidSphere& sph2, OutputVector* contacts)
+int DiscreteIntersection::computeIntersection(RigidSphere& sph1, RigidSphere& sph2, OutputVector* contacts, const core::collision::Intersection* currentIntersection)
 {
-    return computeIntersectionSphere(sph1, sph2, contacts, this->getAlarmDistance(), this->getContactDistance());
+    return computeIntersectionSphere(sph1, sph2, contacts, currentIntersection->getAlarmDistance(), currentIntersection->getContactDistance());
 }
 
-bool DiscreteIntersection::testIntersection(Sphere& sph1, RigidSphere& sph2)
+bool DiscreteIntersection::testIntersection(Sphere& sph1, RigidSphere& sph2, const core::collision::Intersection* currentIntersection)
 {
-    return testIntersectionSphere(sph1, sph2, this->getAlarmDistance());
+    return testIntersectionSphere(sph1, sph2, currentIntersection->getAlarmDistance());
 }
 
-int DiscreteIntersection::computeIntersection(Sphere& sph1, RigidSphere& sph2, OutputVector* contacts)
+int DiscreteIntersection::computeIntersection(Sphere& sph1, RigidSphere& sph2, OutputVector* contacts, const core::collision::Intersection* currentIntersection)
 {
-    return computeIntersectionSphere(sph1, sph2, contacts, this->getAlarmDistance(), this->getContactDistance());
+    return computeIntersectionSphere(sph1, sph2, contacts, currentIntersection->getAlarmDistance(), currentIntersection->getContactDistance());
 }
 
 } // namespace sofa::component::collision::detection::intersection

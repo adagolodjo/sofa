@@ -76,20 +76,20 @@ protected:
         }
     };
 
-    sofa::core::topology::EdgeSubsetData<sofa::type::vector< EdgePressureInformation> > edgePressureMap; ///< map between edge indices and their pressure
+    sofa::core::topology::EdgeSubsetData<sofa::type::vector< EdgePressureInformation> > d_edgePressureMap; ///< map between edge indices and their pressure
 
     sofa::core::topology::BaseMeshTopology* _completeTopology{nullptr};
 
-    Data<Deriv> pressure; ///< Pressure force per unit area
-    Data<type::vector<Index> > edgeIndices; ///< Indices of edges separated with commas where a pressure is applied
-    Data<type::vector<sofa::core::topology::Edge> > edges; ///< List of edges where a pressure is applied
-    Data<Deriv> normal; ///< the normal used to define the edge subjected to the pressure force
-    Data<Real> dmin; ///< coordinates min of the plane for the vertex selection
-    Data<Real> dmax;///< coordinates max of the plane for the vertex selection
-    Data< SReal > arrowSizeCoef; ///< for drawing. The sign changes the direction, 0 doesn't draw arrow
-    Data< type::vector<Real> > p_intensity; ///< pressure intensity on edge normal
-    Data<Coord> p_binormal; ///< binormal of the 2D plane
-    Data<bool> p_showForces; ///< draw arrows of edge pressures
+    Data<Deriv> d_pressure; ///< Pressure force per unit area
+    Data<type::vector<Index> > d_edgeIndices; ///< Indices of edges separated with commas where a pressure is applied
+    Data<type::vector<sofa::core::topology::Edge> > d_edges; ///< List of edges where a pressure is applied
+    Data<Deriv> d_normal; ///< Normal direction for the plane selection of edges
+    Data<Real> d_dmin; ///< Minimum distance from the origin along the normal direction
+    Data<Real> d_dmax; ///< Maximum distance from the origin along the normal direction
+    Data< SReal > d_arrowSizeCoef; ///< Size of the drawn arrows (0->no arrows, sign->direction of drawing
+    Data< type::vector<Real> > d_intensity; ///< pressure intensity on edge normal
+    Data<Coord> d_binormal; ///< Binormal of the 2D plane
+    Data<bool> d_showForces; ///< draw arrows of edge pressures
 
     /// Link to be set to the topology container in the component graph.
     SingleLink<EdgePressureForceField<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
@@ -111,8 +111,11 @@ public:
     void draw(const core::visual::VisualParams* vparams) override;
 
     void setDminAndDmax(const SReal _dmin, const SReal _dmax);
-    void setNormal(const Coord n) { normal.setValue(n);}
-    void setPressure(Deriv _pressure) { this->pressure = _pressure; updateEdgeInformation(); }
+    void setNormal(const Coord n) { d_normal.setValue(n);}
+    void setPressure(Deriv _pressure) { this->d_pressure = _pressure; updateEdgeInformation(); }
+
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix) final;
+    void buildDampingMatrix(core::behavior::DampingMatrix* /*matrix*/) final;
 
 protected :
     void selectEdgesAlongPlane();
@@ -125,10 +128,8 @@ protected :
 };
 
 
-#if  !defined(SOFA_COMPONENT_FORCEFIELD_EDGEPRESSUREFORCEFIELD_CPP)
+#if !defined(SOFA_COMPONENT_FORCEFIELD_EDGEPRESSUREFORCEFIELD_CPP)
 extern template class SOFA_COMPONENT_MECHANICALLOAD_API EdgePressureForceField<sofa::defaulttype::Vec3Types>;
-
-
 #endif // !defined(SOFA_COMPONENT_FORCEFIELD_EDGEPRESSUREFORCEFIELD_CPP)
 
 } // namespace sofa::component::mechanicalload

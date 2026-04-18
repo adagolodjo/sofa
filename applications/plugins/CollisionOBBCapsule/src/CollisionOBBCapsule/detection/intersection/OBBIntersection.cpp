@@ -29,7 +29,7 @@
 #include <CollisionOBBCapsule/geometry/CapsuleModel.h>
 #include <sofa/component/collision/geometry/RayModel.h>
 
-#include <SofaUserInteraction/FixParticlePerformer.h>
+#include <sofa/gui/component/performer/FixParticlePerformer.h>
 
 namespace collisionobbcapsule::detection::intersection
 {
@@ -43,8 +43,7 @@ using namespace collisionobbcapsule::geometry;
 IntersectorCreator<DiscreteIntersection, RigidDiscreteIntersection> RigidDiscreteIntersectors("Rigid");
 IntersectorCreator<NewProximityIntersection, RigidMeshDiscreteIntersection> RigidMeshDiscreteIntersectors("RigidMesh");
 
-RigidDiscreteIntersection::RigidDiscreteIntersection(DiscreteIntersection* object)
-    : intersection(object)
+RigidDiscreteIntersection::RigidDiscreteIntersection(DiscreteIntersection* intersection)
 {
     intersection->intersectors.add<OBBCollisionModel<sofa::defaulttype::Rigid3Types>, OBBCollisionModel<sofa::defaulttype::Rigid3Types>, RigidDiscreteIntersection>(this);
     intersection->intersectors.add<SphereCollisionModel<sofa::defaulttype::Vec3Types>, OBBCollisionModel<sofa::defaulttype::Rigid3Types>, RigidDiscreteIntersection>(this);
@@ -53,13 +52,12 @@ RigidDiscreteIntersection::RigidDiscreteIntersection(DiscreteIntersection* objec
     intersection->intersectors.add<RayCollisionModel, OBBCollisionModel<sofa::defaulttype::Rigid3Types>, RigidDiscreteIntersection>(this);
 }
 
-RigidMeshDiscreteIntersection::RigidMeshDiscreteIntersection(NewProximityIntersection* object)
-    : intersection(object)
+RigidMeshDiscreteIntersection::RigidMeshDiscreteIntersection(NewProximityIntersection* intersection)
 {
     intersection->intersectors.add<TriangleCollisionModel<sofa::defaulttype::Vec3Types>, OBBCollisionModel<sofa::defaulttype::Rigid3Types>, RigidMeshDiscreteIntersection>(this);
 }
 
-bool RigidDiscreteIntersection::testIntersection(Ray& /*rRay*/, OBB& /*rOBB*/)
+bool RigidDiscreteIntersection::testIntersection(Ray& /*rRay*/, OBB& /*rOBB*/, const core::collision::Intersection*)
 {
     return false;
 }
@@ -68,7 +66,7 @@ static float const c_fMin = -3.402823466e+38f;
 static float const c_fMax = 3.402823466e+38f;
 typedef Mat<3, 3, SReal> Mat33;
 
-int  RigidDiscreteIntersection::computeIntersection(Ray& rRay, OBB& rObb, OutputVector* contacts)
+int  RigidDiscreteIntersection::computeIntersection(Ray& rRay, OBB& rObb, OutputVector* contacts, const core::collision::Intersection*)
 {
     //Near intersection: ray to closest plat of slab
     float fNear = c_fMin;
@@ -80,27 +78,27 @@ int  RigidDiscreteIntersection::computeIntersection(Ray& rRay, OBB& rObb, Output
     float fEPSILON = 1e-4f;
 
     //Ray
-    const Vector3& v3Origin = rRay.origin();
-    const Vector3& v3Direction = rRay.direction();
+    const type::Vec3& v3Origin = rRay.origin();
+    const type::Vec3& v3Direction = rRay.direction();
 
     //Box
-    const Vector3 v3HalfExtents = rObb.extents();
-    const Vector3& v3BoxCenter = rObb.center();
+    const type::Vec3 v3HalfExtents = rObb.extents();
+    const type::Vec3& v3BoxCenter = rObb.center();
     const Quat<SReal>& qOrientation = rObb.orientation();
     Mat33 m33Orientation;
     qOrientation.toMatrix(m33Orientation);
 
     //Vector from origin of ray to center of box
-    Vector3 v3RayOriginToBoxCenter = v3BoxCenter - v3Origin;
+    type::Vec3 v3RayOriginToBoxCenter = v3BoxCenter - v3Origin;
 
     //Normal at near and far intersection points
-    Vector3 v3NormalAtNear(0.0f, 1.0f, 0.0f);
-    Vector3 v3NormalAtFar(0.0f, 1.0f, 0.0f);
+    type::Vec3 v3NormalAtNear(0.0f, 1.0f, 0.0f);
+    type::Vec3 v3NormalAtFar(0.0f, 1.0f, 0.0f);
 
     //For the 3 slabs
     for (unsigned int i = 0; i < 3; i++)
     {
-        Vector3 v3CurrAxis = m33Orientation.col(i); //TODO: implement the return of a reference instead of a copy of the column
+        type::Vec3 v3CurrAxis = m33Orientation.col(i); //TODO: implement the return of a reference instead of a copy of the column
         float fR = (float)(v3CurrAxis * v3RayOriginToBoxCenter);
         float fBoxMax = (float)v3HalfExtents[i];
         float fBoxMin = (float)-v3HalfExtents[i];
@@ -166,8 +164,8 @@ int  RigidDiscreteIntersection::computeIntersection(Ray& rRay, OBB& rObb, Output
     bool bHit = false;
 
     float fHitFraction = 0;
-    Vector3 v3Normal;
-    Vector3 v3HitLocation;
+    type::Vec3 v3Normal;
+    type::Vec3 v3HitLocation;
     // If ray starts inside box
     if (fNear < 0.f)
     {
@@ -231,7 +229,7 @@ int  RigidDiscreteIntersection::computeIntersection(Ray& rRay, OBB& rObb, Output
 }
 
 // add OBBModel to the list of supported collision models for FixParticlePerformer
-using FixParticlePerformer3d = sofa::component::collision::FixParticlePerformer<defaulttype::Vec3Types>;
+using FixParticlePerformer3d = sofa::gui::component::performer::FixParticlePerformer<defaulttype::Vec3Types>;
 
 int obbFixParticle = FixParticlePerformer3d::RegisterSupportedModel<OBBCollisionModel<sofa::defaulttype::Rigid3Types>>(
     []

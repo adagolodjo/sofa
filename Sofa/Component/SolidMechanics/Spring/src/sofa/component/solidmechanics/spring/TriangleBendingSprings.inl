@@ -22,6 +22,7 @@
 #pragma once
 
 #include <sofa/component/solidmechanics/spring/TriangleBendingSprings.h>
+#include <sofa/component/solidmechanics/spring/SpringForceField.inl>
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <iostream>
@@ -44,10 +45,12 @@ TriangleBendingSprings<DataTypes>::~TriangleBendingSprings()
 template<class DataTypes>
 void TriangleBendingSprings<DataTypes>::addSpring( unsigned a, unsigned b )
 {
-    const VecCoord& x =this->mstate1->read(core::ConstVecCoordId::position())->getValue();
-    Real s = (Real)this->ks.getValue();
-    Real d = (Real)this->kd.getValue();
-    Real l = (x[a]-x[b]).norm();
+    const VecCoord& x =this->mstate1->read(core::vec_id::read_access::position)->getValue();
+    const auto& ks = this->d_ks.getValue();
+    const auto& kd = this->d_kd.getValue();
+    const Real s = (ks.empty()) ? defaultSpringStiffness : ks[0];
+    const Real d = (kd.empty()) ? defaultSpringDamping : kd[0];
+    const Real l = (x[a]-x[b]).norm();
     this->SpringForceField<DataTypes>::addSpring(a,b, s, d, l );
 }
 
@@ -56,9 +59,9 @@ void TriangleBendingSprings<DataTypes>::registerTriangle( unsigned a, unsigned b
 {
     using namespace std;
     {
-        IndexPair edge(a<b ? a : b,a<b ? b : a);
-        unsigned opposite = c;
-        if( edgeMap.find( edge ) == edgeMap.end() )
+        const IndexPair edge(a<b ? a : b,a<b ? b : a);
+        const unsigned opposite = c;
+        if(!edgeMap.contains( edge ))
         {
             edgeMap[edge] = opposite;
         }
@@ -70,9 +73,9 @@ void TriangleBendingSprings<DataTypes>::registerTriangle( unsigned a, unsigned b
     }
 
     {
-        IndexPair edge(b<c ? b : c,b<c ? c : b);
-        unsigned opposite = a;
-        if( edgeMap.find( edge ) == edgeMap.end() )
+        const IndexPair edge(b<c ? b : c,b<c ? c : b);
+        const unsigned opposite = a;
+        if(!edgeMap.contains( edge ))
         {
             edgeMap[edge] = opposite;
         }
@@ -84,9 +87,9 @@ void TriangleBendingSprings<DataTypes>::registerTriangle( unsigned a, unsigned b
     }
 
     {
-        IndexPair edge(c<a ? c : a,c<a ? a : c);
-        unsigned  opposite = b;
-        if( edgeMap.find( edge ) == edgeMap.end() )
+        const IndexPair edge(c<a ? c : a,c<a ? a : c);
+        const unsigned  opposite = b;
+        if(!edgeMap.contains( edge ))
         {
             edgeMap[edge] = opposite;
         }
@@ -105,7 +108,6 @@ template<class DataTypes>
 void TriangleBendingSprings<DataTypes>::init()
 {
     this->mstate1 = this->mstate2 = dynamic_cast<core::behavior::MechanicalState<DataTypes>*>( this->getContext()->getMechanicalState() );
-    StiffSpringForceField<DataTypes>::clear();
 
     // Set the bending springs
 
@@ -121,33 +123,35 @@ void TriangleBendingSprings<DataTypes>::init()
     if (topology == nullptr)
     {
         msg_error() << "No topology component found at path: " << l_topology.getLinkedPath() << ", nor in current context: " << this->getContext()->name;
-        sofa::core::objectmodel::BaseObject::d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+        this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
 
     const sofa::core::topology::BaseMeshTopology::SeqTriangles& triangles = topology->getTriangles();
-    for( unsigned i= 0; i<triangles.size(); ++i )
-    {
-        const sofa::core::topology::BaseMeshTopology::Triangle& face = triangles[i];
-        {
-            registerTriangle( face[0], face[1], face[2], edgeMap );
-        }
 
+    const auto& ks = this->d_ks.getValue();
+    const auto& kd = this->d_kd.getValue();
+    const auto stiffness = (ks.empty()) ? defaultSpringStiffness : ks[0];
+    const auto damping = (kd.empty()) ? defaultSpringDamping : kd[0];
+
+    SpringForceField<DataTypes>::clear(triangles.size());
+    this->d_ks.setValue({stiffness});
+    this->d_kd.setValue({damping});
+
+    for (const auto& face : triangles)
+    {
+        registerTriangle(face[0], face[1], face[2], edgeMap);
     }
 
     const sofa::core::topology::BaseMeshTopology::SeqQuads& quads = topology->getQuads();
-    for( unsigned i= 0; i<quads.size(); ++i )
+    for (const auto& face : quads)
     {
-        const sofa::core::topology::BaseMeshTopology::Quad& face = quads[i];
-        {
-            registerTriangle( face[0], face[1], face[2], edgeMap );
-            registerTriangle( face[0], face[2], face[3], edgeMap );
-        }
-
+        registerTriangle(face[0], face[1], face[2], edgeMap);
+        registerTriangle(face[0], face[2], face[3], edgeMap);
     }
 
     // init the parent class
-    StiffSpringForceField<DataTypes>::init();
+    SpringForceField<DataTypes>::init();
 
 }
 

@@ -23,6 +23,9 @@
 #include <sofa/linearalgebra/config.h>
 
 #include <sofa/linearalgebra/BTDMatrix.h>
+#include <sofa/type/hardening.h>
+#include <limits>
+#include <stdexcept>
 
 namespace sofa::linearalgebra
 {
@@ -35,8 +38,12 @@ BTDMatrix<N, T>::BTDMatrix()
 
 template<std::size_t N, typename T>
 BTDMatrix<N, T>::BTDMatrix(Index nbRow, Index nbCol)
-    : data(new T[3*(nbRow/BSIZE)]), nTRow(nbRow), nTCol(nbCol), nBRow(nbRow/BSIZE), nBCol(nbCol/BSIZE), allocsize(3*(nbRow/BSIZE))
+    : data(nullptr), nTRow(nbRow), nTCol(nbCol), nBRow(nbRow/BSIZE), nBCol(nbCol/BSIZE), allocsize(0)
 {
+    if (type::hardening::checkOverflow(nBRow,3))
+        throw std::overflow_error("BTDMatrix: allocation size overflow");
+    allocsize = 3 * nBRow;
+    data = new Block[allocsize];
 }
 
 template<std::size_t N, typename T>
@@ -63,9 +70,16 @@ void BTDMatrix<N, T>::resize(Index nbRow, Index nbCol)
 {
     if (nbCol != nTCol || nbRow != nTRow)
     {
+        const Index newBRow = nbRow / BSIZE;
+        if (type::hardening::checkOverflow(nBRow,3))
+        {
+            msg_error("BTDLinearSolver") << "Cannot resize matrix: allocation size overflow for (" << nbRow << "," << nbCol << ")";
+            return;
+        }
+        const Index newSize = 3 * newBRow;
         if (allocsize < 0)
         {
-            if ((nbRow/BSIZE)*3 > -allocsize)
+            if (newSize > -allocsize)
             {
                 msg_error("BTDLinearSolver") << "Cannot resize preallocated matrix to size ("<<nbRow<<","<<nbCol<<")" ;
                 return;
@@ -73,18 +87,18 @@ void BTDMatrix<N, T>::resize(Index nbRow, Index nbCol)
         }
         else
         {
-            if ((nbRow/BSIZE)*3 > allocsize)
+            if (newSize > allocsize)
             {
                 if (allocsize > 0)
                     delete[] data;
-                allocsize = (nbRow/BSIZE)*3;
+                allocsize = newSize;
                 data = new Block[allocsize];
             }
         }
         nTCol = nbCol;
         nTRow = nbRow;
         nBCol = nbCol/BSIZE;
-        nBRow = nbRow/BSIZE;
+        nBRow = newBRow;
     }
     clear();
 }
@@ -104,41 +118,41 @@ typename BTDMatrix<N,T>::Index BTDMatrix<N, T>::colSize(void) const
 template<std::size_t N, typename T>
 SReal BTDMatrix<N, T>::element(Index i, Index j) const
 {
-    Index bi = i / BSIZE; i = i % BSIZE;
-    Index bj = j / BSIZE; j = j % BSIZE;
-    Index bindex = bj - bi + 1;
-    if (bindex >= 3) return (SReal)0;
-    return data[bi*3+bindex][i][j];
+    const Index bi = i / BSIZE; i = i % BSIZE;
+    const Index bj = j / BSIZE; j = j % BSIZE;
+    const Index bindex = bj - bi + 1;
+    if (bindex >= 3 || bindex < 0) return (SReal)0;
+    return data[bi*3+bindex](i,j);
 }
 
 template<std::size_t N, typename T>
 const typename BTDMatrix<N, T>::Block& BTDMatrix<N, T>::asub(Index bi, Index bj, Index, Index) const
 {
     static Block b;
-    Index bindex = bj - bi + 1;
+    const Index bindex = bj - bi + 1;
     if (bindex >= 3) return b;
     return data[bi*3+bindex];
 }
 
 template<std::size_t N, typename T>
-const typename BTDMatrix<N, T>::Block& BTDMatrix<N, T>::sub(Index i, Index j, Index, Index) const
+const typename BTDMatrix<N, T>::Block& BTDMatrix<N, T>::sub(Index i, Index j, Index k, Index l) const
 {
-    return asub(i/BSIZE,j/BSIZE);
+    return asub(i/BSIZE,j/BSIZE,k,l);
 }
 
 template<std::size_t N, typename T>
 typename BTDMatrix<N, T>::Block& BTDMatrix<N, T>::asub(Index bi, Index bj, Index, Index)
 {
     static Block b;
-    Index bindex = bj - bi + 1;
+    const Index bindex = bj - bi + 1;
     if (bindex >= 3) return b;
     return data[bi*3+bindex];
 }
 
 template<std::size_t N, typename T>
-typename BTDMatrix<N, T>::Block& BTDMatrix<N, T>::sub(Index i, Index j, Index, Index)
+typename BTDMatrix<N, T>::Block& BTDMatrix<N, T>::sub(Index i, Index j, Index k, Index l)
 {
-    return asub(i/BSIZE,j/BSIZE);
+    return asub(i/BSIZE,j/BSIZE,k,l);
 }
 
 template<std::size_t N, typename T>
@@ -172,54 +186,54 @@ void BTDMatrix<N, T>::setAlignedSubMatrix(Index bi, Index bj, Index nrow, Index 
 template<std::size_t N, typename T>
 void BTDMatrix<N, T>:: set(Index i, Index j, double v)
 {
-    Index bi = i / BSIZE; i = i % BSIZE;
-    Index bj = j / BSIZE; j = j % BSIZE;
-    Index bindex = bj - bi + 1;
+    const Index bi = i / BSIZE; i = i % BSIZE;
+    const Index bj = j / BSIZE; j = j % BSIZE;
+    const Index bindex = bj - bi + 1;
     if (bindex >= 3) return;
-    data[bi*3+bindex][i][j] = (Real)v;
+    data[bi*3+bindex](i,j) = (Real)v;
 }
 
 template<std::size_t N, typename T>
 void BTDMatrix<N, T>::add(Index i, Index j, double v)
 {
-    Index bi = i / BSIZE; i = i % BSIZE;
-    Index bj = j / BSIZE; j = j % BSIZE;
-    Index bindex = bj - bi + 1;
+    const Index bi = i / BSIZE; i = i % BSIZE;
+    const Index bj = j / BSIZE; j = j % BSIZE;
+    const Index bindex = bj - bi + 1;
     if (bindex >= 3) return;
-    data[bi*3+bindex][i][j] += (Real)v;
+    data[bi*3+bindex](i,j) += (Real)v;
 }
 
 template<std::size_t N, typename T>
 void BTDMatrix<N, T>::clear(Index i, Index j)
 {
-    Index bi = i / BSIZE; i = i % BSIZE;
-    Index bj = j / BSIZE; j = j % BSIZE;
-    Index bindex = bj - bi + 1;
+    const Index bi = i / BSIZE; i = i % BSIZE;
+    const Index bj = j / BSIZE; j = j % BSIZE;
+    const Index bindex = bj - bi + 1;
     if (bindex >= 3) return;
-    data[bi*3+bindex][i][j] = (Real)0;
+    data[bi*3+bindex](i,j) = (Real)0;
 }
 
 template<std::size_t N, typename T>
 void BTDMatrix<N, T>::clearRow(Index i)
 {
-    Index bi = i / BSIZE; i = i % BSIZE;
+    const Index bi = i / BSIZE; i = i % BSIZE;
     for (Index bj = 0; bj < 3; ++bj)
         for (Index j=0; j<BSIZE; ++j)
-            data[bi*3+bj][i][j] = (Real)0;
+            data[bi*3+bj](i,j) = (Real)0;
 }
 
 template<std::size_t N, typename T>
 void BTDMatrix<N, T>::clearCol(Index j)
 {
-    Index bj = j / BSIZE; j = j % BSIZE;
+    const Index bj = j / BSIZE; j = j % BSIZE;
     if (bj > 0)
         for (Index i=0; i<BSIZE; ++i)
-            data[(bj-1)*3+2][i][j] = (Real)0;
+            data[(bj-1)*3+2](i,j) = (Real)0;
     for (Index i=0; i<BSIZE; ++i)
-        data[bj*3+1][i][j] = (Real)0;
+        data[bj*3+1](i,j) = (Real)0;
     if (bj < nBRow-1)
         for (Index i=0; i<BSIZE; ++i)
-            data[(bj+1)*3+0][i][j] = (Real)0;
+            data[(bj+1)*3+0](i,j) = (Real)0;
 }
 
 template<std::size_t N, typename T>
@@ -235,20 +249,5 @@ void BTDMatrix<N, T>::clear()
     for (Index i=0; i<3*nBRow; ++i)
         data[i].clear();
 }
-
-
-template<> const char* BTDMatrix<1, double>::Name() { return "BTDMatrix1d"; }
-template<> const char* BTDMatrix<2, double>::Name() { return "BTDMatrix2d"; }
-template<> const char* BTDMatrix<3, double>::Name() { return "BTDMatrix3d"; }
-template<> const char* BTDMatrix<4, double>::Name() { return "BTDMatrix4d"; }
-template<> const char* BTDMatrix<5, double>::Name() { return "BTDMatrix5d"; }
-template<> const char* BTDMatrix<6, double>::Name() { return "BTDMatrix6d"; }
-
-template<> const char* BTDMatrix<1, float>::Name() { return "BTDMatrix1f"; }
-template<> const char* BTDMatrix<2, float>::Name() { return "BTDMatrix2f"; }
-template<> const char* BTDMatrix<3, float>::Name() { return "BTDMatrix3f"; }
-template<> const char* BTDMatrix<4, float>::Name() { return "BTDMatrix4f"; }
-template<> const char* BTDMatrix<5, float>::Name() { return "BTDMatrix5f"; }
-template<> const char* BTDMatrix<6, float>::Name() { return "BTDMatrix6f"; }
 
 } // namespace sofa::linearalgebra

@@ -22,7 +22,7 @@
 #pragma once
 #include <sofa/component/playback/config.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/simulation/AnimateBeginEvent.h>
 #include <sofa/simulation/AnimateEndEvent.h>
 #include <sofa/simulation/Visitor.h>
@@ -39,18 +39,18 @@ namespace sofa::component::playback
 
 /** Read State vectors from file at each timestep
 */
-class SOFA_COMPONENT_PLAYBACK_API ReadState: public core::objectmodel::BaseObject
+class SOFA_COMPONENT_PLAYBACK_API ReadState: public core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(ReadState,core::objectmodel::BaseObject);
+    SOFA_CLASS(ReadState,core::objectmodel::BaseComponent);
 
     sofa::core::objectmodel::DataFileName d_filename;
     Data < double > d_interval; ///< time duration between inputs
     Data < double > d_shift; ///< shift between times in the file and times when they will be read
     Data < bool > d_loop; ///< set to 'true' to re-read the file when reaching the end
     Data < double > d_scalePos; ///< scale the input mechanical object
-    Data< type::Vector3 > d_rotation; ///< rotate the input mechanical object
-    Data< type::Vector3 > d_translation; ///< translate the input mechanical object
+    Data< type::Vec3 > d_rotation; ///< rotate the input mechanical object
+    Data< type::Vec3 > d_translation; ///< translate the input mechanical object
 
 protected:
     core::behavior::BaseMechanicalState* mmodel;
@@ -91,7 +91,7 @@ public:
             arg->logError("No mechanical state found in the context node.");
             return false;
         }
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
 

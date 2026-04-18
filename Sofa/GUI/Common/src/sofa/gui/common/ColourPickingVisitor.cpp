@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -24,13 +24,13 @@
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/simulation/Node.h>
 
-#include <sofa/component/collision/geometry/SphereModel.h>
-#include <sofa/component/collision/geometry/TriangleModel.h>
+#include <sofa/component/collision/geometry/SphereCollisionModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
 
-#if SOFAGUICOMMON_HAVE_SOFA_GL == 1
+#if SOFA_GUI_COMMON_HAVE_SOFA_GL == 1
 #include <sofa/gl/gl.h>
 #include <sofa/gl/BasicShapes.h>
-#endif // SOFAGUICOMMON_HAVE_SOFA_GL  == 1
+#endif // SOFA_GUI_COMMON_HAVE_SOFA_GL  == 1
 
 namespace sofa::gui::common
 {
@@ -47,7 +47,7 @@ namespace
 constexpr float threshold = std::numeric_limits<float>::min();
 }
 
-void decodeCollisionElement(const sofa::type::Vec4f colour, BodyPicked& body)
+void decodeCollisionElement(const RGBAColor& colour, BodyPicked& body)
 {
 
     if( colour[0] > threshold || colour[1] > threshold || colour[2] > threshold  ) // make sure we are not picking the background...
@@ -70,23 +70,25 @@ void decodeCollisionElement(const sofa::type::Vec4f colour, BodyPicked& body)
 
 }
 
-void decodePosition(BodyPicked& body, const sofa::type::Vec4f colour, const TriangleCollisionModel<sofa::defaulttype::Vec3Types>* model,
+void decodePosition(BodyPicked& body, const RGBAColor& colour, const TriangleCollisionModel<sofa::defaulttype::Vec3Types>* model,
         const unsigned int index)
 {
 
     if( colour[0] > threshold || colour[1] > threshold || colour[2] > threshold  )
     {
-        sofa::component::collision::geometry::Triangle t(const_cast<TriangleCollisionModel<sofa::defaulttype::Vec3Types>*>(model),index);
+        const sofa::component::collision::geometry::Triangle t(const_cast<TriangleCollisionModel<sofa::defaulttype::Vec3Types>*>(model),index);
         body.point = (t.p1()*colour[0]) + (t.p2()*colour[1]) + (t.p3()*colour[2]) ;
 
     }
 
 }
 
-void decodePosition(BodyPicked& body, const sofa::type::Vec4f /*colour*/, const SphereCollisionModel<sofa::defaulttype::Vec3Types> *model,
+void decodePosition(BodyPicked& body, const RGBAColor& colour, const SphereCollisionModel<sofa::defaulttype::Vec3Types> *model,
         const unsigned int index)
 {
-    Sphere s(const_cast<SphereCollisionModel<sofa::defaulttype::Vec3Types>*>(model),index);
+    SOFA_UNUSED(colour);
+
+    const Sphere s(const_cast<SphereCollisionModel<sofa::defaulttype::Vec3Types>*>(model),index);
     body.point = s.center();
 }
 
@@ -110,7 +112,7 @@ void ColourPickingVisitor::processCollisionModel(simulation::Node*  node , core:
 
 void ColourPickingVisitor::processTriangleModel(simulation::Node * node, sofa::component::collision::geometry::TriangleCollisionModel<sofa::defaulttype::Vec3Types> * tmodel)
 {
-#if SOFAGUICOMMON_HAVE_SOFA_GL  == 1
+#if SOFA_GUI_COMMON_HAVE_SOFA_GL  == 1
     using namespace sofa::core::collision;
     using namespace sofa::defaulttype;
     glDisable(GL_LIGHTING);
@@ -119,14 +121,14 @@ void ColourPickingVisitor::processTriangleModel(simulation::Node * node, sofa::c
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 
-    type::vector<Vector3> points;
-    type::vector<Vector3> normals;
+    type::vector<Vec3> points;
+    type::vector<Vec3> normals;
     std::vector<sofa::type::RGBAColor> colours;
     type::vector<core::CollisionModel*> listCollisionModel;
     type::vector<core::CollisionModel*>::iterator iter;
     float r,g;
 
-    int size = tmodel->getSize();
+    const int size = tmodel->getSize();
 
     node->get< sofa::core::CollisionModel >( &listCollisionModel, BaseContext::SearchRoot);
     iter = std::find(listCollisionModel.begin(), listCollisionModel.end(), tmodel);
@@ -140,38 +142,41 @@ void ColourPickingVisitor::processTriangleModel(simulation::Node * node, sofa::c
         for( int i=0 ; i<size; i++)
         {
             g = (float)i / (float)size;
-            component::collision::Triangle t(tmodel,i);
+            sofa::component::collision::geometry::Triangle t(tmodel,i);
             normals.push_back(t.n() );
             points.push_back( t.p1() );
             points.push_back( t.p2() );
             points.push_back( t.p3() );
-            colours.push_back( Vec<4,float>(r,g,0,1) );
-            colours.push_back( Vec<4,float>(r,g,0,1) );
-            colours.push_back( Vec<4,float>(r,g,0,1) );
+            colours.emplace_back( r,g,0,1 );
+            colours.emplace_back( r,g,0,1 );
+            colours.emplace_back( r,g,0,1 );
         }
         break;
     case ENCODE_RELATIVEPOSITION:
         for( int i=0 ; i<size; i++)
         {
-            component::collision::Triangle t(tmodel,i);
+            sofa::component::collision::geometry::Triangle t(tmodel,i);
             normals.push_back(t.n() );
             points.push_back( t.p1() );
             points.push_back( t.p2() );
             points.push_back( t.p3() );
-            colours.push_back( Vec<4,float>(1,0,0,1) );
-            colours.push_back( Vec<4,float>(0,1,0,1) );
-            colours.push_back( Vec<4,float>(0,0,1,1) );
+            colours.emplace_back( 1,0,0,1 );
+            colours.emplace_back( 0,1,0,1 );
+            colours.emplace_back( 0,0,1,1 );
         }
         break;
     default: assert(false);
     }
     vparams->drawTool()->drawTriangles(points,normals,colours);
-#endif // SOFAGUICOMMON_HAVE_SOFA_GL  == 1
+#else
+    SOFA_UNUSED(node);
+    SOFA_UNUSED(tmodel);
+#endif // SOFA_GUI_COMMON_HAVE_SOFA_GL  == 1
 }
 
 void ColourPickingVisitor::processSphereModel(simulation::Node * node, sofa::component::collision::geometry::SphereCollisionModel<sofa::defaulttype::Vec3Types> * smodel)
 {
-#if SOFAGUICOMMON_HAVE_SOFA_GL  == 1
+#if SOFA_GUI_COMMON_HAVE_SOFA_GL  == 1
     typedef Sphere::Coord Coord;
 
     if( method == ENCODE_RELATIVEPOSITION ) return; // we pick the center of the sphere.
@@ -180,13 +185,13 @@ void ColourPickingVisitor::processSphereModel(simulation::Node * node, sofa::com
 
     node->get< sofa::core::CollisionModel >( &listCollisionModel, BaseContext::SearchRoot);
     const std::size_t totalCollisionModel = listCollisionModel.size();
-    type::vector<core::CollisionModel*>::iterator iter = std::find(listCollisionModel.begin(), listCollisionModel.end(), smodel);
+    const type::vector<core::CollisionModel*>::iterator iter = std::find(listCollisionModel.begin(), listCollisionModel.end(), smodel);
     const int indexCollisionModel = std::distance(listCollisionModel.begin(),iter ) + 1 ;
-    float red = (float)indexCollisionModel / (float)totalCollisionModel;
+    const float red = (float)indexCollisionModel / (float)totalCollisionModel;
     // Check topological modifications
 
     const int npoints = smodel->getMechanicalState()->getSize();
-    std::vector<Vector3> points;
+    std::vector<Vec3> points;
     std::vector<float> radius;
     for (int i=0; i<npoints; i++)
     {
@@ -203,7 +208,7 @@ void ColourPickingVisitor::processSphereModel(simulation::Node * node, sofa::com
     float ratio;
     for( int i=0; i<npoints; i++)
     {
-        Vector3 p = points[i];
+        Vec3 p = points[i];
 
         glPushMatrix();
         ratio = (float)i / (float)npoints;
@@ -212,7 +217,10 @@ void ColourPickingVisitor::processSphereModel(simulation::Node * node, sofa::com
 
         glPopMatrix();
     }
-#endif // SOFAGUICOMMON_HAVE_SOFA_GL  == 1
+#else
+    SOFA_UNUSED(node);
+    SOFA_UNUSED(smodel);
+#endif // SOFA_GUI_COMMON_HAVE_SOFA_GL  == 1
 }
 
 } // namespace sofa::gui::common

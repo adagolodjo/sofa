@@ -20,17 +20,15 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 
-#include "IntegrateBeginEvent.h"
+#include <sofa/simulation/IntegrateBeginEvent.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
     SOFA_EVENT_CPP( IntegrateBeginEvent )
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
+
 

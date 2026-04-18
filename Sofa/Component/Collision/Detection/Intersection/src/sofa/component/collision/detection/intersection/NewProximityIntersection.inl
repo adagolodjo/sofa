@@ -29,12 +29,12 @@ namespace sofa::component::collision::detection::intersection
 {
 
 inline int NewProximityIntersection::doIntersectionPointPoint(SReal dist2,
-                                                       const type::Vector3& p,
-                                                       const type::Vector3& q,
+                                                       const type::Vec3& p,
+                                                       const type::Vec3& q,
                                                        OutputVector* contacts,
                                                        int id)
 {
-    const type::Vector3 pq = q-p;
+    const type::Vec3 pq = q-p;
 
     const SReal norm2 = pq.norm2();
 
@@ -54,24 +54,24 @@ inline int NewProximityIntersection::doIntersectionPointPoint(SReal dist2,
 }
 
 template<typename SphereType1, typename SphereType2>
-bool NewProximityIntersection::testIntersection(SphereType1& sph1, SphereType2& sph2)
+bool NewProximityIntersection::testIntersection(SphereType1& sph1, SphereType2& sph2, const core::collision::Intersection* currentIntersection)
 {
-    const auto alarmDist = this->getAlarmDistance() + sph1.getProximity() + sph2.getProximity();
+    const auto alarmDist = currentIntersection->getAlarmDistance() + sph1.getContactDistance() + sph2.getContactDistance();
 
     OutputVector contacts;
     const double alarmDist2 = alarmDist + sph1.r() + sph2.r();
-    int n = doIntersectionPointPoint(alarmDist2 * alarmDist2, sph1.center(), sph2.center(), &contacts, -1);
+    const int n = doIntersectionPointPoint(alarmDist2 * alarmDist2, sph1.center(), sph2.center(), &contacts, -1);
     return n > 0;
 }
 
 template<typename SphereType1, typename SphereType2>
-int NewProximityIntersection::computeIntersection(SphereType1& sph1, SphereType2& sph2, OutputVector* contacts)
+int NewProximityIntersection::computeIntersection(SphereType1& sph1, SphereType2& sph2, OutputVector* contacts, const core::collision::Intersection* currentIntersection)
 {
-    const auto alarmDist = this->getAlarmDistance() + sph1.getProximity() + sph2.getProximity();
-    const auto contactDist = this->getContactDistance() + sph1.getProximity() + sph2.getProximity();
+    const auto alarmDist = currentIntersection->getAlarmDistance() + sph1.getContactDistance() + sph2.getContactDistance();
+    const auto contactDist = currentIntersection->getContactDistance() + sph1.getContactDistance() + sph2.getContactDistance();
 
     const double alarmDist2 = alarmDist + sph1.r() + sph2.r();
-    int n = doIntersectionPointPoint(alarmDist2 * alarmDist2, sph1.center(), sph2.center(), contacts, (sph1.getCollisionModel()->getSize() > sph2.getCollisionModel()->getSize()) ? sph1.getIndex() : sph2.getIndex());
+    const int n = doIntersectionPointPoint(alarmDist2 * alarmDist2, sph1.center(), sph2.center(), contacts, (sph1.getCollisionModel()->getSize() > sph2.getCollisionModel()->getSize()) ? sph1.getIndex() : sph2.getIndex());
     if (n > 0)
     {
         const double contactDist2 = contactDist + sph1.r() + sph2.r();
@@ -83,6 +83,5 @@ int NewProximityIntersection::computeIntersection(SphereType1& sph1, SphereType2
     }
     return n;
 }
-
 
 } // namespace sofa::component::collision::detection::intersection

@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_GROUPFILTERYOUNGMODULUS_CPP
-#include "GroupFilterYoungModulus.inl"
+#include <sofa/component/engine/generate/GroupFilterYoungModulus.inl>
 
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/core/ObjectFactory.h>
@@ -30,13 +30,12 @@ namespace sofa::component::engine::generate
 
 using namespace sofa::defaulttype;
 
-int GroupFilterYoungModulusClass = core::RegisterObject("This class gives a vector of young modulus according of a list of defined groups")
-        .add< GroupFilterYoungModulus<Vec3Types> >()
- 
-        ;
+void registerGroupFilterYoungModulus(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Engine defining a vector of young modulus according of a list of defined groups.")
+        .add< GroupFilterYoungModulus<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_GENERATE_API GroupFilterYoungModulus<Vec3Types>;
- 
-
 
 } //namespace sofa::component::engine::generate

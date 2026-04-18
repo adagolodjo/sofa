@@ -21,7 +21,6 @@
 ******************************************************************************/
 #pragma once
 #include <sofa/component/io/mesh/config.h>
-
 #include <sofa/core/loader/MeshLoader.h>
 
 namespace sofa::component::io::mesh
@@ -36,13 +35,13 @@ namespace sofa::component::io::mesh
 class SOFA_COMPONENT_IO_MESH_API StringMeshCreator : public sofa::core::loader::MeshLoader
 {
 public:
-
     SOFA_CLASS(StringMeshCreator,sofa::core::loader::MeshLoader);
+
     virtual std::string type() { return "This object is procedurally created"; }
     bool canLoad() override { return true; }
     bool doLoad() override; ///< create the string
 
-    Data< unsigned > resolution;  ///< Number of vertices (more than 1)
+    Data< unsigned > d_resolution; ///< Number of vertices
 
 protected:
     StringMeshCreator();

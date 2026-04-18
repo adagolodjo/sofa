@@ -26,10 +26,8 @@
 #include <sofa/simulation/Visitor.h>
 #include <sofa/simulation/fwd.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 /** Triggers the updateInternal() function to update method called
@@ -39,9 +37,9 @@ class SOFA_SIMULATION_CORE_API UpdateInternalDataVisitor : public Visitor
 {
 
 public:
-    UpdateInternalDataVisitor(const core::ExecParams* params): Visitor(params) {}
+    UpdateInternalDataVisitor(const core::ExecParams* eparams): Visitor(eparams) {}
 
-    void processUpdateInternalData(simulation::Node* node, sofa::core::objectmodel::BaseObject* baseObj);
+    void processUpdateInternalData(simulation::Node* node, sofa::core::objectmodel::BaseComponent* baseObj);
     Result processNodeTopDown(simulation::Node* node) override;
 
     /// Specify whether this action can be parallelized.
@@ -53,8 +51,7 @@ public:
     const char* getClassName() const override { return "UpdateInternalDataVisitor"; }
 };
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

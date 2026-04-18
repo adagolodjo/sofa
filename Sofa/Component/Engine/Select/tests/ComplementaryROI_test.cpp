@@ -25,10 +25,9 @@ using sofa::testing::BaseSimulationTest;
 
 #include <sofa/helper/BackTrace.h>
 
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 using sofa::simulation::Simulation ;
 using sofa::simulation::Node ;
-using sofa::simulation::setSimulation ;
 using sofa::core::objectmodel::New ;
 using sofa::core::objectmodel::BaseData ;
 using sofa::simulation::graph::DAGSimulation;
@@ -36,8 +35,8 @@ using sofa::simulation::graph::DAGSimulation;
 #include <sofa/core/visual/VisualParams.h>
 using sofa::core::visual::VisualParams;
 
-#include <SofaGeneralEngine/ComplementaryROI.h>
-using sofa::component::engine::ComplementaryROI ;
+#include <sofa/component/engine/select/ComplementaryROI.h>
+using sofa::component::engine::select::ComplementaryROI ;
 
 using sofa::type::vector;
 
@@ -56,9 +55,11 @@ struct ComplementaryROI_test : public BaseSimulationTest,
     typename ThisClass::SPtr m_thisObject;
 
 
-    void SetUp() override
+    void doSetUp() override
     {
-        setSimulation(m_simu = new DAGSimulation());
+        m_simu = sofa::simulation::getSimulation();
+        ASSERT_NE(m_simu, nullptr);
+
         m_node = m_simu->createNewGraph("root");
         m_thisObject = New<ThisClass >() ;
         m_node->addObject(m_thisObject) ;
@@ -77,7 +78,6 @@ struct ComplementaryROI_test : public BaseSimulationTest,
         EXPECT_TRUE( m_thisObject->findData("pointsInROI") != nullptr ) ;
 
         EXPECT_NO_THROW( m_thisObject->init() ) ;
-        EXPECT_NO_THROW( m_thisObject->bwdInit() ) ;
         EXPECT_NO_THROW( m_thisObject->reinit() ) ;
         EXPECT_NO_THROW( m_thisObject->reset() ) ;
 

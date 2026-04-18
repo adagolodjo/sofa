@@ -25,13 +25,8 @@
 #include <sofa/helper/io/Mesh.h>
 #include <fstream>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace io
+namespace sofa::helper::io
 {
 
 class SOFA_HELPER_API MeshTopologyLoader
@@ -61,12 +56,8 @@ private:
 
     /// method will create a MeshGmsh which will parse the file. Then will call @see addMeshtoTopology() to add mesh data into topology
     bool loadGmsh(const char *filename);
-    
 
     bool loadVtk(const char *filename);
-        
-    /// method to load unknown format. TODO remove this method and deprecated attached format.
-    bool loadMesh(std::ifstream &file);
 
     // will take all data from loaded into @see m_mesh and add it to the current topology using methods api.
     bool addMeshtoTopology();
@@ -74,10 +65,7 @@ private:
     helper::io::Mesh* m_mesh;
 };
 
-} // namespace io
+} // namespace sofa::helper::io
 
-} // namespace helper
-
-} // namespace sofa
 
 #endif

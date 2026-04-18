@@ -26,7 +26,7 @@ using sofa::testing::BaseSimulationTest;
 
 //Including Simulation
 #include <sofa/simulation/Simulation.h>
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 #include <sofa/simulation/Node.h>
 
 #include <sofa/component/statecontainer/MechanicalObject.h>
@@ -47,7 +47,6 @@ In this test: x(t=0)= 1 and v(t=0)=0 and K = spring stiffness and phi = 0 of mat
 This tests generates the discrete mass position obtained with central difference solver with different parameter values (K,M,h).
 Then it compares the effective mass position to the computed mass position every time step.
 */
-
 template <typename _DataTypes>
 struct CentralDifferenceExplicitSolverDynamic_test : public component::odesolver::testing::ODESolverSpringTest
 {
@@ -116,8 +115,8 @@ struct CentralDifferenceExplicitSolverDynamic_test : public component::odesolver
 
         else
         {
-            double constantVel =  ((1.0/h) - (rm/2.0))/((1.0/h) + (rm/2.0));
-            double constantAcc = 1.0/((1.0/h) + (rm/2.0));
+            const double constantVel =  ((1.0/h) - (rm/2.0))/((1.0/h) + (rm/2.0));
+            const double constantAcc = 1.0/((1.0/h) + (rm/2.0));
 
             for(int i=1;i< size+1; i++)
             {
@@ -145,14 +144,14 @@ struct CentralDifferenceExplicitSolverDynamic_test : public component::odesolver
         double time = m_si.root->getTime();
 
         // Get mechanical object
-        simulation::Node::SPtr massNode = m_si.root->getChild("MassNode");
+        const simulation::Node::SPtr massNode = m_si.root->getChild("MassNode");
         typename MechanicalObject::SPtr dofs = massNode->get<MechanicalObject>(m_si.root->SearchDown);
 
         // Animate
         do
         {              
             // Record the mass position
-            Coord p0=dofs.get()->read(sofa::core::ConstVecCoordId::position())->getValue()[0];
+            Coord p0=dofs.get()->read(sofa::core::vec_id::read_access::position)->getValue()[0];
 
             double absoluteError = fabs(p0[1]-positionsArray[i]);
 
@@ -178,13 +177,13 @@ struct CentralDifferenceExplicitSolverDynamic_test : public component::odesolver
 
 };
 
-// Define the list of DataTypes to instanciate
+// Define the list of DataTypes to instantiate
 using ::testing::Types;
 typedef Types<
     Vec3Types
-> DataTypes; // the types to instanciate.
+> DataTypes; // the types to instantiate.
 
-// Test suite for all the instanciations
+// Test suite for all the instantiations
 TYPED_TEST_SUITE(CentralDifferenceExplicitSolverDynamic_test, DataTypes);
 
 // Test case: h=0.01 k=100 m =10 rm=0.1 rk=0.1

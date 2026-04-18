@@ -26,12 +26,12 @@ using sofa::testing::BaseSimulationTest;
 
 #include <sofa/simulation/Node.h>
 #include <sofa/simulation/Simulation.h>
-#include <SofaSimulationGraph/DAGSimulation.h>
-#include <SofaSimulationCommon/SceneLoaderXML.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
+#include <sofa/simulation/common/SceneLoaderXML.h>
 
 #include <sofa/component/sceneutility/AddResourceRepository.h>
 
-#include <SofaSimulationGraph/SimpleApi.h>
+#include <sofa/simpleapi/SimpleApi.h>
 
 namespace sofa
 {
@@ -44,22 +44,21 @@ struct AddResourceRepository_test : public BaseSimulationTest
     sofa::simulation::Node::SPtr m_root;
     std::string m_testRepoDir;
 
-    void SetUp() override
+    void doSetUp() override
     {
-        sofa::simpleapi::importPlugin("Sofa.Component.SceneUtility");
+        this->loadPlugins({Sofa.Component.SceneUtility});
 
         m_testRepoDir = std::string(SOFA_COMPONENT_SCENEUTILITY_TEST_RESOURCES_DIR) + std::string("/repo");
     }
 
     void buildScene(const std::string& repoType, const std::string& repoPath)
     {
-        std::string addRepoStr = "<" + repoType + " path=\""+ repoPath + "\" />";
+        const std::string addRepoStr = "<" + repoType + " path=\""+ repoPath + "\" />";
 
-        std::string scene = START_STR + addRepoStr + END_STR;
+        const std::string scene = START_STR + addRepoStr + END_STR;
         std::cout << scene << std::endl;
 
-        m_root = sofa::simulation::SceneLoaderXML::loadFromMemory(
-                "scene", scene.c_str(), scene.size());
+        m_root = sofa::simulation::SceneLoaderXML::loadFromMemory("scene", scene.c_str());
 
         EXPECT_NE(m_root, nullptr);
     }

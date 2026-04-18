@@ -19,20 +19,12 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_VISUAL_VISUALMODEL_H
-#define SOFA_CORE_VISUAL_VISUALMODEL_H
+#pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/type/Quat.h>
-#include <sofa/defaulttype/TopologyTypes.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace visual
+namespace sofa::core::visual
 {
 
 class VisualParams;
@@ -50,25 +42,45 @@ class VisualParams;
  *  Most VisualModel are bound by a Mapping to a BehaviorModel or
  *  MechanicalState.
  */
-class SOFA_CORE_API VisualModel : public virtual objectmodel::BaseObject
+class SOFA_CORE_API VisualModel : public virtual objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(VisualModel, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(VisualModel, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(VisualModel)
-protected:
-    /// Destructor
-    ~VisualModel() override { }
-public:
+
+    Data<bool> d_enable; ///< Display the object or not
+
+    /**
+     *  \brief Display the VisualModel object.
+     */
+    virtual void drawVisual(const VisualParams* /*vparams*/) final;
+    
     /**
      *  \brief Initialize the textures, or other graphical resources.
      *
      *  Called once before the first frame is drawn, and if the graphical
      *  context has been recreated.
      */
-    virtual void initVisual() {  }
+    void initVisual(const VisualParams* /*vparams*/);
 
     /**
-     *  \brief clear some graphical resources (generaly called before the deleteVisitor).
+     *  \brief used to update the model if necessary.
+     *
+     */
+    void updateVisual(const VisualParams* /*vparams*/);
+
+protected:
+    VisualModel();
+    ~VisualModel() override { }
+
+private:
+    virtual void doDrawVisual(const VisualParams* /*vparams*/) {}
+    virtual void doInitVisual(const VisualParams* /*vparams*/) {}
+    virtual void doUpdateVisual(const VisualParams* /*vparams*/) {}
+
+public:
+    /**
+     *  \brief clear some graphical resources (generally called before the deleteVisitor).
      *  \note: for more general usage you can use the cleanup visitor
      */
     virtual void clearVisual() { }
@@ -82,12 +94,6 @@ public:
      *  \brief Called after objects in the current branch are displayed
      */
     virtual void bwdDraw(VisualParams* /*vparams*/) {}
-
-    /**
-     *  \brief Display the VisualModel object.
-     */
-    virtual void drawVisual(const VisualParams* /*vparams*/) {}
-    //virtual void drawVisual() = 0;
 
     /**
      *  \brief Display transparent surfaces.
@@ -106,13 +112,9 @@ public:
      */
     virtual void drawShadow(const VisualParams* vparams)
     {
-        drawVisual(vparams);
+        doDrawVisual(vparams);
     }
 
-    /**
-     *  \brief used to update the model if necessary.
-     */
-    virtual void updateVisual() {  }
     /**
     *  \brief used to update the model if necessary.
     */
@@ -176,11 +178,5 @@ public:
     bool insertInNode( objectmodel::BaseNode* node ) override;
     bool removeInNode( objectmodel::BaseNode* node ) override;
 };
+} // namespace sofa::core::visual
 
-} // namespace visual
-
-} // namespace core
-
-} // namespace sofa
-
-#endif //SOFA_CORE_VISUAL_VISUALMODEL_H

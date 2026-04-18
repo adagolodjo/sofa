@@ -121,7 +121,7 @@ void SPHFluidForceField<gpu::opencl::OpenCLVec3fTypes>::addDForce(const core::Me
     const VecDeriv& dx = d_dx.getValue();
 
     msg_info() << "addDForce(" << mparams->kFactor() << "," << sofa::core::mechanicalparams::bFactor(mparams) << ")";
-    const VecDeriv& v = this->mstate->read(core::ConstVecDerivId::velocity())->getValue();
+    const VecDeriv& v = this->mstate->read(core::vec_id::read_access::velocity)->getValue();
     data.fillParams(this, mparams->kFactor(), sofa::core::mechanicalparams::bFactor(mparams));
     df.resize(dx.size());
     Grid::Grid* g = m_grid->getGrid();
@@ -182,7 +182,7 @@ void SPHFluidForceField<gpu::opencl::OpenCLVec3dTypes>::addDForce(const core::Me
     VecDeriv& df = *d_df.beginEdit();
     const VecDeriv& dx = d_dx.getValue();
     //const VecCoord& x = this->mstate->read(core::ConstVecCoordId::position())->getValue();
-    const VecDeriv& v = this->mstate->read(core::ConstVecDerivId::velocity())->getValue();
+    const VecDeriv& v = this->mstate->read(core::vec_id::read_access::velocity)->getValue();
     data.fillParams(this, mparams->kFactor(), sofa::core::mechanicalparams::bFactor(mparams));
     df.resize(dx.size());
     Grid::Grid* g = m_grid->getGrid();
@@ -199,7 +199,7 @@ void SPHFluidForceField<gpu::opencl::OpenCLVec3fTypes>::draw(const sofa::core::v
 //if (!getContext()->getShowForceFields()) return;
     //if (m_grid != NULL)
     //	m_grid->draw(vparams);
-    const VecCoord& x = this->mstate->read(core::ConstVecCoordId::position())->getValue();
+    const VecCoord& x = this->mstate->read(core::vec_id::read_access::position)->getValue();
     const gpu::opencl::OpenCLVector<type::Vec4f> pos4 = this->data.pos4;
     if (pos4.empty()) return;
 
@@ -209,7 +209,7 @@ void SPHFluidForceField<gpu::opencl::OpenCLVec3fTypes>::draw(const sofa::core::v
     vparams->drawTool()->enableDepthTest();
 
     std::vector<sofa::type::Vec4f> colorVector;
-    std::vector<sofa::type::Vector3> vertices;
+    std::vector<sofa::type::Vec3> vertices;
 
     for (unsigned int i = 0; i < m_particles.size(); i++)
     {
@@ -224,7 +224,7 @@ void SPHFluidForceField<gpu::opencl::OpenCLVec3fTypes>::draw(const sofa::core::v
         {
             colorVector.push_back(sofa::type::Vec4f(f - 1, 0, 2 - f, 1));
         }
-        vertices.push_back(sofa::type::Vector3(x[i]));
+        vertices.push_back(sofa::type::Vec3(x[i]));
     }
 
     vparams->drawTool()->drawPoints(vertices, 5, colorVector);

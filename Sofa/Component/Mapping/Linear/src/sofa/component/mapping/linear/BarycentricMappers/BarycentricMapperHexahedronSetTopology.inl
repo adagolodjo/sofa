@@ -50,15 +50,14 @@ template <class In, class Out>
 typename BarycentricMapperHexahedronSetTopology<In, Out>::Index 
 BarycentricMapperHexahedronSetTopology<In,Out>::addPointInCube ( const Index cubeIndex, const SReal* baryCoords )
 {
-    type::vector<MappingData>& vectorData = *(d_map.beginEdit());
-    vectorData.resize ( d_map.getValue().size() +1 );
-    MappingData& data = *vectorData.rbegin();
-    d_map.endEdit();
+    auto vectorData = sofa::helper::getWriteAccessor(d_map);
+    MappingData data;
     data.in_index = cubeIndex;
-    data.baryCoords[0] = ( Real ) baryCoords[0];
-    data.baryCoords[1] = ( Real ) baryCoords[1];
-    data.baryCoords[2] = ( Real ) baryCoords[2];
-    return (int)d_map.getValue().size()-1;
+    data.baryCoords[0] = static_cast<Real>(baryCoords[0]);
+    data.baryCoords[1] = static_cast<Real>(baryCoords[1]);
+    data.baryCoords[2] = static_cast<Real>(baryCoords[2]);
+    vectorData->emplace_back(data);
+    return static_cast<Index>(vectorData.size() - 1u);
 }
 
 
@@ -66,16 +65,16 @@ template <class In, class Out>
 typename BarycentricMapperHexahedronSetTopology<In, Out>::Index 
 BarycentricMapperHexahedronSetTopology<In,Out>::setPointInCube ( const Index pointIndex, const Index cubeIndex, const SReal* baryCoords )
 {
-    if ( pointIndex >= d_map.getValue().size() )
+    auto vectorData = sofa::helper::getWriteAccessor(d_map);
+
+    if ( pointIndex >= vectorData.size() )
         return sofa::InvalidID;
 
-    type::vector<MappingData>& vectorData = *(d_map.beginEdit());
     MappingData& data = vectorData[pointIndex];
     data.in_index = cubeIndex;
-    data.baryCoords[0] = ( Real ) baryCoords[0];
-    data.baryCoords[1] = ( Real ) baryCoords[1];
-    data.baryCoords[2] = ( Real ) baryCoords[2];
-    d_map.endEdit();
+    data.baryCoords[0] = static_cast<Real>(baryCoords[0]);
+    data.baryCoords[1] = static_cast<Real>(baryCoords[1]);
+    data.baryCoords[2] = static_cast<Real>(baryCoords[2]);
 
     if(cubeIndex == sofa::InvalidID)
         m_invalidIndex.insert(pointIndex);
@@ -87,39 +86,31 @@ BarycentricMapperHexahedronSetTopology<In,Out>::setPointInCube ( const Index poi
 
 
 template <class In, class Out>
-type::vector<Hexahedron> BarycentricMapperHexahedronSetTopology<In,Out>::getElements()
+auto BarycentricMapperHexahedronSetTopology<In,Out>::getElements() -> type::vector<Hexahedron>
 {
     return this->m_fromTopology->getHexahedra();
 }
 
-
 template <class In, class Out>
-type::vector<SReal> BarycentricMapperHexahedronSetTopology<In,Out>::getBaryCoef(const Real* f)
+auto BarycentricMapperHexahedronSetTopology<In,Out>::getBarycentricCoefficients(const std::array<Real, MappingData::NumberOfCoordinates>& barycentricCoordinates) -> std::array<Real, Hexahedron::NumberOfNodes>
 {
-    return getBaryCoef(f[0],f[1],f[2]);
-}
-
-
-template <class In, class Out>
-type::vector<SReal> BarycentricMapperHexahedronSetTopology<In,Out>::getBaryCoef(const Real fx, const Real fy, const Real fz)
-{
-    type::vector<SReal> hexahedronCoef{(1-fx)*(1-fy)*(1-fz),
-                (fx)*(1-fy)*(1-fz),
-                (fx)*(fy)*(1 - fz),
-                (1 - fx)*(fy)*(1 - fz),
-                (1-fx)*(1-fy)*(fz),
-                (fx)*(1-fy)*(fz),
-                (fx)*(fy)*(fz),
-                (1 - fx)*(fy)*(fz)
+    const auto& f = barycentricCoordinates; // for better readability
+    
+    return {(1-f[0])*(1-f[1])*(1-f[2]),
+        (f[0])*(1-f[1])*(1-f[2]),
+        (f[0])*(f[1])*(1 - f[2]),
+        (1 - f[0])*(f[1])*(1 - f[2]),
+        (1-f[0])*(1-f[1])*(f[2]),
+        (f[0])*(1-f[1])*(f[2]),
+        (f[0])*(f[1])*(f[2]),
+        (1 - f[0])*(f[1])*(f[2])
     };
-    return hexahedronCoef;
 }
 
-
 template <class In, class Out>
-void BarycentricMapperHexahedronSetTopology<In,Out>::computeBase(Mat3x3d& base, const typename In::VecCoord& in, const Hexahedron& element)
+void BarycentricMapperHexahedronSetTopology<In,Out>::computeBase(Mat3x3& base, const typename In::VecCoord& in, const Hexahedron& element)
 {
-    Mat3x3d matrixTranspose;
+    Mat3x3 matrixTranspose;
     base[0] = in[element[1]]-in[element[0]];
     base[1] = in[element[3]]-in[element[0]];
     base[2] = in[element[4]]-in[element[0]];
@@ -131,14 +122,14 @@ void BarycentricMapperHexahedronSetTopology<In,Out>::computeBase(Mat3x3d& base, 
 
 
 template <class In, class Out>
-void BarycentricMapperHexahedronSetTopology<In,Out>::computeCenter(Vector3& center, const typename In::VecCoord& in, const Hexahedron &element)
+void BarycentricMapperHexahedronSetTopology<In,Out>::computeCenter(Vec3& center, const typename In::VecCoord& in, const Hexahedron &element)
 {
     center = ( in[element[0]]+in[element[1]]+in[element[2]]+in[element[3]]+in[element[4]]+in[element[5]]+in[element[6]]+in[element[7]] ) *0.125;
 }
 
 
 template <class In, class Out>
-void BarycentricMapperHexahedronSetTopology<In,Out>::computeDistance(SReal& d, const Vector3& v)
+void BarycentricMapperHexahedronSetTopology<In,Out>::computeDistance(SReal& d, const Vec3& v)
 {
     d = std::max ( std::max ( -v[0],-v[1] ),std::max ( std::max ( -v[2],v[0]-1 ),std::max ( v[1]-1,v[2]-1 ) ) );
 }
@@ -162,8 +153,8 @@ void BarycentricMapperHexahedronSetTopology<In,Out>::handleTopologyChange(core::
     if ( this->m_fromTopology->beginChange() == this->m_fromTopology->endChange() )
         return;
 
-    std::list<const core::topology::TopologyChange *>::const_iterator itBegin = this->m_fromTopology->beginChange();
-    std::list<const core::topology::TopologyChange *>::const_iterator itEnd = this->m_fromTopology->endChange();
+    const std::list<const core::topology::TopologyChange *>::const_iterator itBegin = this->m_fromTopology->beginChange();
+    const std::list<const core::topology::TopologyChange *>::const_iterator itEnd = this->m_fromTopology->endChange();
 
     for ( std::list<const core::topology::TopologyChange *>::const_iterator changeIt = itBegin;
             changeIt != itEnd; ++changeIt )
@@ -184,7 +175,7 @@ void BarycentricMapperHexahedronSetTopology<In,Out>::handleTopologyChange(core::
                     const auto j = *iter;
                     if ( mapData[j].in_index == sofa::InvalidID ) // compute new mapping
                     {
-                        sofa::type::fixed_array<SReal, 3> coefs;
+                        type::Vec3 coefs;
                         typename In::Coord pos;
                         pos[0] = mapData[j].baryCoords[0];
                         pos[1] = mapData[j].baryCoords[1];
@@ -198,7 +189,7 @@ void BarycentricMapperHexahedronSetTopology<In,Out>::handleTopologyChange(core::
                         typedef MechanicalState<In> InMechanicalStateT;
                         InMechanicalStateT* inState;
                         this->m_fromTopology->getContext()->get(inState);
-                        const auto& inRestPos = (inState->read(core::ConstVecCoordId::restPosition())->getValue());
+                        const auto& inRestPos = (inState->read(core::vec_id::read_access::restPosition)->getValue());
                         if( this->m_toTopology)
                         {
                             typedef MechanicalState<Out> MechanicalStateT;
@@ -210,7 +201,7 @@ void BarycentricMapperHexahedronSetTopology<In,Out>::handleTopologyChange(core::
                             }
                             else
                             {
-                                const typename MechanicalStateT::VecCoord& outXto0 = (mState->read(core::ConstVecCoordId::restPosition())->getValue());
+                                const typename MechanicalStateT::VecCoord& outXto0 = (mState->read(core::vec_id::read_access::restPosition)->getValue());
                                 const decltype(inRestPos[0])& outRestPos = Out::getCPos(outXto0[j]); //decltype stuff is to force the same type of coordinates between in and out
                                 index = sofa::topology::getClosestHexahedronIndex(inRestPos, m_fromTopology->getHexahedra(), outRestPos, coefs, distance);
                             }
@@ -257,7 +248,7 @@ void BarycentricMapperHexahedronSetTopology<In,Out>::handleTopologyChange(core::
             typedef MechanicalState<In> InMechanicalStateT;
             InMechanicalStateT* inState;
             this->m_fromTopology->getContext()->get(inState);
-            const auto& inRestPos = (inState->read(core::ConstVecCoordId::restPosition())->getValue());
+            const auto& inRestPos = (inState->read(core::vec_id::read_access::restPosition)->getValue());
 
             const auto nbHexahedra = this->m_fromTopology->getNbHexahedra();
 
@@ -328,7 +319,7 @@ void BarycentricMapperHexahedronSetTopology<In,Out>::applyOnePoint( const Index&
     const Real fx = d_map.getValue()[hexaPointId].baryCoords[0];
     const Real fy = d_map.getValue()[hexaPointId].baryCoords[1];
     const Real fz = d_map.getValue()[hexaPointId].baryCoords[2];
-    Index index = d_map.getValue()[hexaPointId].in_index;
+    const Index index = d_map.getValue()[hexaPointId].in_index;
     const Hexahedron& cube = cubes[index];
     Out::setCPos(out[hexaPointId] , in[cube[0]] * ( ( 1-fx ) * ( 1-fy ) * ( 1-fz ) )
             + in[cube[1]] * ( ( fx ) * ( 1-fy ) * ( 1-fz ) )

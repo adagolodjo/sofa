@@ -42,28 +42,24 @@ class COLLISIONOBBCAPSULE_API RigidDiscreteIntersection : public core::collision
     typedef DiscreteIntersection::OutputVector OutputVector;
 
 public:
-    RigidDiscreteIntersection(DiscreteIntersection* object);
+    RigidDiscreteIntersection(DiscreteIntersection* intersection);
 
     template <class Elem1, class Elem2>
-    int computeIntersection(Elem1& e1, Elem2& e2, OutputVector* contacts) {
+    int computeIntersection(Elem1& e1, Elem2& e2, OutputVector* contacts, const core::collision::Intersection* intersection) {
         return BaseIntTool::computeIntersection(e1,
             e2,
-            e1.getProximity() + e2.getProximity() + intersection->getAlarmDistance(),
-            e1.getProximity() + e2.getProximity() + intersection->getContactDistance(),
+            e1.getContactDistance() + e2.getContactDistance() + intersection->getAlarmDistance(),
+            e1.getContactDistance() + e2.getContactDistance() + intersection->getContactDistance(),
             contacts);
     }
 
     template <class Elem1, class Elem2>
-    bool testIntersection(Elem1& e1, Elem2& e2) {
+    bool testIntersection(Elem1& e1, Elem2& e2, const core::collision::Intersection* intersection) {
         return BaseIntTool::testIntersection(e1, e2, intersection->getAlarmDistance());
     }
 
-    bool testIntersection(Ray& /*rRay*/, OBB& /*rOBB*/);
-    int computeIntersection(Ray& rRay, OBB& rObb, OutputVector* contacts);
-
-protected:
-    DiscreteIntersection* intersection;
-
+    bool testIntersection(Ray& /*rRay*/, OBB& /*rOBB*/, const core::collision::Intersection* intersection);
+    int computeIntersection(Ray& rRay, OBB& rObb, OutputVector* contacts, const core::collision::Intersection* intersection);
 };
 
 
@@ -72,25 +68,21 @@ class COLLISIONOBBCAPSULE_API RigidMeshDiscreteIntersection : public core::colli
     typedef DiscreteIntersection::OutputVector OutputVector;
 
 public:
-    RigidMeshDiscreteIntersection(NewProximityIntersection* object);
+    RigidMeshDiscreteIntersection(NewProximityIntersection* intersection);
 
     template <class Elem1, class Elem2>
-    int computeIntersection(Elem1& e1, Elem2& e2, OutputVector* contacts) {
+    int computeIntersection(Elem1& e1, Elem2& e2, OutputVector* contacts, const core::collision::Intersection* intersection) {
         return MeshIntTool::computeIntersection(e1,
             e2,
-            e1.getProximity() + e2.getProximity() + intersection->getAlarmDistance(),
-            e1.getProximity() + e2.getProximity() + intersection->getContactDistance(),
+            e1.getContactDistance() + e2.getContactDistance() + intersection->getAlarmDistance(),
+            e1.getContactDistance() + e2.getContactDistance() + intersection->getContactDistance(),
             contacts);
     }
 
     template <class Elem1, class Elem2>
-    bool testIntersection(Elem1& e1, Elem2& e2) {
+    bool testIntersection(Elem1& e1, Elem2& e2, const core::collision::Intersection* intersection) {
         return BaseIntTool::testIntersection(e1, e2, intersection->getAlarmDistance());
     }
-
-protected:
-    NewProximityIntersection* intersection;
-
 };
 
 

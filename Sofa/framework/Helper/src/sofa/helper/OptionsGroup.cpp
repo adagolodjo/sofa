@@ -21,12 +21,12 @@
 ******************************************************************************/
 #include <sofa/helper/OptionsGroup.h>
 #include <cstdlib>
+#include <cerrno>
+#include <climits>
 #include <sofa/helper/logging/Messaging.h>
+#include <sofa/type/hardening.h>
 
-namespace sofa
-{
-
-namespace helper
+namespace sofa::helper
 {
 
 class OptionsGroup;
@@ -37,82 +37,52 @@ OptionsGroup::OptionsGroup() : textItems()
     selectedItem=0;
 }
 ///////////////////////////////////////
-OptionsGroup::OptionsGroup(int nbofRadioButton,...)
-{
-    textItems.resize(nbofRadioButton);
-    va_list vl;
-    va_start(vl,nbofRadioButton);
-    for(unsigned int i=0; i<textItems.size(); i++)
-    {
-        const char * tempochar=va_arg(vl,char *);
-        assert( strcmp( tempochar, "") );
-        std::string  tempostring(tempochar);
-        textItems[i]=tempostring;
-    }
-    va_end(vl);
-    selectedItem=0;
-}
-///////////////////////////////////////
 OptionsGroup::OptionsGroup(const OptionsGroup & m_radiotrick) : textItems(m_radiotrick.textItems)
 {
-    selectedItem=m_radiotrick.getSelectedId();
+    selectedItem = m_radiotrick.getSelectedId();
 }
 ///////////////////////////////////////
-OptionsGroup & OptionsGroup::operator=(const OptionsGroup & m_radiotrick)
-{
-    textItems.resize(m_radiotrick.textItems.size());
-    for(unsigned int i=0; i<textItems.size(); i++)
-    {
-        textItems[i]=m_radiotrick.textItems[i];
-    }
-    selectedItem=m_radiotrick.selectedItem;
-    return *this;
-}
-///////////////////////////////////////
-void OptionsGroup::setNbItems( unsigned int nbofRadioButton )
+void OptionsGroup::setNbItems(const size_type nbofRadioButton )
 {
     textItems.resize( nbofRadioButton );
     selectedItem = 0;
 }
 ///////////////////////////////////////
-void OptionsGroup::setItemName( unsigned int id_item, const std::string& name )
+type::vector<std::string> OptionsGroup::getItemNames()
 {
-    textItems[id_item] = name;
+    return textItems;
 }
 ///////////////////////////////////////
-void OptionsGroup::setNames(int nbofRadioButton,...)
+void OptionsGroup::setItemName(const unsigned int id_item, const std::string& name )
 {
-    textItems.resize(nbofRadioButton);
-    va_list vl;
-    va_start(vl,nbofRadioButton);
-    for(unsigned int i=0; i<textItems.size(); i++)
+    if(id_item < textItems.size())
     {
-        const char * tempochar=va_arg(vl,char *);
-        std::string  tempostring(tempochar);
-        textItems[i]=tempostring;
+        textItems[id_item] = name;
     }
-    va_end(vl);
-    selectedItem=0;
 }
 ///////////////////////////////////////
 int OptionsGroup::isInOptionsList(const std::string & tempostring) const
 {
-    for(unsigned int i=0; i<textItems.size(); i++)
+    for (std::size_t i = 0; i < textItems.size(); i++)
     {
-        if (textItems[i]==tempostring) return i;
+        if (textItems[i] == tempostring)
+        {
+            return static_cast<int>(i);
+        }
     }
     return -1;
 }
 ///////////////////////////////////////
-void OptionsGroup::setSelectedItem(unsigned int id_item)
+OptionsGroup& OptionsGroup::setSelectedItem(unsigned int id_item)
 {
-    if (id_item<textItems.size())
-        selectedItem=id_item;
+    if (id_item < textItems.size())
+        selectedItem = id_item;
+    return *this;
 }
 ///////////////////////////////////////
-void OptionsGroup::setSelectedItem(const std::string & m_string)
+OptionsGroup& OptionsGroup::setSelectedItem(const std::string & m_string)
 {
-    int id_stringinButtonList = isInOptionsList(m_string);
+    const int id_stringinButtonList = isInOptionsList(m_string);
     if (id_stringinButtonList == -1)
     {
         msg_warning("OptionsGroup") << "\""<< m_string <<"\" is not a parameter in button list :\" "<<(*this)<<"\"";
@@ -121,6 +91,7 @@ void OptionsGroup::setSelectedItem(const std::string & m_string)
     {
         setSelectedItem(id_stringinButtonList);
     }
+    return *this;
 }
 ///////////////////////////////////////
 unsigned int OptionsGroup::getSelectedId() const
@@ -130,11 +101,11 @@ unsigned int OptionsGroup::getSelectedId() const
 ///////////////////////////////////////
 const std::string& OptionsGroup::getSelectedItem() const
 {
-	if (textItems.empty())
-	{
-		static std::string empty;
-		return empty;
-	}
+    if (textItems.empty())
+    {
+        static std::string empty;
+        return empty;
+    }
     return textItems[selectedItem];
 }
 ///////////////////////////////////////
@@ -142,14 +113,22 @@ void OptionsGroup::readFromStream(std::istream & stream)
 {
     std::string tempostring;
     std::getline(stream,tempostring);
-    int id_stringinButtonList = isInOptionsList(tempostring);
+    const int id_stringinButtonList = isInOptionsList(tempostring);
     if (id_stringinButtonList == -1)
     {
-        int idx=atoi(tempostring.c_str());
-        if (idx >=0 && idx < (int)size()) 
-			setSelectedItem(idx);
-        else
-            msg_warning("OptionsGroup") << "\""<< tempostring <<"\" is not a parameter in button list :\" "<<(*this)<<"\"";
+        int idx{};
+        if(sofa::type::hardening::safeStrToInt(tempostring, idx))
+        {
+            if (idx >=0 && idx < (int)size())
+            {
+                setSelectedItem(idx);
+            }
+            else
+            {
+                msg_warning("OptionsGroup") << "\""<< tempostring <<"\" is not a parameter in button list :\" "<<(*this)<<"\"";
+            }
+        }
+        msg_warning("OptionsGroup") << "Error while parsing \"" << tempostring << "\"";
     }
     else
     {
@@ -163,7 +142,4 @@ void OptionsGroup::writeToStream(std::ostream & stream) const
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-
-} // namespace helper
-
-} // namespace sofa
+} // namespace sofa::helper

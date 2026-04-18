@@ -30,15 +30,16 @@
 #include "LinkComponent.h"
 #include <sofa/core/SofaLibrary.h>
 
-#include <sofa/gui/qt/ModifyObject.h>
-#include <sofa/gui/qt/QDisplayPropertyWidget.h>
+#include <sofa/qt/ModifyObject.h>
+#include <sofa/qt/QDisplayPropertyWidget.h>
 #include <sofa/simulation/Simulation.h>
 #include <sofa/simulation/Node.h>
 #include <SofaSimulationCommon/xml/BaseElement.h>
 #include <sofa/core/ObjectFactory.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 
-#include <sofa/gui/qt/GraphListenerQListView.h>
+#include <sofa/qt/GraphListenerQListView.h>
+#include <sofa/qt/SofaSceneGraphWidget.h>
 
 
 #include <QTreeWidget>
@@ -65,7 +66,7 @@ using namespace sofa::core::objectmodel;
 using namespace sofa::simulation;
 using sofa::core::SofaLibrary;
 
-class GraphModeler : public QTreeWidget
+class GraphModeler : public SofaSceneGraphWidget
 {
     friend class GraphHistoryManager;
     friend class LinkComponent;
@@ -168,7 +169,7 @@ public:
     void openModifyObject(QTreeWidgetItem *);
     /// Add the component in the PropertyWidget
     void addInPropertyWidget(QTreeWidgetItem *, bool clear = true);
-    /// Delete a componnent
+    /// Delete a component
     void deleteComponent(QTreeWidgetItem *item, bool saveHistory=true);
     /// Construct a node from a BaseElement, by passing the factory
     Node::SPtr buildNodeFromBaseElement(Node::SPtr node,xml::BaseElement *elem, bool saveHistory=false);
@@ -201,7 +202,7 @@ public slots:
     void doubleClick(QTreeWidgetItem *, int column);
     void leftClick(QTreeWidgetItem *, const QPoint &, int );
     void rightClick(const QPoint & p);
-    /// Context Menu Operation: collasping all the nodes below the current one
+    /// Context Menu Operation: collapsing all the nodes below the current one
     void collapseNode();
     /// Context Menu Operation: expanding all the nodes below the current one
     void expandNode();
@@ -225,7 +226,7 @@ public slots:
     void openModifyObject();
     /// Context Menu Operation: Add the component in the PropertyWidget
     void addInPropertyWidget();
-    /// Context Menu Operation: Deleting a componnent
+    /// Context Menu Operation: Deleting a component
     void deleteComponent();
 
     /// Close all opened configuration windows

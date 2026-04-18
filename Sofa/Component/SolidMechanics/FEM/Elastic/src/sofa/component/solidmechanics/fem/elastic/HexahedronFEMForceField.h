@@ -20,17 +20,17 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
+#include <sofa/component/solidmechanics/fem/elastic/BaseLinearElasticityFEMForceField.h>
 #include <sofa/component/solidmechanics/fem/elastic/fwd.h>
-
-#include <sofa/core/behavior/ForceField.h>
-#include <sofa/core/topology/BaseMeshTopology.h>
-#include <SofaBaseTopology/SparseGridTopology.h>
-#include <sofa/type/vector.h>
-#include <sofa/defaulttype/VecTypes.h>
-#include <sofa/type/Mat.h>
+#include <sofa/component/topology/container/grid/SparseGridTopology.h>
 #include <sofa/core/behavior/BaseRotationFinder.h>
-#include <sofa/helper/decompose.h>
+#include <sofa/core/topology/BaseMeshTopology.h>
+#include <sofa/core/visual/DrawMesh.h>
+#include <sofa/defaulttype/VecTypes.h>
 #include <sofa/helper/OptionsGroup.h>
+#include <sofa/helper/decompose.h>
+#include <sofa/type/Mat.h>
+#include <sofa/type/vector.h>
 
 namespace sofa::component::solidmechanics::fem::elastic
 {
@@ -45,11 +45,11 @@ public:
     typedef HexahedronFEMForceField<DataTypes> Main;
     void initPtrData(Main * m)
     {
-        m->_gatherPt.beginEdit()->setNames(1," ");
-        m->_gatherPt.endEdit();
+        auto gatherPt = sofa::helper::getWriteOnlyAccessor(m->d_gatherPt);
+        auto gatherBsize = sofa::helper::getWriteOnlyAccessor(m->d_gatherBsize);
 
-        m->_gatherBsize.beginEdit()->setNames(1," ");
-        m->_gatherBsize.endEdit();
+        gatherPt.wref().setNames({" "});
+        gatherBsize.wref().setNames({" "});
     }
 };
 
@@ -79,12 +79,17 @@ public:
 *     0---------1-->X
 */
 template<class DataTypes>
-class HexahedronFEMForceField : virtual public core::behavior::ForceField<DataTypes>, public sofa::core::behavior::BaseRotationFinder
+class HexahedronFEMForceField :
+    virtual public BaseLinearElasticityFEMForceField<DataTypes>,
+    public sofa::core::behavior::BaseRotationFinder
 {
 public:
-    SOFA_CLASS(SOFA_TEMPLATE(HexahedronFEMForceField, DataTypes), SOFA_TEMPLATE(core::behavior::ForceField, DataTypes));
+    SOFA_CLASS2(
+        SOFA_TEMPLATE(HexahedronFEMForceField, DataTypes),
+        SOFA_TEMPLATE(BaseLinearElasticityFEMForceField, DataTypes),
+        sofa::core::behavior::BaseRotationFinder);
 
-    typedef typename core::behavior::ForceField<DataTypes> InheritForceField;
+    typedef BaseLinearElasticityFEMForceField<DataTypes> InheritForceField;
     typedef typename DataTypes::VecCoord VecCoord;
     typedef typename DataTypes::VecDeriv VecDeriv;
     typedef VecCoord Vector;
@@ -113,28 +118,20 @@ public:
     typedef Mat33 Transformation; ///< matrix for rigid transformations like rotations
 
     int method;
-    Data<std::string> f_method; ///< the computation method of the displacements
-    Data<Real> f_poissonRatio;
-    Data<Real> f_youngModulus;
-    Data<bool> f_updateStiffnessMatrix;
-    SOFA_ATTRIBUTE_DISABLED__REMOVE_UNUSED_ASSEMBLING()
-    DeprecatedAndRemoved f_assembling;
-    Data< sofa::helper::OptionsGroup > _gatherPt; ///< use in GPU version
-    Data< sofa::helper::OptionsGroup > _gatherBsize; ///< use in GPU version
-    Data<bool> f_drawing; ///<  draw the forcefield if true
-    Data<Real> f_drawPercentageOffset; ///< size of the hexa
+
+    Data<std::string> d_method; ///< "large" or "polar" or "small" displacements
+    Data<bool> d_updateStiffnessMatrix;
+    Data< sofa::helper::OptionsGroup > d_gatherPt; ///< number of dof accumulated per threads during the gather operation (Only use in GPU version)
+    Data< sofa::helper::OptionsGroup > d_gatherBsize; ///< number of dof accumulated per threads during the gather operation (Only use in GPU version)
+    Data<bool> d_drawing; ///< draw the forcefield if true
+    Data<Real> d_drawPercentageOffset; ///< size of the hexa
     bool needUpdateTopology;
 
-    /// Link to be set to the topology container in the component graph. 
-    SingleLink<HexahedronFEMForceField<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
-public:
-    void setPoissonRatio(Real val) { this->f_poissonRatio.setValue(val); }
-    void setYoungModulus(Real val) { this->f_youngModulus.setValue(val); }
-    void setMethod(int val) ;
-    SOFA_ATTRIBUTE_DISABLED("v22.06 (PR#2901)", "v22.12", "Removing unused boolean data assembling in forcefields.")
-    void setComputeGlobalMatrix(bool val) = delete;
+    using Inherit1::l_topology;
 
-    void setUpdateStiffnessMatrix(bool val) { this->f_updateStiffnessMatrix.setValue(val); }
+    void setMethod(int val) ;
+
+    void setUpdateStiffnessMatrix(bool val) { this->d_updateStiffnessMatrix.setValue(val); }
 
     void init() override;
     void reinit() override;
@@ -143,18 +140,17 @@ public:
     void addDForce (const core::MechanicalParams* mparams, DataVecDeriv& df,
                             const DataVecDeriv& dx) override;
 
-    SReal getPotentialEnergy(const core::MechanicalParams* /*mparams*/,
-                                     const DataVecCoord&  /* x */) const override;
-
-    // getPotentialEnergy is implemented for polar method
-    SReal getPotentialEnergy(const core::MechanicalParams*) const override;
+    SReal getPotentialEnergy(const core::MechanicalParams* mparams, const DataVecCoord& x) const override;
 
     const Transformation& getElementRotation(const sofa::Index elemidx);
 
     void getNodeRotation(Transformation& R, sofa::Index nodeIdx) ;
     void getRotations(linearalgebra::BaseMatrix * rotations,int offset = 0) override ;
 
-    void addKToMatrix(const core::MechanicalParams* mparams, const sofa::core::behavior::MultiMatrixAccessor* matrix) override;
+    using Inherit1::addKToMatrix;
+    void addKToMatrix(sofa::linearalgebra::BaseMatrix * matrix, SReal kFact, unsigned int &offset) override;
+    void buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix) override;
+    void buildDampingMatrix(core::behavior::DampingMatrix* /* matrices */) override {}
 
     void computeBBox(const core::ExecParams* params, bool onlyVisible) override;
 
@@ -174,7 +170,8 @@ protected:
 
     typedef type::Mat<24, 24, Real> ElementStiffness;
     typedef type::vector<ElementStiffness> VecElementStiffness;
-    Data<VecElementStiffness> _elementStiffnesses; ///< Stiffness matrices per element (K_i)
+
+    Data<VecElementStiffness> d_elementStiffnesses; ///< Stiffness matrices per element (K_i)
 
     typedef std::pair<int,Real> Col_Value;
     typedef type::vector< Col_Value > CompressedValue;
@@ -182,9 +179,9 @@ protected:
     CompressedMatrix _stiffnesses;
     SReal m_potentialEnergy;
 
-    sofa::core::topology::BaseMeshTopology* m_topology; ///< Pointer to the topology container. Will be set by link @sa l_topology
-    topology::SparseGridTopology* _sparseGrid;
-    Data< VecCoord > _initialPoints; ///< the intial positions of the points
+    topology::container::grid::SparseGridTopology* _sparseGrid;
+
+    Data< VecCoord > d_initialPoints; ///< Initial Position
 
     type::Mat<8,3,int> _coef; ///< coef of each vertices to compute the strain stress matrix
 
@@ -194,10 +191,10 @@ protected:
 protected:
     HexahedronFEMForceField();
 
-    inline const VecElement *getIndexedElements(){ return & (m_topology->getHexahedra()); }
+    inline const VecElement *getIndexedElements(){ return & (this->l_topology->getHexahedra()); }
 
     virtual void computeElementStiffness( ElementStiffness &K, const MaterialStiffness &M,
-                                          const type::fixed_array<Coord,8> &nodes, const sofa::Index elementIndice,
+                                          const type::Vec<8, Coord> &nodes, const sofa::Index elementIndice,
                                           double stiffnessFactor=1.0) const;
     static Mat33 integrateStiffness( int signx0, int signy0, int signz0, int signx1, int signy1, int signz1,
                               const Real u, const Real v, const Real w, const Mat33& J_1  );
@@ -211,23 +208,25 @@ protected:
     type::vector<type::fixed_array<Coord,8> > _rotatedInitialElements;   ///< The initials positions in its frame
     type::vector<Transformation> _rotations;
     type::vector<Transformation> _initialrotations;
-    void initLarge(int i, const Element&elem);
+    void initLarge(sofa::Index i, const Element&elem);
     static void computeRotationLarge( Transformation &r, Coord &edgex, Coord &edgey);
     virtual void accumulateForceLarge( WDataRefVecDeriv &f, RDataRefVecCoord &p, sofa::Index i, const Element&elem  );
 
     ////////////// polar decomposition method
-    void initPolar(int i, const Element&elem);
+    void initPolar(sofa::Index i, const Element&elem);
     void computeRotationPolar( Transformation &r, type::Vec<8,Coord> &nodes);
     virtual void accumulateForcePolar( WDataRefVecDeriv &f, RDataRefVecCoord &p, sofa::Index i, const Element&elem  );
 
     ////////////// small decomposition method
-    void initSmall(int i, const Element&elem);
+    void initSmall(sofa::Index i, const Element&elem);
     virtual void accumulateForceSmall( WDataRefVecDeriv &f, RDataRefVecCoord &p, sofa::Index i, const Element&elem  );
 
     bool _alreadyInit;
+
+    core::visual::DrawElementMesh<sofa::geometry::Hexahedron> m_drawMesh;
 };
 
-#if  !defined(SOFA_COMPONENT_FORCEFIELD_HEXAHEDRONFEMFORCEFIELD_CPP)
+#if !defined(SOFA_COMPONENT_FORCEFIELD_HEXAHEDRONFEMFORCEFIELD_CPP)
 extern template class SOFA_COMPONENT_SOLIDMECHANICS_FEM_ELASTIC_API HexahedronFEMForceField<defaulttype::Vec3Types>;
 
 #endif

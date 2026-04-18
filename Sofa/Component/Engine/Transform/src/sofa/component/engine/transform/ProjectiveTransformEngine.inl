@@ -32,7 +32,7 @@ template <class DataTypes>
 ProjectiveTransformEngine<DataTypes>::ProjectiveTransformEngine()
     : f_inputX ( initData (&f_inputX, "input_position", "input array of 3d points") )
     , f_outputX( initData (&f_outputX, "output_position", "output array of projected 3d points") )
-    , proj_mat(initData(&proj_mat, "proj_mat", "projection matrix ") )
+    , proj_mat(initData(&proj_mat, "proj_mat", "projection matrix") )
     , focal_distance(initData(&focal_distance, (Real)1,"focal_distance", "focal distance ") )
 {
     addInput(&f_inputX);
@@ -71,7 +71,7 @@ void ProjectiveTransformEngine<DataTypes>::doUpdate()
     {
         std::stringstream tmp;
         for (k=0; k<4; k++)
-            tmp << P[j][k] << " ";
+            tmp << P(j,k) << " ";
         dmsg_info() << tmp.str() ;
     }
 
@@ -81,7 +81,7 @@ void ProjectiveTransformEngine<DataTypes>::doUpdate()
         out[i]=Vec3(in[i][0],in[i][1],in[i][2]);
         out[i]=P*Vec4(out[i],1);
         s = out[i][2];
-        if (fabs(s) < 1e-10) s=s<0 ? -1e-10 : 1e-10; // handle undefined case where out[i][2] == 0 -> set it to 1e-10 (and keep its sign)
+        if (fabs(s) < 1e-10) s=s<0 ? -1e-10 : 1e-10; // handle undefined case where out(i,2) == 0 -> set it to 1e-10 (and keep its sign)
         r = f/out[i][2];
         out[i] *= r;
         dmsg_info() << in[i] << " <-> " << out[i] ;

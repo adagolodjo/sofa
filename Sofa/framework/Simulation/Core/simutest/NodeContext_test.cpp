@@ -32,14 +32,19 @@ using sofa::component::sceneutility::InfoComponent;
 #include <sofa/helper/system/PluginManager.h>
 using sofa::helper::system::PluginManager ;
 
+#include <sofa/simpleapi/SimpleApi.h>
+
 class NodeContext_test: public BaseSimulationTest
 {
 public:
 
 
-    NodeContext_test()
+    void doSetUp() override
     {
-        importPlugin("SofaComponentAll") ;
+        this->loadPlugins({
+            Sofa.Component.StateContainer,
+            Sofa.Component.SceneUtility
+        });
     }
 
     void testGetNodeObjects()
@@ -83,7 +88,7 @@ public:
 
         /// Query a specific model with a compact syntax, this returns std::vector<BaseObject*>
         /// So there is 4 base object in the scene.
-        for(auto& m : node->getNodeObjects() ) { SOFA_UNUSED(m); }
+        for(const auto& m : node->getNodeObjects() ) { SOFA_UNUSED(m); }
         ASSERT_EQ( node->getNodeObjects().size(), (unsigned int)3 ) ;
     }
 
@@ -128,7 +133,7 @@ public:
 
         /// Query a specific model with a compact syntax, this returns std::vector<BaseObject*>
         /// So there is 4 base object in the scene.
-        for(auto& m : node->getTreeObjects() ) { SOFA_UNUSED(m); }
+        for(const auto& m : node->getTreeObjects() ) { SOFA_UNUSED(m); }
         ASSERT_EQ( node->getTreeObjects().size(), (unsigned int)5 ) ;
     }
 };

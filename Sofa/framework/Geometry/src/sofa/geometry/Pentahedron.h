@@ -22,15 +22,6 @@
 #pragma once
 
 #include <sofa/geometry/config.h>
+#include <sofa/geometry/Prism.h>
 
-namespace sofa::geometry
-{
-
-struct Pentahedron
-{
-    static const sofa::Size NumberOfNodes = 6;
-
-    Pentahedron() = delete;
-};
-
-} // namespace sofa::geometry
+SOFA_HEADER_DEPRECATED("v25.12", "v26.06", "sofa/geometry/Prism.h")

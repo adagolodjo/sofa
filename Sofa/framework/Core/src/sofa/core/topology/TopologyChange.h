@@ -19,20 +19,13 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_TOPOLOGY_TOPOLOGYCHANGE_H
-#define SOFA_CORE_TOPOLOGY_TOPOLOGYCHANGE_H
+#pragma once
 
 #include <sofa/core/topology/Topology.h>
 #include <sofa/core/objectmodel/Data.h>
 #include <sofa/helper/list.h>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace topology
+namespace sofa::core::topology
 {
 
 
@@ -133,34 +126,34 @@ class SOFA_CORE_API HexahedraRenumbering;
 /// Topology identification of a primitive element
 struct TopologyElemID
 {
-    TopologyElemID() : type(TopologyElementType::POINT), index((Topology::ElemID)-1) {}
+    TopologyElemID() : type(geometry::ElementType::POINT), index((Topology::ElemID)-1) {}
 
-    TopologyElemID(TopologyElementType _type, Topology::ElemID _index)
+    TopologyElemID(geometry::ElementType _type, Topology::ElemID _index)
         : type(_type)
         , index(_index)
     {}
 
-    TopologyElementType type;
+    geometry::ElementType type;
     Topology::ElemID index;
 };
 
 SOFA_CORE_API std::ostream& operator << (std::ostream& out, const TopologyElemID& d);
 SOFA_CORE_API std::istream& operator >> (std::istream& in, TopologyElemID& d);
 
-/// Topology change informations related to the ancestor topology element of a point
+/// Topology change information related to the ancestor topology element of a point
 struct PointAncestorElem
 {
     typedef type::Vec3 LocalCoords;
 
-    PointAncestorElem() : type(TopologyElementType::POINT), index(sofa::InvalidID) {}
+    PointAncestorElem() : type(geometry::ElementType::POINT), index(sofa::InvalidID) {}
 
-    PointAncestorElem(TopologyElementType _type, Topology::ElemID _index, const LocalCoords& _localCoords)
+    PointAncestorElem(geometry::ElementType _type, Topology::ElemID _index, const LocalCoords& _localCoords)
         : type(_type)
         , index(_index)
         , localCoords(_localCoords)
     {}
     
-    TopologyElementType type;
+    geometry::ElementType type;
     Topology::ElemID index;
     LocalCoords localCoords;
 };
@@ -168,7 +161,7 @@ struct PointAncestorElem
 SOFA_CORE_API std::ostream& operator << (std::ostream& out, const PointAncestorElem& d);
 SOFA_CORE_API std::istream& operator >> (std::istream& in, PointAncestorElem& d);
 
-/// Topology change informations related to the ancestor topology element of an edge
+/// Topology change information related to the ancestor topology element of an edge
 template<int NV>
 struct ElemAncestorElem
 {
@@ -195,9 +188,19 @@ struct ElemAncestorElem
 };
 
 template<int NV>
-SOFA_CORE_API std::ostream& operator << (std::ostream& out, const ElemAncestorElem<NV>& d);
+std::ostream& operator << (std::ostream& out, const ElemAncestorElem<NV>& d)
+{
+    out << d.pointSrcElems << " " << d.srcElems.size() << " " << d.srcElems << "\n";
+    return out;
+}
+
 template<int NV>
-SOFA_CORE_API std::istream& operator >> (std::istream& in, ElemAncestorElem<NV>& d);
+std::istream& operator >> (std::istream& in, ElemAncestorElem<NV>& d)
+{
+    SOFA_UNUSED(d);
+    
+    return in;
+}
 
 typedef ElemAncestorElem<2> EdgeAncestorElem;
 typedef ElemAncestorElem<3> TriangleAncestorElem;
@@ -1449,13 +1452,7 @@ public:
     sofa::type::vector<Topology::HexahedronID> indexArray;
     sofa::type::vector<Topology::HexahedronID> inv_indexArray;
 };
-
-
-} // namespace topology
-
-} // namespace core
-
-} // namespace sofa
+} // namespace sofa::core::topology
 
 #ifndef SOFA_CORE_TOPOLOGY_TOPOLOGYCHANGE_DEFINITION
 namespace std
@@ -1468,5 +1465,3 @@ namespace sofa::core::objectmodel
 }
 
 #endif /// SOFA_CORE_TOPOLOGY_BASETOPOLOGYENGINE_DEFINITION
-
-#endif // SOFA_CORE_TOPOLOGY_TOPOLOGYCHANGE_H

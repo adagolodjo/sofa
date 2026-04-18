@@ -24,24 +24,15 @@
 * in the messaging.h file.
 ******************************************************************************/
 
-#include "Message.h"
-#include "SilentMessageHandler.h"
+#include <sofa/helper/logging/Message.h>
+#include <sofa/helper/logging/SilentMessageHandler.h>
 
 
-namespace sofa
-{
-
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 void SilentMessageHandler::process(Message& /*m*/) {
 }
 
 
-} // logging
-} // helper
-} // sofa
-
+}

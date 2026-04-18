@@ -21,6 +21,7 @@
 ******************************************************************************/
 #pragma once
 #include <sofa/component/solidmechanics/spring/RepulsiveSpringForceField.h>
+#include <sofa/component/solidmechanics/spring/SpringForceField.inl>
 #include <sofa/core/visual/VisualParams.h>
 
 namespace sofa::component::solidmechanics::spring
@@ -39,7 +40,7 @@ void RepulsiveSpringForceField<DataTypes>::addForce(const sofa::core::Mechanical
     const VecCoord& x2 =  data_x2.getValue();
     const VecDeriv& v2 =  data_v2.getValue();
 
-    const type::vector<Spring>& springs= this->springs.getValue();
+    const type::vector<Spring>& springs= this->d_springs.getValue();
     this->dfdx.resize(springs.size());
     f1.resize(x1.size());
     f2.resize(x2.size());
@@ -67,9 +68,9 @@ void RepulsiveSpringForceField<DataTypes>::addForce(const sofa::core::Mechanical
             {
                 for( int k=0; k<N; ++k )
                 {
-                    m[j][k] = ((Real)springs[i].ks-tgt) * u[j] * u[k];
+                    m(j,k) = ((Real)springs[i].ks-tgt) * u[j] * u[k];
                 }
-                m[j][j] += tgt;
+                m(j,j) += tgt;
             }
         }
         else
@@ -77,7 +78,7 @@ void RepulsiveSpringForceField<DataTypes>::addForce(const sofa::core::Mechanical
             Mat& m = this->dfdx[i];
             for( int j=0; j<N; ++j )
                 for( int k=0; k<N; ++k )
-                    m[j][k] = 0.0;
+                    m(j,k) = 0.0;
         }
     }
 

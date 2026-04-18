@@ -23,6 +23,7 @@
 
 #include <sofa/geometry/config.h>
 
+#include <sofa/geometry/ElementType.h>
 #include <sofa/type/fixed_array_algorithms.h>
 #include <sofa/type/vector_algebra.h>
 #include <sofa/type/Vec.h>
@@ -33,7 +34,8 @@ namespace sofa::geometry
 
 struct Tetrahedron
 {
-    static const sofa::Size NumberOfNodes = 4;
+    static constexpr sofa::Size NumberOfNodes = 4;
+    static constexpr ElementType Element_type = ElementType::TETRAHEDRON;
 
     Tetrahedron() = delete;
 
@@ -42,8 +44,8 @@ struct Tetrahedron
     * @remark	This function is not generic
     * @tparam   Node a container of the type sofa::type::Vec3 (needed for cross(), dot(), operator-)
     * @tparam   T scalar
-    * @param	n0,n1,n2,n3,n4 nodes of the tetrahedron
-    * @return	Volume of the hexahedron (a T scalar)
+    * @param	n0,n1,n2,n3 nodes of the tetrahedron
+    * @return	Volume of the tetrahedron (a T scalar)
     */
     template<typename Node,
              typename T = std::decay_t<decltype(*std::begin(std::declval<Node>()))>,
@@ -52,6 +54,24 @@ struct Tetrahedron
     [[nodiscard]]
     static constexpr auto volume(const Node& n0, const Node& n1, const Node& n2, const Node& n3)
     {
+        return std::abs(signedVolume(n0, n1, n2, n3));
+    }
+
+    /**
+    * @brief	Compute the signed volume of a tetrahedron
+    * @remark	This function is not generic
+    * @tparam   Node a container of the type sofa::type::Vec3 (needed for cross(), dot(), operator-)
+    * @tparam   T scalar
+    * @param	n0,n1,n2,n3 nodes of the tetrahedron
+    * @return	Signed volume of the tetrahedron (a T scalar)
+    */
+    template<typename Node,
+             typename T = std::decay_t<decltype(*std::begin(std::declval<Node>()))>,
+             typename = std::enable_if_t<std::is_scalar_v<T>>
+    >
+    [[nodiscard]]
+    static constexpr auto signedVolume(const Node& n0, const Node& n1, const Node& n2, const Node& n3)
+    {
         constexpr Node n{};
         static_assert(std::distance(std::begin(n), std::end(n)) == 3, "volume can only be computed in 3 dimensions.");
 
@@ -59,8 +79,7 @@ struct Tetrahedron
         const auto b = n2 - n0;
         const auto c = n3 - n0;
 
-        return std::abs(sofa::type::dot(sofa::type::cross(a, b), c) / static_cast<T>(6));
-
+        return sofa::type::dot(sofa::type::cross(a, b), c) / static_cast<T>(6);
     }
 };
 

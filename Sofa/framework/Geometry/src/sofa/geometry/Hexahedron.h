@@ -22,6 +22,7 @@
 #pragma once
 
 #include <sofa/geometry/config.h>
+#include <sofa/geometry/ElementType.h>
 #include <sofa/type/fixed_array.h>
 #include <sofa/type/Mat.h>
 #include <cmath>
@@ -37,6 +38,7 @@ namespace sofa::geometry
 struct Hexahedron
 {
     static constexpr sofa::Size NumberOfNodes = 8;
+    static constexpr ElementType Element_type = ElementType::HEXAHEDRON;
 
     Hexahedron() = delete;
 
@@ -56,6 +58,36 @@ struct Hexahedron
     //  Z
 
     /**
+     * @brief Defines the edges of a hexahedron along the X-axis.
+     *
+     * This variable represents the edges of a hexahedron that are parallel to the X-axis according
+     * to the conventional node numbering. It consists of an array of 4 pairs, each pair containing
+     * the indices of the two nodes that form an edge along the X-axis.
+     */
+    static constexpr std::array<std::pair<sofa::Size, sofa::Size>, 4> xEdges{
+        {{0, 1}, {4, 5}, {3, 2}, {7, 6}}};
+
+    /**
+     * @brief Defines the edges of a hexahedron along the Y-axis.
+     *
+     * This variable represents the edges of a hexahedron that are parallel to the Y-axis according
+     * to the conventional node numbering. It consists of an array of 4 pairs, each pair containing
+     * the indices of the two nodes that form an edge along the Y-axis.
+     */
+    static constexpr std::array<std::pair<sofa::Size, sofa::Size>, 4> yEdges{
+        {{4, 7}, {5, 6}, {1, 2}, {0, 3}}};
+
+    /**
+     * @brief Defines the edges of a hexahedron along the Z-axis.
+     *
+     * This variable represents the edges of a hexahedron that are parallel to the Z-axis according
+     * to the conventional node numbering. It consists of an array of 4 pairs, each pair containing
+     * the indices of the two nodes that form an edge along the Z-axis.
+     */
+    static constexpr std::array<std::pair<sofa::Size, sofa::Size>, 4> zEdges{
+        {{4, 0}, {5, 1}, {6, 2}, {7, 3}}};
+
+    /**
     * @brief	Compute the center of a hexahedron
     * @remark	The order of nodes given as parameter is not necessary.
     * @tparam   Node iterable container, with operator[]
@@ -73,7 +105,7 @@ struct Hexahedron
     {
         constexpr auto dimensions = sizeof(Node) / sizeof(T);
         auto centerRes = n0;
-        for (auto i = 0; i < dimensions; i++)
+        for (size_t i = 0; i < dimensions; i++)
         {
             centerRes[i] += n1[i] + n2[i] + n3[i] + n4[i] + n5[i] + n6[i] + n7[i];
             centerRes[i] /= static_cast<T>(NumberOfNodes);

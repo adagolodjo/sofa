@@ -50,7 +50,7 @@ CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::CapsuleColli
 }
 
 template<class MyReal>
-void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::resize(Size size)
+void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::resize(sofa::Size size)
 {
     this->core::CollisionModel::resize(size);
 
@@ -99,7 +99,7 @@ void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::init()
 template <class MyReal>
 Size CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::nbCap()const
 {
-    return Size(d_capsule_radii.getValue().size());
+    return sofa::Size(d_capsule_radii.getValue().size());
 }
 
 template <class MyReal>
@@ -124,14 +124,14 @@ void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::compute
     if (!empty())
     {
         typename TCapsule<defaulttype::StdRigidTypes<3,MyReal> >::Real r;
-        for (Size i=0; i<ncap; i++)
+        for (sofa::Size i=0; i<ncap; i++)
         {
             const Coord p1 = point1(i);
             const Coord p2 = point2(i);
             r = radius(i);
 
-            type::Vector3 maxVec;
-            type::Vector3 minVec;
+            type::Vec3 maxVec;
+            type::Vec3 minVec;
 
             for(int dim = 0 ; dim < 3 ; ++dim){
                 if(p1(dim) > p2(dim)){
@@ -153,30 +153,25 @@ void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::compute
 
 
 template<class MyReal>
-void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::draw(const core::visual::VisualParams* vparams, Index index)
+void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::draw(const core::visual::VisualParams* vparams, sofa::Index index)
 {
     sofa::type::RGBAColor col4f(getColor4f()[0], getColor4f()[1], getColor4f()[2], getColor4f()[3]);
     vparams->drawTool()->drawCapsule(point1(index),point2(index),(float)radius(index),col4f);
 }
 
 template<class MyReal>
-void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::draw(const core::visual::VisualParams* vparams)
+void CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::drawCollisionModel(const core::visual::VisualParams* vparams)
 {
-    if (vparams->displayFlags().getShowCollisionModels())
+    sofa::type::RGBAColor col4f(getColor4f()[0], getColor4f()[1], getColor4f()[2], getColor4f()[3]);
+    vparams->drawTool()->setPolygonMode(0, vparams->displayFlags().getShowWireFrame());  // maybe ??
+    vparams->drawTool()->setLightingEnabled(true);  // Enable lightning
+
+    for (sofa::Size i = 0; i < size; i++)
     {
-        sofa::type::RGBAColor col4f(getColor4f()[0], getColor4f()[1], getColor4f()[2], getColor4f()[3]);
-        vparams->drawTool()->setPolygonMode(0,vparams->displayFlags().getShowWireFrame());//maybe ??
-        vparams->drawTool()->setLightingEnabled(true); //Enable lightning
-
-        for (Size i=0; i<size; i++){
-            vparams->drawTool()->drawCapsule(point1(i),point2(i),(float)radius(i),col4f);
-        }
-
-        vparams->drawTool()->setLightingEnabled(false); //Disable lightning
+        vparams->drawTool()->drawCapsule(point1(i), point2(i), (float)radius(i), col4f);
     }
 
-    if (getPrevious()!=nullptr && vparams->displayFlags().getShowBoundingCollisionModels())
-        getPrevious()->draw(vparams);
+    vparams->drawTool()->setLightingEnabled(false);  // Disable lightning
 
     vparams->drawTool()->setPolygonMode(0,false);
 }
@@ -189,24 +184,24 @@ typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Rea
 }
 
 template <class MyReal>
-const typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord & CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::center(Index i)const{
-    return DataTypes::getCPos((_mstate->read(core::ConstVecCoordId::position())->getValue())[i]);
+const typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord & CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::center(sofa::Index i)const{
+    return DataTypes::getCPos((_mstate->read(core::vec_id::read_access::position)->getValue())[i]);
 }
 
 template <class MyReal>
-typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Real CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::radius(Index i) const
+typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Real CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::radius(sofa::Index i) const
 {
     return this->d_capsule_radii.getValue()[i];
 }
 
 template <class MyReal>
-typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::point1(Index i) const
+typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::point1(sofa::Index i) const
 {
     return  center(i) - axis(i) * height(i)/2.0;
 }
 
 template <class MyReal>
-typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::point2(Index i) const
+typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::point2(sofa::Index i) const
 {
     return  center(i) + axis(i) * height(i)/2.0;
 }
@@ -236,8 +231,8 @@ typename TCapsule<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Real TCapsule<so
 
 
 template<class MyReal>
-const typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord & CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::velocity(Index index) const {
-    return DataTypes::getDPos(((_mstate->read(core::ConstVecDerivId::velocity())->getValue()))[index]);
+const typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord & CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::velocity(sofa::Index index) const {
+    return DataTypes::getDPos(((_mstate->read(core::vec_id::read_access::velocity)->getValue()))[index]);
 }
 
 
@@ -245,12 +240,12 @@ template<class MyReal>
 const typename TCapsule<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord & TCapsule<sofa::defaulttype::StdRigidTypes<3,MyReal> >::v() const {return this->model->velocity(this->index);}
 
 template<class MyReal>
-const sofa::type::Quat<SReal> CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::orientation(Index index)const{
-    return _mstate->read(core::ConstVecCoordId::position())->getValue()[index].getOrientation();
+const sofa::type::Quat<SReal> CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::orientation(sofa::Index index)const{
+    return _mstate->read(core::vec_id::read_access::position)->getValue()[index].getOrientation();
 }
 
 template<class MyReal>
-typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::axis(Index index) const {
+typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coord CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::axis(sofa::Index index) const {
     Coord ax(0,1,0);
 
     const sofa::type::Quat<SReal> & ori = orientation(index);
@@ -259,7 +254,7 @@ typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Coo
 
 
 template<class MyReal>
-typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Real CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::height(Index index) const {
+typename CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::Real CapsuleCollisionModel<sofa::defaulttype::StdRigidTypes<3,MyReal> >::height(sofa::Index index) const {
     return ((d_capsule_heights.getValue()))[index];
 }
 

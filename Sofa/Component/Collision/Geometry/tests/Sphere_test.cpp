@@ -30,12 +30,12 @@ using std::vector;
 using std::string;
 
 #include<sofa/core/objectmodel/BaseObject.h>
-using sofa::core::objectmodel::BaseObject ;
+using sofa::core::objectmodel::BaseComponent ;
 
 #include<sofa/simulation/Node.h>
 using sofa::simulation::Node ;
 
-#include <SofaSimulationCommon/SceneLoaderXML.h>
+#include <sofa/simulation/common/SceneLoaderXML.h>
 using sofa::simulation::SceneLoaderXML ;
 
 #include <sofa/component/collision/detection/intersection/MinProximityIntersection.h>
@@ -58,25 +58,25 @@ using sofa::helper::logging::MessageDispatcher ;
 #include <sofa/helper/logging/ClangMessageHandler.h>
 using sofa::helper::logging::ClangMessageHandler ;
 
-#include <SofaSimulationGraph/DAGNode.h>
+#include <sofa/simulation/Node.h>
 
 #include <sofa/testing/BaseSimulationTest.h>
 using sofa::testing::BaseSimulationTest;
 
 #include <sofa/component/collision/testing/SpherePrimitiveCreator.h>
+#include <sofa/simpleapi/SimpleApi.h>
 
 namespace sofa {
 
 struct TestSphere : public BaseSimulationTest
 {
-    void SetUp() override
+    void doSetUp() override
     {
+        loadPlugins({Sofa.Component.StateContainer, Sofa.Component.Collision.Geometry});
+
         m_proxIntersection = sofa::core::objectmodel::New<MinProximityIntersection>();
         m_proxIntersection->setAlarmDistance(1.0);
         m_proxIntersection->setContactDistance(1.0);
-    }
-    void TearDown() override
-    {
     }
 
     bool rigidRigid1();
@@ -101,12 +101,12 @@ bool TestSphere::rigidRigid1(){
     angles[1] = 0;
     angles[2] = 0;
 
-    Node::SPtr scn = New<sofa::simulation::graph::DAGNode>();
+    Node::SPtr scn = New<sofa::simulation::Node>();
     //the center of this OBB is (0,0,-1) and its extent is 1
 
     //we construct the falling sphere
-    SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
-    SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel2 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,-2),2,Vec3d(0,0,0),angles,order,scn);
+    const SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
+    const SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel2 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,-2),2,Vec3d(0,0,0),angles,order,scn);
 
 
     //we construct the OBB and the capsule from the OBBCollisionModel<sofa::defaulttype::Rigid3Types> and the CapsuleModel
@@ -119,7 +119,7 @@ bool TestSphere::rigidRigid1(){
     sofa::type::vector<DetectionOutput> detectionOUTPUT;
 
     //looking for an intersection (with proximities)
-    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT))
+    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT,m_proxIntersection.get()))
         return false;
 
     //the intersection point of cap (detectionOUTPUT[0].point[1]) should be (0,0,0.01)
@@ -157,12 +157,12 @@ bool TestSphere::rigidRigid2(){
     angles_2[1] = 0;
     angles_2[2] = 0;
 
-   Node::SPtr scn = New<sofa::simulation::graph::DAGNode>();
+   Node::SPtr scn = New<sofa::simulation::Node>();
                                         //the center of this OBB is (0,0,-1) and its extent is 1
 
     //we construct the falling sphere
-    SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles_1,order_1,scn);
-    SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel2 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,-2),2,Vec3d(0,0,0),angles_2,order_2,scn);
+    const SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles_1,order_1,scn);
+    const SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel2 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,-2),2,Vec3d(0,0,0),angles_2,order_2,scn);
 
 
     //we construct the OBB and the capsule from the OBBCollisionModel<sofa::defaulttype::Rigid3Types> and the CapsuleModel
@@ -175,7 +175,7 @@ bool TestSphere::rigidRigid2(){
     sofa::type::vector<DetectionOutput> detectionOUTPUT;
 
     //loooking for an intersection
-    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT))
+    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT,m_proxIntersection.get()))
         return false;
 
     //the intersection point of cap (detectionOUTPUT[0].point[1]) should be (0,0,0.01)
@@ -204,12 +204,12 @@ bool TestSphere::rigidSoft2(){
     angles[1] = M_PI/4;
     angles[2] = M_PI/3;
 
-   Node::SPtr scn = New<sofa::simulation::graph::DAGNode>();
+   Node::SPtr scn = New<sofa::simulation::Node>();
                                         //the center of this OBB is (0,0,-1) and its extent is 1
 
     //we construct the falling sphere
-    SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
-    SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
+    const SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
+    const SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
 
 
     //we construct the OBB and the capsule from the OBBCollisionModel<sofa::defaulttype::Rigid3Types> and the CapsuleModel
@@ -222,7 +222,7 @@ bool TestSphere::rigidSoft2(){
     sofa::type::vector<DetectionOutput> detectionOUTPUT;
 
     //loooking for an intersection
-    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT))
+    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT,m_proxIntersection.get()))
         return false;
 
     //the intersection point of cap (detectionOUTPUT[0].point[1]) should be (0,0,0.01)
@@ -251,12 +251,12 @@ bool TestSphere::rigidSoft1(){
     angles[1] = 0;
     angles[2] = 0;
 
-   Node::SPtr scn = New<sofa::simulation::graph::DAGNode>();
+   Node::SPtr scn = New<sofa::simulation::Node>();
                                         //the center of this OBB is (0,0,-1) and its extent is 1
 
     //we construct the falling sphere
-    SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
-    SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
+    const SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
+    const SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
 
 
     //we construct the OBB and the capsule from the OBBCollisionModel<sofa::defaulttype::Rigid3Types> and the CapsuleModel
@@ -269,7 +269,7 @@ bool TestSphere::rigidSoft1(){
     sofa::type::vector<DetectionOutput> detectionOUTPUT;
 
     //loooking for an intersection
-    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT))
+    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT,m_proxIntersection.get()))
         return false;
 
     //the intersection point of cap (detectionOUTPUT[0].point[1]) should be (0,0,0.01)
@@ -299,12 +299,12 @@ bool TestSphere::rigidSoft3(){
     angles[1] = M_PI/4;
     angles[2] = M_PI/3;
 
-   Node::SPtr scn = New<sofa::simulation::graph::DAGNode>();
+   Node::SPtr scn = New<sofa::simulation::Node>();
                                         //the center of this OBB is (0,0,-1) and its extent is 1
 
     //we construct the falling sphere
-    SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
-    SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
+    const SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
+    const SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
 
 
     //we construct the OBB and the capsule from the OBBCollisionModel<sofa::defaulttype::Rigid3Types> and the CapsuleModel
@@ -317,7 +317,7 @@ bool TestSphere::rigidSoft3(){
     sofa::type::vector<DetectionOutput> detectionOUTPUT;
 
     //loooking for an intersection
-    if(!m_proxIntersection->computeIntersection(sph2,sph1,&detectionOUTPUT))
+    if(!m_proxIntersection->computeIntersection(sph2,sph1,&detectionOUTPUT,m_proxIntersection.get()))
         return false;
 
     //the intersection point of cap (detectionOUTPUT[0].point[1]) should be (0,0,0.01)
@@ -346,12 +346,12 @@ bool TestSphere::rigidSoft4(){
     angles[1] = 0;
     angles[2] = 0;
 
-   Node::SPtr scn = New<sofa::simulation::graph::DAGNode>();
+   Node::SPtr scn = New<sofa::simulation::Node>();
                                         //the center of this OBB is (0,0,-1) and its extent is 1
 
     //we construct the falling sphere
-    SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
-    SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
+    const SphereCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr sphmodel1 = sofa::collision_test::makeRigidSphere(Vec3d(0,0,2 + 0.01),2,Vec3d(0,0,-10),angles,order,scn);
+    const SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
 
 
     //we construct the OBB and the capsule from the OBBCollisionModel<sofa::defaulttype::Rigid3Types> and the CapsuleModel
@@ -364,7 +364,7 @@ bool TestSphere::rigidSoft4(){
     sofa::type::vector<DetectionOutput> detectionOUTPUT;
 
     //loooking for an intersection
-    if(!m_proxIntersection->computeIntersection(sph2,sph1,&detectionOUTPUT))
+    if(!m_proxIntersection->computeIntersection(sph2,sph1,&detectionOUTPUT,m_proxIntersection.get()))
         return false;
 
     //the intersection point of cap (detectionOUTPUT[0].point[1]) should be (0,0,0.01)
@@ -384,12 +384,12 @@ bool TestSphere::rigidSoft4(){
 
 
 bool TestSphere::softSoft1(){
-   Node::SPtr scn = New<sofa::simulation::graph::DAGNode>();
+   Node::SPtr scn = New<sofa::simulation::Node>();
                                         //the center of this OBB is (0,0,-1) and its extent is 1
 
     //we construct the falling sphere
-    SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel1 = sofa::collision_test::makeSphere(Vec3d(0,0,2 + 0.01),(SReal)(2.0),Vec3d(0,0,-10),scn);
-    SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
+   const SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel1 = sofa::collision_test::makeSphere(Vec3d(0,0,2 + 0.01),(SReal)(2.0),Vec3d(0,0,-10),scn);
+   const SphereCollisionModel<sofa::defaulttype::Vec3Types>::SPtr sphmodel2 = sofa::collision_test::makeSphere(Vec3d(0,0,-2),(SReal)(2.0),Vec3d(0,0,0),scn);
 
 
     //we construct the OBB and the capsule from the OBBCollisionModel<sofa::defaulttype::Rigid3Types> and the CapsuleModel
@@ -400,7 +400,7 @@ bool TestSphere::softSoft1(){
     sofa::type::vector<DetectionOutput> detectionOUTPUT;
 
     //loooking for an intersection
-    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT))
+    if(!m_proxIntersection->computeIntersection(sph1,sph2,&detectionOUTPUT,m_proxIntersection.get()))
         return false;
 
     //the intersection point of cap (detectionOUTPUT[0].point[1]) should be (0,0,0.01)
@@ -430,18 +430,16 @@ void checkAttributes()
              "  </Node>                                                                      \n"
              "</Node>                                                                        \n" ;
 
-    Node::SPtr root = SceneLoaderXML::loadFromMemory ("testscene",
-                                                      scene.str().c_str(),
-                                                      scene.str().size()) ;
+    const Node::SPtr root = SceneLoaderXML::loadFromMemory("testscene", scene.str().c_str());
     EXPECT_NE(root.get(), nullptr) ;
     root->init(sofa::core::execparams::defaultInstance()) ;
 
-    BaseObject* theSphere = root->getTreeNode("Level 1")->getObject("spheremodel") ;
+    sofa::core::objectmodel::BaseComponent* theSphere = root->getTreeNode("Level 1")->getObject("spheremodel") ;
     EXPECT_NE(theSphere, nullptr) ;
 
     /// List of the supported attributes the user expect to find
     /// This list needs to be updated if you add an attribute.
-    vector<string> attrnames = {
+    const vector<string> attrnames = {
         "listRadius", "radius"
     };
 
@@ -460,13 +458,11 @@ void checkSceneWithVec3MechanicalModel()
              "  </Node>                                                                      \n"
              "</Node>                                                                        \n" ;
 
-    Node::SPtr root = SceneLoaderXML::loadFromMemory ("testscene",
-                                                      scene.str().c_str(),
-                                                      scene.str().size()) ;
+    const Node::SPtr root = SceneLoaderXML::loadFromMemory("testscene", scene.str().c_str());
     EXPECT_NE(root.get(), nullptr) ;
     root->init(sofa::core::execparams::defaultInstance()) ;
 
-    BaseObject* theSphere = root->getTreeNode("Level 1")->getObject("spheremodel") ;
+    sofa::core::objectmodel::BaseComponent* theSphere = root->getTreeNode("Level 1")->getObject("spheremodel") ;
     EXPECT_NE(theSphere, nullptr) ;
 }
 
@@ -481,13 +477,11 @@ void checkSceneWithRigid3dMechanicalModel()
              "  </Node>                                                                      \n"
              "</Node>                                                                        \n" ;
 
-    Node::SPtr root = SceneLoaderXML::loadFromMemory ("testscene",
-                                                      scene.str().c_str(),
-                                                      scene.str().size()) ;
+    const Node::SPtr root = SceneLoaderXML::loadFromMemory("testscene", scene.str().c_str());
     EXPECT_NE(root.get(), nullptr) ;
     root->init(sofa::core::execparams::defaultInstance()) ;
 
-    BaseObject* theSphere = root->getTreeNode("Level 1")->getObject("spheremodel") ;
+    sofa::core::objectmodel::BaseComponent* theSphere = root->getTreeNode("Level 1")->getObject("spheremodel") ;
     EXPECT_NE(theSphere, nullptr) ;
 }
 
@@ -503,9 +497,7 @@ void checkGracefulHandlingWhenMechanicalModelIsMissing()
              "  </Node>                                                                      \n"
              "</Node>                                                                        \n" ;
 
-    Node::SPtr root = SceneLoaderXML::loadFromMemory ("testscene",
-                                                      scene.str().c_str(),
-                                                      scene.str().size()) ;
+    const Node::SPtr root = SceneLoaderXML::loadFromMemory("testscene", scene.str().c_str());
     EXPECT_NE(root.get(), nullptr) ;
     root->init(sofa::core::execparams::defaultInstance()) ;
 

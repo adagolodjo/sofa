@@ -19,19 +19,12 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_OBJECTMODEL_JOYSTICKEVENT_H
-#define SOFA_CORE_OBJECTMODEL_JOYSTICKEVENT_H
+#pragma once
 
 #include <sofa/core/objectmodel/Event.h>
 #include <vector>
 
-namespace sofa
-{
-
-namespace core
-{
-
-namespace objectmodel
+namespace sofa::core::objectmodel
 {
 
 /**
@@ -131,7 +124,7 @@ public:
 
 
     /**
-     * @brief Implements an event notifiying changes about a directionnal hat on a device (like a joystick).
+     * @brief Implements an event notifying changes about a directionnal hat on a device (like a joystick).
      */
     class SOFA_CORE_API HatEvent
     {
@@ -262,11 +255,4 @@ protected:
 private:
 
 };
-
-} // namespace objectmodel
-
-} // namespace core
-
-} // namespace sofa
-
-#endif // SOFA_CORE_OBJECTMODEL_JOYSTICKEVENT_H
+} // namespace sofa::core::objectmodel

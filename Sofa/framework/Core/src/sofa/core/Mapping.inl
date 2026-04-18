@@ -19,18 +19,14 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_MAPPING_INL
-#define SOFA_CORE_MAPPING_INL
+#pragma once
 
 #include <sofa/core/State.h>
 #include <sofa/core/behavior/BaseMechanicalState.h>
 #include <sofa/core/Mapping.h>
 #include <iostream>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 template <class In, class Out>
@@ -102,15 +98,17 @@ type::vector<behavior::BaseMechanicalState*> Mapping<In,Out>::getMechTo()
 template <class In, class Out>
 void Mapping<In,Out>::init()
 {
+    Inherit1::init();
+
     if(toModel && !testMechanicalState(toModel.get()))
     {
         setNonMechanical();
     }
 
-    apply(mechanicalparams::defaultInstance(), VecCoordId::position(), ConstVecCoordId::position());
-    applyJ(mechanicalparams::defaultInstance(), VecDerivId::velocity(), ConstVecDerivId::velocity());
+    apply(mechanicalparams::defaultInstance(), vec_id::write_access::position, vec_id::read_access::position);
+    applyJ(mechanicalparams::defaultInstance(), vec_id::write_access::velocity, vec_id::read_access::velocity);
     if (f_applyRestPosition.getValue())
-        apply(mechanicalparams::defaultInstance(), VecCoordId::restPosition(), ConstVecCoordId::restPosition());
+        apply(mechanicalparams::defaultInstance(), vec_id::write_access::restPosition, vec_id::read_access::restPosition);
 }
 
 template <class In, class Out>
@@ -271,9 +269,4 @@ bool Mapping<In,Out>::setTo(BaseState* to)
 
     return true;
 }
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core

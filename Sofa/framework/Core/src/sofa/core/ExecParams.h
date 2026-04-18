@@ -19,16 +19,12 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_EXEC_PARAMS_H
-#define SOFA_CORE_EXEC_PARAMS_H
+#pragma once
 
 #include <sofa/core/config.h>
 #include <atomic>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 
@@ -132,23 +128,6 @@ public:
         return *this;
     }
 
-    ////////////////////////////////////// DEPRECATED ///////////////////////////////////////////
-    SOFA_ATTRIBUTE_DISABLED__ASPECT("You can safely remove this function from your code.")
-    int aspectID() const = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__ASPECT("You can safely remove this function from your code.")
-    ExecParams& setAspectID(int) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__ASPECT("You can safely remove this function from your code.")
-    static int currentAspect() = delete;
-
-    SOFA_ATTRIBUTE_DISABLED__ASPECT("You can safely remove this function from your code.")
-    static int currentAspect(const core::ExecParams*) = delete;
-
 };
+} // namespace sofa::core
 
-} // namespace core
-
-} // namespace sofa
-
-#endif

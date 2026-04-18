@@ -21,7 +21,7 @@
 ******************************************************************************/
 #pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/component/sceneutility/config.h>
 
 
@@ -29,17 +29,17 @@ namespace sofa::component::sceneutility::infocomponent
 {
 
 /// I use a per-file namespace so that I can employ the 'using' keywords without
-/// fearing it will leack names into the global namespace. When closing this namespace
+/// fearing it will leak names into the global namespace. When closing this namespace
 /// selected object from this per-file namespace are then imported into their parent namespace.
 /// for ease of use
-using sofa::core::objectmodel::BaseObject ;
+using BaseObject [[deprecated("Use sofa::core::objectmodel::BaseObject instead.")]] = sofa::core::objectmodel::BaseObject;
 
-/// Despite this component does absolutely nothin... it is very usefull as it can be used to
+/// Despite this component does absolutely nothing... it is very useful as it can be used to
 /// retain information scene graph.
-class SOFA_COMPONENT_SCENEUTILITY_API InfoComponent : public BaseObject
+class SOFA_COMPONENT_SCENEUTILITY_API InfoComponent : public sofa::core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(InfoComponent, BaseObject);
+    SOFA_CLASS(InfoComponent, sofa::core::objectmodel::BaseComponent);
 
     InfoComponent() {}
     ~InfoComponent() override{}

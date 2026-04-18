@@ -23,14 +23,19 @@
 
 #include <sstream>
 #include <locale>
+#include <map>
 
+#include <sofa/type/fixed_array.h>
 #include <sofa/type/fixed_array_algorithms.h>
+#include <sofa/type/Vec.h>
+
 using namespace sofa::type::pairwise;
 
 namespace // anonymous
 {
+
     template<class T>
-    inline T rclamp(const T& value, const T& low, const T& high)
+    T rclamp(const T& value, const T& low, const T& high)
     {
         return value < low ? low : (value > high ? high : value);
     }
@@ -40,24 +45,30 @@ namespace // anonymous
 namespace sofa::type
 {
 
-static bool ishexsymbol(char c)
+static bool ishexsymbol(const char c)
 {
     return (c>='0' && c<='9') || (c>='a' && c<='f') || (c>='A' && c<='F') ;
 }
 
-static int hexval(char c)
+static int hexval(const char c)
 {
     if (c>='0' && c<='9') return c-'0';
-    else if (c>='a' && c<='f') return (c-'a')+10;
-    else if (c>='A' && c<='F') return (c-'A')+10;
-    else return 0;
+    if (c>='a' && c<='f') return (c-'a')+10;
+    if (c>='A' && c<='F') return (c-'A')+10;
+    return 0;
 }
 
 
 static void extractValidatedHexaString(std::istream& in, std::string& s)
 {
     s.reserve(9);
-    char c = in.get();
+    char c {};
+    in.get(c);
+
+    if (in.fail())
+    {
+        return;
+    }
 
     if(c!='#')
     {
@@ -66,20 +77,22 @@ static void extractValidatedHexaString(std::istream& in, std::string& s)
     }
 
     s.push_back(c);
-    while(in.get(c)){
-        if( !ishexsymbol(c) )
-            return;
+    while (in.get(c))
+    {
+        if (!ishexsymbol(c)) return;
 
-        s.push_back(c) ;
-        if(s.size()>9){
-            in.setstate(std::ios_base::failbit) ;
-            return ;
+        s.push_back(c);
+        if (s.size() > 9)
+        {
+            in.setstate(std::ios_base::failbit);
+            return;
         }
     }
     /// we need to reset the failbit because it is set by the get function
     /// on the last character.
     in.clear(in.rdstate() & ~std::ios_base::failbit) ;
 }
+
 
 bool RGBAColor::read(const std::string& str, RGBAColor& color)
 {
@@ -91,21 +104,21 @@ bool RGBAColor::read(const std::string& str, RGBAColor& color)
 }
 
 
-void RGBAColor::set(float r, float g, float b, float a)
+void RGBAColor::set(const float r, const float g, const float b, const float a)
 {
-    this->elems[0]=r;
-    this->elems[1]=g;
-    this->elems[2]=b;
-    this->elems[3]=a;
+    this->m_components[0] = r;
+    this->m_components[1] = g;
+    this->m_components[2] = b;
+    this->m_components[3] = a;
 }
 
 
-RGBAColor RGBAColor::fromString(const std::string& c)
+RGBAColor RGBAColor::fromString(const std::string& str)
 {
     RGBAColor color(1.0,1.0,1.0,1.0) ;
-    if( !RGBAColor::read(c, color) )
+    if( !RGBAColor::read(str, color) )
     {
-        throw std::invalid_argument("Unable to scan color from string '" + c + "'");
+        throw std::invalid_argument("Unable to scan color from string '" + str + "'");
     }
     return color;
 }
@@ -117,28 +130,28 @@ RGBAColor RGBAColor::fromFloat(const float r, const float g, const float b, cons
 }
 
 
-RGBAColor RGBAColor::fromVec4(const fixed_array<float, 4>& color)
+RGBAColor RGBAColor::fromStdArray(const std::array<float, 4>& color)
 {
     return RGBAColor(color) ;
 }
 
 
-RGBAColor RGBAColor::fromVec4(const fixed_array<double, 4>& color)
+RGBAColor RGBAColor::fromStdArray(const std::array<double, 4>& color)
 {
     return RGBAColor(float(color[0]), float(color[1]), float(color[2]), float(color[3]));
 }
 
 
-RGBAColor RGBAColor::fromHSVA(float h, float s, float v, float a )
+RGBAColor RGBAColor::fromHSVA(const float h, const float s, const float v, const float a )
 {
     // H [0, 360] S, V and A [0.0, 1.0].
     RGBAColor rgba;
 
-    int i = (int)floor(h/60.0f) % 6;
-    float f = h/60.0f - floor(h/60.0f);
-    float p = v * (float)(1 - s);
-    float q = v * (float)(1 - s * f);
-    float t = v * (float)(1 - (1 - f) * s);
+    const int i = (int)floor(h/60.0f) % 6;
+    const float f = h/60.0f - floor(h/60.0f);
+    const float p = v * (float)(1 - s);
+    const float q = v * (float)(1 - s * f);
+    const float t = v * (float)(1 - (1 - f) * s);
     rgba[3]=a;
     switch (i)
     {
@@ -159,45 +172,69 @@ RGBAColor RGBAColor::fromHSVA(float h, float s, float v, float a )
     return rgba;
 }
 
-
 /// This function remove the leading space in the stream.
 static std::istream& trimInitialSpaces(std::istream& in)
 {
-    char first=in.peek();
-    while(!in.eof() && !in.fail() && std::isspace(first, std::locale()))
+    char first = static_cast<char>(in.peek());
+    while (!in.eof() && !in.fail() && std::isspace(first, std::locale()))
     {
         in.get();
-        first=in.peek();
+        first = static_cast<char>(in.peek());
     }
     return in;
 }
 
+const std::map<std::string, RGBAColor> stringToColorMap {
+    {"white", g_white},
+    {"black", g_black},
+    {"red", g_red},
+    {"green", g_green},
+    {"blue", g_blue},
+    {"cyan", g_cyan},
+    {"magenta", g_magenta},
+    {"yellow", g_yellow},
+    {"gray", g_gray},
+    {"darkgray", g_darkgray},
+    {"lightgray", g_lightgray},
+    {"orange", g_orange},
+    {"purple", g_purple},
+    {"pink", g_pink},
+    {"brown", g_brown},
+    {"lime", g_lime},
+    {"teal", g_teal},
+    {"navy", g_navy},
+    {"olive", g_olive},
+    {"maroon", g_maroon},
+    {"silver", g_silver},
+    {"gold", g_gold},
+    {"azure", g_azure}
+};
 
-SOFA_TYPE_API std::istream& operator>>(std::istream& in, RGBAColor& t)
+SOFA_TYPE_API std::istream& operator>>(std::istream& i, RGBAColor& t)
 {
     float r=0.0,g=0.0, b=0.0, a=1.0;
 
-    trimInitialSpaces(in) ;
+    trimInitialSpaces(i) ;
 
     /// Let's remove the initial spaces.
-    if( in.eof() || in.fail() )
-        return in;
+    if( i.eof() || i.fail() )
+        return i;
 
-    char first = in.peek() ;
+    const char first = static_cast<char>(i.peek()) ;
     if (std::isdigit(first, std::locale()))
     {
-        in >> r >> g >> b ;
-        if(!in.eof()){
-            in >> a;
+        i >> r >> g >> b ;
+        if(!i.eof()){
+            i >> a;
         }
     }
     else if (first=='#')
     {
         std::string str;
-        extractValidatedHexaString(in, str) ;
+        extractValidatedHexaString(i, str) ;
 
-        if(in.fail()){
-            return in;
+        if(i.fail()){
+            return i;
         }
 
         if(str.length()>=7){
@@ -216,46 +253,42 @@ SOFA_TYPE_API std::istream& operator>>(std::istream& in, RGBAColor& t)
                 a = (hexval(str[4])*17)/255.0f;
         }else{
             /// If we cannot parse the field we returns that with the fail bit.
-            in.setstate(std::ios_base::failbit) ;
-            return in;
+            i.setstate(std::ios_base::failbit) ;
+            return i;
         }
     } else {
         std::string str;
         /// Search for the first word, it is not needed to read more char than size("magenta"
-        std::getline(in, str, ' ');
+        std::getline(i, str, ' ');
 
         /// if end of line is returned before encountering ' ' or 7... is it fine
         /// so we can clear the failure bitset.
-
-        /// Compare the resulting string with supported colors.
-        /// If you add more colors... please also add them in the test file.
-        if (str == "white")    { r = 1.0f; g = 1.0f; b = 1.0f; }
-        else if (str == "black")    { r = 0.0f; g = 0.0f; b = 0.0f; }
-        else if (str == "red")      { r = 1.0f; g = 0.0f; b = 0.0f; }
-        else if (str == "green")    { r = 0.0f; g = 1.0f; b = 0.0f; }
-        else if (str == "blue")     { r = 0.0f; g = 0.0f; b = 1.0f; }
-        else if (str == "cyan")     { r = 0.0f; g = 1.0f; b = 1.0f; }
-        else if (str == "magenta")  { r = 1.0f; g = 0.0f; b = 1.0f; }
-        else if (str == "yellow")   { r = 1.0f; g = 1.0f; b = 0.0f; }
-        else if (str == "gray")     { r = 0.5f; g = 0.5f; b = 0.5f; }
+        if (const auto it = stringToColorMap.find(str);
+            it != stringToColorMap.end())
+        {
+            r = it->second.r();
+            g = it->second.g();
+            b = it->second.b();
+            a = it->second.a();
+        }
         else {
             /// If we cannot parse the field we returns that with the fail bit.
-            in.setstate(std::ios_base::failbit) ;
-            return in;
+            i.setstate(std::ios_base::failbit) ;
+            return i;
         }
     }
 
     t.set(r,g,b,a) ;
-    return in;
+    return i;
 }
 
 
 /// Write to an output stream
-SOFA_TYPE_API std::ostream& operator << ( std::ostream& out, const RGBAColor& v )
+SOFA_TYPE_API std::ostream& operator << ( std::ostream& out, const RGBAColor& t )
 {
     for( int i=0; i<3; ++i )
-        out<<v[i]<<" ";
-    out<<v[3];
+        out<<t[i]<<" ";
+    out<<t[3];
     return out;
 }
 
@@ -263,8 +296,9 @@ SOFA_TYPE_API std::ostream& operator << ( std::ostream& out, const RGBAColor& v 
 /// @brief enlight a color by a given factor.
 RGBAColor RGBAColor::lighten(const RGBAColor& in, const SReal factor)
 {
-    RGBAColor c = in + ( (RGBAColor::white() - clamp(in, 0.0f, 1.0f)) * rclamp(float(factor), 0.0f, 1.0f));
-    c.a()=1.0;
+    RGBAColor c = in + ( (RGBAColor::white() - RGBAColor::clamp(in, 0.0f, 1.0f)) * rclamp(float(factor), 0.0f, 1.0f));
+
+    c.a() = 1.0;
     return c ;
 }
 

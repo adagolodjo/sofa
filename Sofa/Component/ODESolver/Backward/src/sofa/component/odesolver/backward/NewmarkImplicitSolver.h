@@ -22,6 +22,7 @@
 #pragma once
 
 #include <sofa/component/odesolver/backward/config.h>
+#include <sofa/core/behavior/LinearSolverAccessor.h>
 
 #include <sofa/core/behavior/OdeSolver.h>
 
@@ -46,7 +47,9 @@ namespace sofa::component::odesolver::backward
  * The current implementation first computes $a_t$ directly (as in the explicit solvers), then solves the previous system to compute $a_{t+dt}$, and finally computes the new position and velocity.
  *
 */
-class SOFA_COMPONENT_ODESOLVER_BACKWARD_API NewmarkImplicitSolver : public sofa::core::behavior::OdeSolver
+class SOFA_COMPONENT_ODESOLVER_BACKWARD_API NewmarkImplicitSolver
+    : public sofa::core::behavior::OdeSolver
+    , public sofa::core::behavior::LinearSolverAccessor
 {
 protected:
     unsigned int cpt;
@@ -55,26 +58,26 @@ protected:
     NewmarkImplicitSolver();
 
 public:
-    SOFA_CLASS(NewmarkImplicitSolver, sofa::core::behavior::OdeSolver);
-    Data<double> d_rayleighStiffness; ///< Rayleigh damping coefficient related to stiffness
-    Data<double> d_rayleighMass; ///< Rayleigh damping coefficient related to mass
-    Data<double> d_velocityDamping; ///< Velocity decay coefficient (no decay if null)
+    SOFA_CLASS2(NewmarkImplicitSolver, sofa::core::behavior::OdeSolver, sofa::core::behavior::LinearSolverAccessor);
+    Data<SReal> d_rayleighStiffness; ///< Rayleigh damping coefficient related to stiffness
+    Data<SReal> d_rayleighMass; ///< Rayleigh damping coefficient related to mass
+    Data<SReal> d_velocityDamping; ///< Velocity decay coefficient (no decay if null)
 
-    Data<double> d_gamma; ///< Newmark scheme gamma coefficient
-    Data<double> d_beta; ///< Newmark scheme beta coefficient
+    Data<SReal> d_gamma; ///< Newmark scheme gamma coefficient
+    Data<SReal> d_beta; ///< Newmark scheme beta coefficient
 
     Data<bool> d_threadSafeVisitor; ///< If true, do not use realloc and free visitors in fwdInteractionForceField.
 
     void solve (const core::ExecParams* params, SReal dt, sofa::core::MultiVecCoordId xResult, sofa::core::MultiVecDerivId vResult) override;
 
     /// Given a displacement as computed by the linear system inversion, how much will it affect the velocity
-    double getVelocityIntegrationFactor() const override
+    SReal getVelocityIntegrationFactor() const override
     {
         return 1.0; // getContext()->getDt();
     }
 
     /// Given a displacement as computed by the linear system inversion, how much will it affect the position
-    double getPositionIntegrationFactor() const override
+    SReal getPositionIntegrationFactor() const override
     {
         return getContext()->getDt(); //*getContext()->getDt());
     }
@@ -94,10 +97,10 @@ public:
     /// v_{t+dt}     0    1      0    1
     /// a_{t+dt}     0    0      0    1/dt
     /// The last column is returned by the getSolutionIntegrationFactor method.
-    double getIntegrationFactor(int inputDerivative, int outputDerivative) const override
+    SReal getIntegrationFactor(int inputDerivative, int outputDerivative) const override
     {
-        const double dt = getContext()->getDt();
-        double matrix[3][3] =
+        const auto dt = getContext()->getDt();
+        const SReal matrix[3][3] =
         {
             { 1, dt, 0},
             { 0, 1, 0},
@@ -111,10 +114,10 @@ public:
 
     /// Given a solution of the linear system,
     /// how much will it affect the output derivative of the given order.
-    double getSolutionIntegrationFactor(int outputDerivative) const override
+    SReal getSolutionIntegrationFactor(int outputDerivative) const override
     {
-        const double dt = getContext()->getDt();
-        double vect[3] = { dt, 1, 1/dt};
+        const auto dt = getContext()->getDt();
+        const SReal vect[3] = { dt, 1, 1/dt};
         if (outputDerivative >= 3)
             return 0;
         else

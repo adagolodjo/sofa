@@ -108,11 +108,9 @@ public:
     virtual void onGUIEvent(core::objectmodel::GUIEvent *) {}
 
 protected:
-
-    Data< bool > handleEventTriggersUpdate; ///< Event reception triggers object update ?
+    Data< bool > d_handleEventTriggersUpdate; ///< Event handling frequency controls the controller update frequency
 
 public:
-
     void handleEvent(core::objectmodel::Event *) override;
 };
 

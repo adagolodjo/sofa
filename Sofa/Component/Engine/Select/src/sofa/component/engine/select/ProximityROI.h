@@ -26,7 +26,7 @@
 
 #include <sofa/type/Vec.h>
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/behavior/MechanicalState.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/core/loader/MeshLoader.h>
@@ -82,7 +82,7 @@ public:
             }
         }
 
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
 public:
@@ -101,12 +101,12 @@ public:
 
 
     //Parameter
-    Data<bool> p_drawSphere; ///< Draw shpere(s)
+    Data<bool> p_drawSphere; ///< Draw sphere(s)
     Data<bool> p_drawPoints; ///< Draw Points
     Data<double> _drawSize; ///< rendering size for box and topological elements
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_PROXIMITYROI_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_PROXIMITYROI_CPP)
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API ProximityROI<defaulttype::Vec3Types>;
  
 #endif

@@ -1,12 +1,14 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(Sofa.Component.SolidMechanics.FEM LANGUAGES CXX)
 
 set(SOFACOMPONENTSOLIDMECHANICSFEM_SOURCE_DIR "src/sofa/component/solidmechanics/fem")
 
 set(OFACOMPONENTSOLIDMECHANICSFEM_DIRS Elastic HyperElastic NonUniform)
 foreach(fem_dir ${OFACOMPONENTSOLIDMECHANICSFEM_DIRS})
-    sofang_add_component_subdirectory(${fem_dir} ${PROJECT_NAME}.${fem_dir})
-    list(APPEND SOFACOMPONENTSOLIDMECHANICSFEM_TARGETS ${PROJECT_NAME}.${fem_dir})
+    sofa_add_subdirectory(module ${fem_dir} ${PROJECT_NAME}.${fem_dir} ON)
+    if(TARGET ${PROJECT_NAME}.${fem_dir})
+        list(APPEND SOFACOMPONENTSOLIDMECHANICSFEM_TARGETS ${PROJECT_NAME}.${fem_dir})
+    endif()
 endforeach()
 
 set(HEADER_FILES

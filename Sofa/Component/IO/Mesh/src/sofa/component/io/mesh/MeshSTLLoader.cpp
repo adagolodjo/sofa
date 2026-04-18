@@ -38,13 +38,16 @@ using sofa::helper::getWriteOnlyAccessor;
 using namespace sofa::type;
 using namespace sofa::defaulttype;
 
-static int MeshSTLLoaderClass = core::RegisterObject("Loader for the STL file format. STL can be used to represent the surface of object using with a triangulation.")
-        .add< MeshSTLLoader >();
+void registerMeshSTLLoader(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Loader for the STL file format. STL can be used to represent the surface of object using with a triangulation.")
+        .add< MeshSTLLoader >());
+}
 
 //Base VTK Loader
 MeshSTLLoader::MeshSTLLoader() : MeshLoader()
-    , _headerSize(initData(&_headerSize, 80u, "headerSize","Size of the header binary file (just before the number of facet)."))
-    , _forceBinary(initData(&_forceBinary, false, "forceBinary","Force reading in binary mode. Even in first keyword of the file is solid."))
+    , d_headerSize(initData(&d_headerSize, 80u, "headerSize", "Size of the header binary file (just before the number of facet)."))
+    , d_forceBinary(initData(&d_forceBinary, false, "forceBinary", "Force reading in binary mode. Even in first keyword of the file is solid."))
     , d_mergePositionUsingMap(initData(&d_mergePositionUsingMap, true, "mergePositionUsingMap","Since positions are duplicated in a STL, they have to be merged. Using a map to do so will temporarily duplicate memory but should be more efficient. Disable it if memory is really an issue."))
 {
 }
@@ -69,7 +72,7 @@ bool MeshSTLLoader::doLoad()
     }
 
     bool ret = false;
-    if( _forceBinary.getValue() )
+    if( d_forceBinary.getValue() )
         ret = this->readBinarySTL(filename); // -- Reading binary file
     else
     {
@@ -89,9 +92,9 @@ bool MeshSTLLoader::doLoad()
 
 bool isBinarySTLValid(const char* filename, const MeshSTLLoader* _this)
 {
-    // Binary STL files have 80-bytes headers. The following 4-bytes is the number of triangular facets in the file
+    // Binary STL files have 80-bytes headers. The following 4-bytes is the number of triangular d_facets in the file
     // Each facet is described with a 50-bytes field, so a valid binary STL file verifies the following condition:
-    // nFacets * 50 + 84-bytes header == filename
+    // nFacets * 50 + 84-bytes header == filesize
 
     long filesize;
     std::ifstream f(filename, std::ifstream::ate | std::ifstream::binary);
@@ -106,9 +109,11 @@ bool isBinarySTLValid(const char* filename, const MeshSTLLoader* _this)
     f.read(buffer, 80);
     uint32_t ntriangles;
     f.read(reinterpret_cast<char*>(&ntriangles), 4);
-    if (filesize != ntriangles * 50 + 84)
+    const uint32_t expectedFileSize = ntriangles * 50 + 84;
+    if (filesize != expectedFileSize)
     {
-        msg_error(_this) << filename << " isn't  binary STL file";
+        msg_error(_this) << filename << " isn't binary STL file. File size expected to be "
+            << expectedFileSize << " (with " << ntriangles << " triangles) but it is " << filesize;
         return false;
     }
     return true;
@@ -124,15 +129,15 @@ bool MeshSTLLoader::readBinarySTL(const char *filename)
     auto my_normals = getWriteOnlyAccessor(d_normals);
     auto my_triangles = getWriteOnlyAccessor(this->d_triangles);
 
-    std::map< sofa::type::Vec3f, core::topology::Topology::Index > my_map;
-    core::topology::Topology::Index positionCounter = 0;
-    bool useMap = d_mergePositionUsingMap.getValue();
+    std::map< sofa::type::Vec3, sofa::Index > my_map;
+    sofa::Index positionCounter = 0;
+    const bool useMap = d_mergePositionUsingMap.getValue();
 
     std::ifstream dataFile(filename, std::ios::in | std::ifstream::binary);
 
     // Skipping header file
     char buffer[256];
-    dataFile.read(buffer, _headerSize.getValue());
+    dataFile.read(buffer, d_headerSize.getValue());
 
     uint32_t nbrFacet;
     dataFile.read(reinterpret_cast<char*>(&nbrFacet), 4);
@@ -142,7 +147,7 @@ bool MeshSTLLoader::readBinarySTL(const char *filename)
 
 #ifndef NDEBUG
     {
-    // checking that the file is large enough to contain the given nb of facets
+    // checking that the file is large enough to contain the given nb of d_facets
     // store current pos in file
     std::streampos pos = dataFile.tellg();
     // get length of file
@@ -151,33 +156,36 @@ bool MeshSTLLoader::readBinarySTL(const char *filename)
     // restore pos in file
     dataFile.seekg(pos);
     // check for length
-    assert( length >= _headerSize.getValue() + 4 + nbrFacet * (12 /*normal*/ + 3 * 12 /*points*/ + 2 /*attribute*/ ) );
+    assert(length >= d_headerSize.getValue() + 4 + nbrFacet * (12 /*normal*/ + 3 * 12 /*points*/ + 2 /*attribute*/ ) );
     }
 #endif
 
     // temporaries
-    sofa::type::Vec3f vertex, normal;
+    sofa::type::Vec3f vertexf, normalf;
 
     // reserve vector before filling it
     my_triangles.reserve( nbrFacet );
 
-    // Parsing facets
+    unsigned int nbDegeneratedTriangles = 0;
+
+    // Parsing d_facets
     for (uint32_t i = 0; i<nbrFacet; ++i)
     {
-        Triangle the_tri;
+        topology::Triangle the_tri;
 
         // Normal:
-        dataFile.read((char*)&normal[0], 4);
-        dataFile.read((char*)&normal[1], 4);
-        dataFile.read((char*)&normal[2], 4);
-        my_normals[i] = normal;
+        dataFile.read((char*)&normalf[0], 4);
+        dataFile.read((char*)&normalf[1], 4);
+        dataFile.read((char*)&normalf[2], 4);
+        my_normals[i] = type::toVec3(normalf);
 
         // Vertices:
         for (size_t j = 0; j<3; ++j)
         {
-            dataFile.read((char*)&vertex[0], 4);
-            dataFile.read((char*)&vertex[1], 4);
-            dataFile.read((char*)&vertex[2], 4);
+            dataFile.read((char*)&vertexf[0], 4);
+            dataFile.read((char*)&vertexf[1], 4);
+            dataFile.read((char*)&vertexf[2], 4);
+            const auto vertex = type::toVec3(vertexf);
 
 
             if( useMap )
@@ -201,7 +209,7 @@ bool MeshSTLLoader::readBinarySTL(const char *filename)
                     if ( (vertex[0] == my_positions[k][0]) && (vertex[1] == my_positions[k][1])  && (vertex[2] == my_positions[k][2]))
                     {
                         find = true;
-                        the_tri[j] = static_cast<core::topology::Topology::PointID>(k);
+                        the_tri[j] = static_cast<sofa::Index>(k);
                         break;
                     }
 
@@ -213,18 +221,28 @@ bool MeshSTLLoader::readBinarySTL(const char *filename)
             }
         }
 
-        this->addTriangle(my_triangles.wref(), the_tri);
+        if (the_tri[0] == the_tri[1] || the_tri[1] == the_tri[2] || the_tri[0] == the_tri[2])
+        {
+            ++nbDegeneratedTriangles;
+        }
+        else
+        {
+            this->addTriangle(my_triangles.wref(), the_tri);
+        }
 
         // Attribute byte count
         uint16_t count;
         dataFile.read((char*)&count, 2);
     }
 
-    if(my_triangles.size() != (size_t)nbrFacet)
+    if(my_triangles.size() != (size_t)(nbrFacet - nbDegeneratedTriangles))
     {
         msg_error() << "Size mismatch between triangle vector and facetSize";
         return false;
     }
+
+    msg_warning_when(nbDegeneratedTriangles > 0) << "Found " << nbDegeneratedTriangles << " degenerated triangles ("
+        "triangles which indices are not all different). Those triangles have not been added to the list of triangles";
 
     dmsg_info() << "done!" ;
     return true;
@@ -233,18 +251,18 @@ bool MeshSTLLoader::readBinarySTL(const char *filename)
 
 bool MeshSTLLoader::readSTL(std::ifstream& dataFile)
 {
-    Vec3f result;
+    Vec3 result;
     std::string line;
 
     auto my_positions = getWriteOnlyAccessor(d_positions);
     auto my_normals = getWriteOnlyAccessor(d_normals);
     auto my_triangles = getWriteOnlyAccessor(d_triangles);
 
-    std::map< sofa::type::Vec3f, core::topology::Topology::Index > my_map;
-    core::topology::Topology::Index positionCounter = 0, vertexCounter = 0;
-    bool useMap = d_mergePositionUsingMap.getValue();
+    std::map< sofa::type::Vec3, sofa::Index > my_map;
+    sofa::Index positionCounter = 0, vertexCounter = 0;
+    const bool useMap = d_mergePositionUsingMap.getValue();
 
-    Triangle the_tri;
+    topology::Triangle the_tri;
 
     while (std::getline(dataFile, line))
     {
@@ -287,14 +305,14 @@ bool MeshSTLLoader::readSTL(std::ifstream& dataFile)
                     if ( (result[0] == my_positions[i][0]) && (result[1] == my_positions[i][1])  && (result[2] == my_positions[i][2]))
                     {
                         find = true;
-                        the_tri[vertexCounter] = static_cast<core::topology::Topology::PointID>(i);
+                        the_tri[vertexCounter] = static_cast<sofa::Index>(i);
                         break;
                     }
 
                 if (!find)
                 {
                     my_positions.push_back(result);
-                    the_tri[vertexCounter] = static_cast<core::topology::Topology::PointID>(my_positions.size()-1);
+                    the_tri[vertexCounter] = static_cast<sofa::Index>(my_positions.size()-1);
                 }
             }
             vertexCounter++;

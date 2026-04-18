@@ -24,17 +24,15 @@
 
 #include <sofa/simulation/Visitor.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 
 class SOFA_SIMULATION_CORE_API CleanupVisitor : public Visitor
 {
 public:
-    CleanupVisitor(const core::ExecParams* params ) :Visitor(params) {}
+    CleanupVisitor(const core::ExecParams* eparams ) :Visitor(eparams) {}
 
     Result processNodeTopDown(Node* node) override;
     void processNodeBottomUp(Node* node) override;
@@ -42,8 +40,7 @@ public:
 };
 
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

@@ -19,25 +19,16 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_OBJECTMODEL_BASECLASS_H
-#define SOFA_CORE_OBJECTMODEL_BASECLASS_H
+#pragma once
 
 #include <sofa/core/config.h>
-#include <sofa/helper/NameDecoder.h>
+#include <sofa/core/fwd.h>
+#include <sofa/core/objectmodel/BaseClassNameHelper.h>
 #include <sofa/core/objectmodel/SPtr.h>
 #include <map>
 
-namespace sofa
+namespace sofa::core::objectmodel
 {
-
-namespace core
-{
-
-namespace objectmodel
-{
-
-class Base;
-using sofa::helper::NameDecoder;
 
 /**
  *  \brief Class hierarchy reflection base class
@@ -54,10 +45,7 @@ protected:
     virtual ~BaseClass();
 
 public:
-
-
     /// @todo the names could be hashed for faster comparisons
-
     std::string namespaceName;
     std::string typeName;
     std::string className;
@@ -98,31 +86,6 @@ public:
 
     virtual Base* dynamicCast(Base* obj) const = 0;
     virtual bool isInstance(Base* obj) const = 0;
-
-    /// Helper method to decode the type name
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string decodeFullName(const std::type_info& t) = delete;
-
-    /// Helper method to decode the type name to a more readable form if possible
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string decodeTypeName(const std::type_info& t) = delete;
-
-    /// Helper method to extract the class name (removing namespaces and templates)
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string decodeClassName(const std::type_info& t) = delete;
-
-    /// Helper method to extract the namespace (removing class name and templates)
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string decodeNamespaceName(const std::type_info& t) = delete;
-
-    /// Helper method to extract the template name (removing namespaces and class name)
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string decodeTemplateName(const std::type_info& t) = delete;
-
-    /// Helper method to get the type name
-    template<class T>
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string defaultTypeName(const T* = nullptr) = delete;
 };
 
 class SOFA_CORE_API DeprecatedBaseClass : public BaseClass
@@ -148,6 +111,7 @@ public:
     typedef T MyType;                                               \
     typedef ::sofa::core::objectmodel::TClass< T, Parent > MyClass; \
     typedef Parent Inherit1; \
+    using Parent::initData; \
     SOFA_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 1 base class
@@ -155,153 +119,136 @@ public:
     typedef T MyType;                                               \
     typedef ::sofa::core::objectmodel::TClass< T, Parent > MyClass; \
     typedef Parent Inherit1; \
+    using Parent::initData; \
     SOFA_ABSTRACT_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 2 base classes
 #define SOFA_CLASS2(T,Parent1,Parent2) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<Parent1,Parent2> > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 2 base classes
 #define SOFA_ABSTRACT_CLASS2(T,Parent1,Parent2) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<Parent1,Parent2> > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_ABSTRACT_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 3 base classes
 #define SOFA_CLASS3(T,Parent1,Parent2,Parent3) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<Parent1,std::pair<Parent2,Parent3> > > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2, Parent3> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
     typedef Parent3 Inherit3; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 3 base classes
 #define SOFA_ABSTRACT_CLASS3(T,Parent1,Parent2,Parent3) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<Parent1,std::pair<Parent2,Parent3> > > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2, Parent3> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
     typedef Parent3 Inherit3; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_ABSTRACT_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 4 base classes
 #define SOFA_CLASS4(T,Parent1,Parent2,Parent3,Parent4) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<std::pair<Parent1,Parent2>,std::pair<Parent3,Parent4> > > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2, Parent3, Parent4> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
     typedef Parent3 Inherit3; \
     typedef Parent4 Inherit4; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 4 base classes
 #define SOFA_ABSTRACT_CLASS4(T,Parent1,Parent2,Parent3,Parent4) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<std::pair<Parent1,Parent2>,std::pair<Parent3,Parent4> > > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2, Parent3, Parent4> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
     typedef Parent3 Inherit3; \
     typedef Parent4 Inherit4; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_ABSTRACT_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 5 base classes
 #define SOFA_CLASS5(T,Parent1,Parent2,Parent3,Parent4,Parent5) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<std::pair<Parent1,Parent2>,std::pair<Parent3,std::pair<Parent4,Parent5> > > > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2, Parent3, Parent4, Parent5> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
     typedef Parent3 Inherit3; \
     typedef Parent4 Inherit4; \
     typedef Parent5 Inherit5; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 5 base classes
 #define SOFA_ABSTRACT_CLASS5(T,Parent1,Parent2,Parent3,Parent4,Parent5) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<std::pair<Parent1,Parent2>,std::pair<Parent3,std::pair<Parent4,Parent5> > > > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2, Parent3, Parent4, Parent5> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
     typedef Parent3 Inherit3; \
     typedef Parent4 Inherit4; \
     typedef Parent5 Inherit5; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_ABSTRACT_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 5 base classes
 #define SOFA_CLASS6(T,Parent1,Parent2,Parent3,Parent4,Parent5,Parent6) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<std::pair<Parent1,Parent2>,std::pair<std::pair<Parent3,Parent4>,std::pair<Parent5,Parent6> > > > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2, Parent3, Parent4, Parent5, Parent6> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
     typedef Parent3 Inherit3; \
     typedef Parent4 Inherit4; \
     typedef Parent5 Inherit5; \
     typedef Parent6 Inherit6; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_CLASS_DECL
 
 // This macro should now be used at the beginning of all declarations of classes with 5 base classes
 #define SOFA_ABSTRACT_CLASS6(T,Parent1,Parent2,Parent3,Parent4,Parent5,Parent6) \
     typedef T MyType;                                               \
-    typedef ::sofa::core::objectmodel::TClass< T, std::pair<std::pair<Parent1,Parent2>,std::pair<std::pair<Parent3,Parent4>,std::pair<Parent5,Parent6> > > > MyClass; \
+    typedef ::sofa::core::objectmodel::TClass< T, ::sofa::core::objectmodel::Parents<Parent1, Parent2, Parent3, Parent4, Parent5, Parent6> > MyClass; \
     typedef Parent1 Inherit1; \
     typedef Parent2 Inherit2; \
     typedef Parent3 Inherit3; \
     typedef Parent4 Inherit4; \
     typedef Parent5 Inherit5; \
     typedef Parent6 Inherit6; \
+    using ::sofa::core::objectmodel::Base::initData; \
     SOFA_ABSTRACT_CLASS_DECL
 
 // Do not use this macro directly, use SOFA_ABSTRACT_CLASS instead
 #define SOFA_ABSTRACT_CLASS_DECL                                        \
     typedef MyType* Ptr;                                                \
-    friend class sofa::helper::NameDecoder;                             \
-    static std::string GetDefaultTemplateName(){ return sofa::helper::NameDecoder::DefaultTypeTemplateName<MyType>::Get(); } \
+    friend class sofa::core::objectmodel::BaseClassNameHelper;          \
+    static std::string GetDefaultTemplateName(){ return sofa::core::objectmodel::BaseClassNameHelper::DefaultTypeTemplateName<MyType>::Get(); } \
     using SPtr = sofa::core::sptr<MyType>;                              \
     static const ::sofa::core::objectmodel::BaseClass* GetClass() { return MyClass::get(); }   \
     virtual const ::sofa::core::objectmodel::BaseClass* getClass() const override \
 { return GetClass(); }                                              \
     static const char* HeaderFileLocation() { return __FILE__; }        \
-    template<class SOFA_T> ::sofa::core::objectmodel::BaseData::BaseInitData \
-    initData(::sofa::core::objectmodel::Data<SOFA_T>* field, const char* name, const char* help,   \
-    ::sofa::core::objectmodel::BaseData::DataFlags dataflags)  \
-{                                                                   \
-    ::sofa::core::objectmodel::BaseData::BaseInitData res;          \
-    this->initData0(field, res, name, help, dataflags);             \
-    return res;                                                     \
-}                                                                   \
-    template<class SOFA_T> ::sofa::core::objectmodel::BaseData::BaseInitData \
-    initData(::sofa::core::objectmodel::Data<SOFA_T>* field, const char* name, const char* help,   \
-    bool isDisplayed=true, bool isReadOnly=false)              \
-{                                                                   \
-    ::sofa::core::objectmodel::BaseData::BaseInitData res;          \
-    this->initData0(field, res, name, help,                         \
-    isDisplayed, isReadOnly);                       \
-    return res;                                                     \
-}                                                                   \
-    template<class SOFA_T> typename ::sofa::core::objectmodel::Data<SOFA_T>::InitData initData(    \
-    ::sofa::core::objectmodel::Data<SOFA_T>* field, const SOFA_T& value, const char* name,     \
-    const char* help, bool isDisplayed=true, bool isReadOnly=false) \
-{                                                                   \
-    typename ::sofa::core::objectmodel::Data<SOFA_T>::InitData res; \
-    this->initData0(field, res, value, name, help,                  \
-    isDisplayed, isReadOnly);                       \
-    return res;                                                     \
-}                                                                   \
     ::sofa::core::objectmodel::BaseLink::InitLink<MyType>               \
-    initLink(const char* name, const char* help)                        \
+    initLink(const char* n, const char* help)                        \
 {                                                                   \
     return ::sofa::core::objectmodel::BaseLink::InitLink<MyType>    \
-    (this, name, help);                                             \
-}                                                                   \
-    using Inherit1::sout;                                               \
-    using Inherit1::serr;                                               \
-    using Inherit1::sendl
+    (this, n, help);                                             \
+}\
+    using BaseObject SOFA_ATTRIBUTE_DEPRECATED("v26.06", "v29.06", "BaseObject has been renamed to BaseComponent") = sofa::core::objectmodel::BaseComponent; // this alias allows the transition from BaseObject to BaseComponent.
 
 // Do not use this macro directly, use SOFA_CLASS instead
 #define SOFA_CLASS_DECL                                        \
@@ -309,51 +256,72 @@ public:
     \
     friend class sofa::core::objectmodel::New<MyType>
 
-template <class Parents>
-class TClassParents
+/**
+ * Represents a list of types with ability to get the number of types, and the ith type BaseClass
+ */
+template<class T, class ...Types>
+struct Parents
 {
-public:
-    static int nb()
+    static constexpr std::size_t nb = sizeof...(Types) + 1;
+
+    static const BaseClass* get(const std::size_t i)
     {
-        return 1;
-    }
-    static const BaseClass* get(int i)
-    {
-        if (i==0)
-            return Parents::GetClass();
-        else
+        if (i == 0)
+        {
+            return T::GetClass();
+        }
+        if constexpr (sizeof...(Types) == 0)
+        {
             return nullptr;
+        }
+        else
+        {
+            return Parents<Types...>::get(i-1);
+        }
     }
 };
 
-template<>
-class TClassParents<void>
+template <typename Parent>
+struct TClassParents
 {
-public:
-    static int nb()
+    static constexpr std::size_t nb()
     {
-        return 0;
+        return 1;
     }
-    static const BaseClass* get(int)
+    static const BaseClass* get(const std::size_t i)
     {
+        if (i==0)
+        {
+            return Parent::GetClass();
+        }
         return nullptr;
     }
 };
 
-template<class P1, class P2>
-class TClassParents< std::pair<P1,P2> >
+template<>
+struct TClassParents<void>
 {
-public:
-    static int nb()
+    static constexpr std::size_t nb()
     {
-        return TClassParents<P1>::nb() + TClassParents<P2>::nb();
+        return 0;
     }
-    static const BaseClass* get(int i)
+    static const BaseClass* get(const std::size_t i)
     {
-        if (i<TClassParents<P1>::nb())
-            return TClassParents<P1>::get(i);
-        else
-            return TClassParents<P2>::get(i-TClassParents<P1>::nb());
+        SOFA_UNUSED(i);
+        return nullptr;
+    }
+};
+
+template<typename ...Types>
+struct TClassParents<Parents<Types...> >
+{
+    static constexpr std::size_t nb()
+    {
+        return Parents<Types...>::nb;
+    }
+    static const BaseClass* get(const std::size_t i)
+    {
+        return Parents<Types...>::get(i);
     }
 };
 
@@ -363,15 +331,17 @@ class TClass : public BaseClass
 protected:
     TClass()
     {
-        typeName = NameDecoder::getTypeName<T>();
-        namespaceName = NameDecoder::getNamespaceName<T>();
-        className = NameDecoder::getClassName<T>();
-        templateName = NameDecoder::getTemplateName<T>();
-        shortName = NameDecoder::getShortName<T>();
+        typeName = BaseClassNameHelper::getTypeName<T>();
+        namespaceName = BaseClassNameHelper::getNamespaceName<T>();
+        className = BaseClassNameHelper::getClassName<T>();
+        templateName = BaseClassNameHelper::getTemplateName<T>();
+        shortName = BaseClassNameHelper::getShortName<T>();
 
         parents.resize(TClassParents<Parents>::nb());
-        for (int i=0; i<TClassParents<Parents>::nb(); ++i)
+        for (std::size_t i = 0; i < TClassParents<Parents>::nb(); ++i)
+        {
             parents[i] = TClassParents<Parents>::get(i);
+        }
     }
     ~TClass() override {}
 
@@ -389,18 +359,11 @@ public:
 
     static const BaseClass* get()
     {
-        static TClass<T, Parents> *theClass=new TClass<T, Parents>();
-        return theClass;
+        static TClass<T, Parents> theClass;
+        return &theClass;
     }
 };
 
-} // namespace objectmodel
+} // namespace sofa::core::objectmodel
 
-} // namespace core
-
-} // namespace sofa
-
-
-
-#endif
 

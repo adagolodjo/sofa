@@ -78,6 +78,12 @@ public:
     ///Adding values from a 2x2f matrix. This function may be overload to obtain better performances
     virtual void add(Index row, Index col, const type::Mat2x2f & _M);
 
+    ///Adding values from a 6x6d matrix. This function may be overload to obtain better performances
+    virtual void add(Index row, Index col, const type::Mat6x6d & _M);
+
+    ///Adding values from a 6x6f matrix. This function may be overload to obtain better performances
+    virtual void add(Index row, Index col, const type::Mat6x6f & _M);
+
     /*    /// Write the value of the element at row i, column j (using 0-based indices)
         virtual void set(Index i, Index j, float v) { set(i,j,(double)v); }
         /// Add v to the existing value of the element at row i, column j (using 0-based indices)
@@ -147,7 +153,7 @@ public:
     /// @return true if this matrix is diagonal
     bool isDiagonal() const
     {
-        MatrixCategory cat = getCategory();
+        const MatrixCategory cat = getCategory();
         return (cat == MATRIX_IDENTITY)
                 || (cat == MATRIX_DIAGONAL && getBlockRows() == 1 && getBlockCols() == 1)
                 || (cat == MATRIX_BAND && getBandWidth() == 0);
@@ -156,7 +162,7 @@ public:
     /// @return true if this matrix is block-diagonal
     bool isBlockDiagonal() const
     {
-        MatrixCategory cat = getCategory();
+        const MatrixCategory cat = getCategory();
         return (cat == MATRIX_IDENTITY)
                 || (cat == MATRIX_DIAGONAL)
                 || (cat == MATRIX_BAND && getBandWidth() == 0);
@@ -165,7 +171,7 @@ public:
     /// @return true if this matrix is band
     bool isBand() const
     {
-        MatrixCategory cat = getCategory();
+        const MatrixCategory cat = getCategory();
         return (cat == MATRIX_IDENTITY)
                 || (cat == MATRIX_DIAGONAL)
                 || (cat == MATRIX_BAND);
@@ -174,7 +180,7 @@ public:
     /// @return true if this matrix is sparse
     bool isSparse() const
     {
-        MatrixCategory cat = getCategory();
+        const MatrixCategory cat = getCategory();
         return (cat == MATRIX_IDENTITY)
                 || (cat == MATRIX_DIAGONAL)
                 || (cat == MATRIX_BAND)
@@ -204,15 +210,15 @@ public:
             data = 0;
         }
 
-        InternalBlockAccessor(Index row, Index col, void* internalPtr)
-            : row(row), col(col)
+        InternalBlockAccessor(Index r, Index c, void* internalPtr)
+            : row(r), col(c)
         {
             data = 0;
             ptr = internalPtr;
         }
 
-        InternalBlockAccessor(Index row, Index col, Index internalData)
-            : row(row), col(col)
+        InternalBlockAccessor(Index r, Index c, Index internalData)
+            : row(r), col(c)
         {
             ptr = nullptr;
             data = internalData;
@@ -236,15 +242,15 @@ public:
             data = 0;
         }
 
-        InternalColBlockIterator(Index row, void* internalPtr)
-            : row(row)
+        InternalColBlockIterator(Index r, void* internalPtr)
+            : row(r)
         {
             data = 0;
             ptr = internalPtr;
         }
 
-        InternalColBlockIterator(Index row, Index internalData)
-            : row(row)
+        InternalColBlockIterator(Index r, Index internalData)
+            : row(r)
         {
             ptr = nullptr;
             data = internalData;
@@ -303,13 +309,13 @@ public:
         {
         }
 
-        BlockAccessor(BaseMatrix* matrix, Index row, Index col, void* internalPtr)
-            : matrix(matrix), internal(row, col, internalPtr)
+        BlockAccessor(BaseMatrix* m, Index row, Index col, void* internalPtr)
+            : matrix(m), internal(row, col, internalPtr)
         {
         }
 
-        BlockAccessor(BaseMatrix* matrix, Index row, Index col, Index internalData)
-            : matrix(matrix), internal(row, col, internalData)
+        BlockAccessor(BaseMatrix* m, Index row, Index col, Index internalData)
+            : matrix(m), internal(row, col, internalData)
         {
         }
 
@@ -485,13 +491,13 @@ public:
         {
         }
 
-        BlockConstAccessor(const BaseMatrix* matrix, Index row, Index col, void* internalPtr)
-            : matrix(matrix), internal(row, col, internalPtr)
+        BlockConstAccessor(const BaseMatrix* m, Index row, Index col, void* internalPtr)
+            : matrix(m), internal(row, col, internalPtr)
         {
         }
 
-        BlockConstAccessor(const BaseMatrix* matrix, Index row, Index col, Index internalData)
-            : matrix(matrix), internal(row, col, internalData)
+        BlockConstAccessor(const BaseMatrix* m, Index row, Index col, Index internalData)
+            : matrix(m), internal(row, col, internalData)
         {
         }
 
@@ -771,13 +777,13 @@ public:
         InternalColBlockIterator internal;
         BlockConstAccessor b;
 
-        ColBlockConstIterator(const BaseMatrix* matrix, Index row, void* internalPtr)
-            : matrix(matrix), internal(row, internalPtr)
+        ColBlockConstIterator(const BaseMatrix* m, Index row, void* internalPtr)
+            : matrix(m), internal(row, internalPtr)
         {
         }
 
-        ColBlockConstIterator(const BaseMatrix* matrix, Index row, Index internalData)
-            : matrix(matrix), internal(row, internalData)
+        ColBlockConstIterator(const BaseMatrix* m, Index row, Index internalData)
+            : matrix(m), internal(row, internalData)
         {
         }
 
@@ -889,14 +895,14 @@ protected:
     }
     virtual bool itEqColBlock(const InternalColBlockIterator* it, const InternalColBlockIterator* it2) const
     {
-        Index col = it->data;
-        Index col2 = it2->data;
+        const Index col = it->data;
+        const Index col2 = it2->data;
         return col == col2;
     }
     virtual bool itLessColBlock(const InternalColBlockIterator* it, const InternalColBlockIterator* it2) const
     {
-        Index col = it->data;
-        Index col2 = it2->data;
+        const Index col = it->data;
+        const Index col2 = it2->data;
         return col < col2;
     }
 
@@ -936,13 +942,13 @@ public:
         const BaseMatrix* matrix;
         InternalRowBlockIterator internal;
 
-        RowBlockConstIterator(const BaseMatrix* matrix, void* internalPtr)
-            : matrix(matrix), internal(internalPtr)
+        RowBlockConstIterator(const BaseMatrix* m, void* internalPtr)
+            : matrix(m), internal(internalPtr)
         {
         }
 
-        RowBlockConstIterator(const BaseMatrix* matrix, Index internalData0, Index internalData1)
-            : matrix(matrix), internal(internalData0, internalData1)
+        RowBlockConstIterator(const BaseMatrix* m, Index internalData0, Index internalData1)
+            : matrix(m), internal(internalData0, internalData1)
         {
         }
 
@@ -1048,22 +1054,22 @@ protected:
     virtual void itDeleteRowBlock(const InternalRowBlockIterator* /*it*/) const {}
     virtual Index itAccessRowBlock(InternalRowBlockIterator* it) const
     {
-        Index row = (it->data[0]);
+        const Index row = (it->data[0]);
         return row;
     }
     virtual ColBlockConstIterator itBeginRowBlock(InternalRowBlockIterator* it) const
     {
-        Index row = (it->data[0]);
+        const Index row = (it->data[0]);
         return bRowBegin(row);
     }
     virtual ColBlockConstIterator itEndRowBlock(InternalRowBlockIterator* it) const
     {
-        Index row = (it->data[0]);
+        const Index row = (it->data[0]);
         return bRowEnd(row);
     }
     virtual std::pair<ColBlockConstIterator, ColBlockConstIterator> itRangeRowBlock(InternalRowBlockIterator* it) const
     {
-        Index row = (it->data[0]);
+        const Index row = (it->data[0]);
         return bRowRange(row);
     }
 
@@ -1081,14 +1087,14 @@ protected:
     }
     virtual bool itEqRowBlock(const InternalRowBlockIterator* it, const InternalRowBlockIterator* it2) const
     {
-        Index row = (it->data[0]);
-        Index row2 = (it2->data[0]);
+        const Index row = (it->data[0]);
+        const Index row2 = (it2->data[0]);
         return row == row2;
     }
     virtual bool itLessRowBlock(const InternalRowBlockIterator* it, const InternalRowBlockIterator* it2) const
     {
-        Index row = (it->data[0]);
-        Index row2 = (it2->data[0]);
+        const Index row = (it->data[0]);
+        const Index row2 = (it2->data[0]);
         return row < row2;
     }
 

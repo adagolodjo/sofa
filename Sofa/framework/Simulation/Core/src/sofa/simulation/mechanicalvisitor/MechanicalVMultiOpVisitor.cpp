@@ -34,21 +34,10 @@ Visitor::Result MechanicalVMultiOpVisitor::fwdMechanicalState(VisitorContext* /*
 
 Visitor::Result MechanicalVMultiOpVisitor::fwdMappedMechanicalState(VisitorContext* ctx, core::behavior::BaseMechanicalState* mm)
 {
+    SOFA_UNUSED(ctx);
     if (mapped)
     {
-        if (ctx->nodeData && *ctx->nodeData != 1.0)
-        {
-            VMultiOp ops2 = ops;
-            const SReal fact = *ctx->nodeData;
-            for (VMultiOp::iterator it = ops2.begin(), itend = ops2.end(); it != itend; ++it)
-                for (unsigned int i = 1; i < it->second.size(); ++i)
-                    it->second[i].second *= fact;
-            mm->vMultiOp(this->params, ops2 );
-        }
-        else
-        {
-            mm->vMultiOp(this->params, ops );
-        }
+        mm->vMultiOp(this->params, ops );
     }
     return RESULT_CONTINUE;
 }
@@ -64,7 +53,7 @@ std::string MechanicalVMultiOpVisitor::getInfos() const
         core::MultiVecId r = it->first;
         out << r.getName();
         const type::vector< std::pair< core::ConstMultiVecId, SReal > >& operands = it->second;
-        int nop = (int)operands.size();
+        const int nop = (int)operands.size();
         if (nop==0)
         {
             out << " = 0";

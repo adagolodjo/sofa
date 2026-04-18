@@ -39,8 +39,8 @@
 //(imports + Image data structure + others) are in here
 #include <image/CImgData.h>
 
-#include <SofaBaseVisual/VisualModelImpl.h>
-#include <SofaBaseVisual/VisualStyle.h>
+#include <sofa/component/visual/VisualModelImpl.h>
+#include <sofa/component/visual/VisualStyle.h>
 
 namespace sofa
 {
@@ -133,7 +133,14 @@ public:
 
     friend std::ostream& operator << ( std::ostream& out, const Histogram& h )
     {
-        out<<h.getClamp();
+        if constexpr (std::is_same_v<T, unsigned char>)
+        {
+            out << sofa::type::Vec<2, int>(h.getClamp());
+        }
+        else
+        {
+            out<<h.getClamp();
+        }
         return out;
     }
 
@@ -156,7 +163,7 @@ struct ImagePlane
     typedef ImageTransform<Real> TransformTypes;
     typedef typename TransformTypes::Coord Coord;
 
-    typedef typename sofa::component::visualmodel::VisualModelImpl VisualModelTypes;
+    typedef typename sofa::component::visual::VisualModelImpl VisualModelTypes;
     typedef std::vector<VisualModelTypes*> VecVisualModel;
 
     //    const VectorVis* vectorvis; //! A reference to the VectorVis data allows the plane images to switch between RGB or greyscale norms, as the user changes the options in the GUI
@@ -294,8 +301,8 @@ public:
 
         for(unsigned int m=0; m<visualModels.size(); m++)
         {
-            sofa::component::visualmodel::VisualStyle::SPtr ptr = visualModels[m]->getContext()->template get<sofa::component::visualmodel::VisualStyle>();
-            if (ptr && !ptr->displayFlags.getValue().getShowVisualModels()) continue;
+            sofa::component::visual::VisualStyle::SPtr ptr = visualModels[m]->getContext()->template get<sofa::component::visual::VisualStyle>();
+            if (ptr && !ptr->d_displayFlags.getValue().getShowVisualModels()) continue;
 
             const sofa::type::vector<VisualModelTypes::Coord>& verts= visualModels[m]->getVertices();
 
@@ -305,7 +312,7 @@ public:
             {
                 tposition[i]=transform->toImage(Coord((Real)verts[i][0],(Real)verts[i][1],(Real)verts[i][2]));
             }
-            helper::ReadAccessor<Data< sofa::type::Material > > mat(visualModels[m]->material);
+            helper::ReadAccessor<Data< sofa::type::Material > > mat(visualModels[m]->d_material);
             const unsigned char color[3]= {(unsigned char)helper::round(mat->diffuse[0]*255.),(unsigned char)helper::round(mat->diffuse[1]*255.),(unsigned char)helper::round(mat->diffuse[2]*255.)};
 
             cimg_library::CImg<bool> tmp = this->img->get_slicedModels(index,axis,roi,tposition,visualModels[m]->getTriangles(),visualModels[m]->getQuads());

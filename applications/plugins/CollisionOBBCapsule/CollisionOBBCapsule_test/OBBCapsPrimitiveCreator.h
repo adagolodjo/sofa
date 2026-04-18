@@ -21,8 +21,8 @@
 ******************************************************************************/
 #pragma once
 
-#include <SofaBaseTopology/MeshTopology.h>
-#include <SofaBaseMechanics/MechanicalObject.h>
+#include <sofa/component/topology/container/constant/MeshTopology.h>
+#include <sofa/component/statecontainer/MechanicalObject.h>
 
 #include <CollisionOBBCapsule/geometry/OBBModel.h>
 #include <CollisionOBBCapsule/geometry/CapsuleModel.h>
@@ -35,8 +35,8 @@ using sofa::simulation::Node;
 using sofa::type::Quat;
 using sofa::type::Vec3;
 
-typedef sofa::component::container::MechanicalObject<sofa::defaulttype::Vec3Types> MechanicalObject3;
-typedef sofa::component::container::MechanicalObject<sofa::defaulttype::Rigid3Types> MechanicalObjectRigid3;
+typedef sofa::component::statecontainer::MechanicalObject<sofa::defaulttype::Vec3Types> MechanicalObject3;
+typedef sofa::component::statecontainer::MechanicalObject<sofa::defaulttype::Rigid3Types> MechanicalObjectRigid3;
 
 using sofa::core::objectmodel::Data;
 using sofa::core::objectmodel::New;
@@ -54,7 +54,7 @@ inline collisionobbcapsule::geometry::OBBCollisionModel<sofa::defaulttype::Rigid
 
     //editing DOF related to the OBBCollisionModel<sofa::defaulttype::Rigid3Types> to be created, size is 1 because it contains just one OBB
     obbDOF->resize(1);
-    Data<MechanicalObjectRigid3::VecCoord> & dpositions = *obbDOF->write( sofa::core::VecId::position() );
+    Data<MechanicalObjectRigid3::VecCoord> & dpositions = *obbDOF->write( sofa::core::vec_id::write_access::position );
     MechanicalObjectRigid3::VecCoord & positions = *dpositions.beginEdit();
 
     //we create a frame that we will rotate like it is specified by the parameters angles and order
@@ -85,8 +85,8 @@ inline collisionobbcapsule::geometry::OBBCollisionModel<sofa::defaulttype::Rigid
 
     dpositions.endEdit();
 
-    //Editting the velocity of the OBB
-    Data<MechanicalObjectRigid3::VecDeriv> & dvelocities = *obbDOF->write( sofa::core::VecId::velocity() );
+    //Editing the velocity of the OBB
+    Data<MechanicalObjectRigid3::VecDeriv> & dvelocities = *obbDOF->write( sofa::core::vec_id::write_access::velocity );
 
     MechanicalObjectRigid3::VecDeriv & velocities = *dvelocities.beginEdit();
     velocities[0] = v;
@@ -99,7 +99,7 @@ inline collisionobbcapsule::geometry::OBBCollisionModel<sofa::defaulttype::Rigid
     collisionobbcapsule::geometry::OBBCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr obbCollisionModel = New<collisionobbcapsule::geometry::OBBCollisionModel<sofa::defaulttype::Rigid3Types>>();
     obb->addObject(obbCollisionModel);
 
-    //editting the OBBModel
+    //editing the OBBModel
     obbCollisionModel->init();
     Data<collisionobbcapsule::geometry::OBBCollisionModel<sofa::defaulttype::Rigid3Types>::VecCoord> & dVecCoord = obbCollisionModel->writeExtents();
     collisionobbcapsule::geometry::OBBCollisionModel<sofa::defaulttype::Rigid3Types>::VecCoord & vecCoord = *(dVecCoord.beginEdit());
@@ -122,7 +122,7 @@ inline collisionobbcapsule::geometry::CapsuleCollisionModel<sofa::defaulttype::V
 
     //editing DOF related to the OBBCollisionModel<sofa::defaulttype::Rigid3Types> to be created, size is 1 because it contains just one OBB
     capDOF->resize(2);
-    Data<MechanicalObject3::VecCoord>& dpositions = *capDOF->write(sofa::core::VecId::position());
+    Data<MechanicalObject3::VecCoord>& dpositions = *capDOF->write(sofa::core::vec_id::write_access::position);
     MechanicalObject3::VecCoord& positions = *dpositions.beginEdit();
 
     //we finnaly edit the positions by filling it with a RigidCoord made up from p and the rotated fram x,y,z
@@ -131,8 +131,8 @@ inline collisionobbcapsule::geometry::CapsuleCollisionModel<sofa::defaulttype::V
 
     dpositions.endEdit();
 
-    //Editting the velocity of the OBB
-    Data<MechanicalObject3::VecDeriv>& dvelocities = *capDOF->write(sofa::core::VecId::velocity());
+    //Editing the velocity of the OBB
+    Data<MechanicalObject3::VecDeriv>& dvelocities = *capDOF->write(sofa::core::vec_id::write_access::velocity);
 
     MechanicalObject3::VecDeriv& velocities = *dvelocities.beginEdit();
     velocities[0] = v;
@@ -142,7 +142,7 @@ inline collisionobbcapsule::geometry::CapsuleCollisionModel<sofa::defaulttype::V
     cap->addObject(capDOF);
 
     //creating a topology necessary for capsule
-    sofa::component::topology::MeshTopology::SPtr bmt = New<sofa::component::topology::MeshTopology>();
+    sofa::component::topology::container::constant::MeshTopology::SPtr bmt = New<sofa::component::topology::container::constant::MeshTopology>();
     bmt->addEdge(0, 1);
     cap->addObject(bmt);
 
@@ -151,7 +151,7 @@ inline collisionobbcapsule::geometry::CapsuleCollisionModel<sofa::defaulttype::V
     cap->addObject(capCollisionModel);
 
 
-    //editting the OBBModel
+    //editing the OBBModel
     capCollisionModel->init();
     Data<collisionobbcapsule::geometry::CapsuleCollisionModel<sofa::defaulttype::Vec3Types>::VecReal>& dVecReal = capCollisionModel->writeRadii();
     collisionobbcapsule::geometry::CapsuleCollisionModel<sofa::defaulttype::Vec3Types>::VecReal& vecReal = *(dVecReal.beginEdit());

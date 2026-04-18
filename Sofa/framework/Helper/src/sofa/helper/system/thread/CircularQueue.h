@@ -28,16 +28,8 @@
 #include <atomic>
 #include <sofa/type/fixed_array.h>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace system
-{
-
-namespace thread
+namespace sofa::helper::system::thread
 {
 
 /**
@@ -159,8 +151,8 @@ protected:
     template<class T, class OutputIterator>
     unsigned pop(T array[], unsigned maxSize, unsigned maxCapacity, OutputIterator out, unsigned outmaxsize, bool clear = true);
     
-    volatile unsigned head;
-    volatile unsigned tail;
+    std::atomic<unsigned> head;
+    std::atomic<unsigned> tail;
 };
 
 /**
@@ -198,12 +190,7 @@ protected:
     AtomicInt tail;
 };
 
-} // namespace thread
+} // namespace sofa::helper::system::thread
 
-} // namespace system
-
-} // namespace helper
-
-} // namespace sofa
 
 #endif // SOFA_HELPER_SYSTEM_THREAD_CIRCULARQUEUE_H

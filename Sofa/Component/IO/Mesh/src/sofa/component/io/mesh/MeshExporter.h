@@ -23,27 +23,25 @@
 
 #include <sofa/component/io/mesh/config.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/objectmodel/DataFileName.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/helper/OptionsGroup.h>
 #include <sofa/simulation/BaseSimulationExporter.h>
 
 ///////////////////////////// FORWARD DECLARATION //////////////////////////////////////////////////
-namespace sofa {
-    namespace core {
-        namespace objectmodel {
-            class Event ;
-        }
-        namespace behavior {
-            class BaseMechanicalState;
-        }
-        namespace topology {
-            class BaseMeshTopology ;
-        }
-    }
+namespace sofa::core
+{
+namespace objectmodel {
+    class Event ;
 }
-
+namespace behavior {
+    class BaseMechanicalState;
+}
+namespace topology {
+    class BaseMeshTopology ;
+}
+}
 
 
 ////////////////////////////////// DECLARATION /////////////////////////////////////////////////////
@@ -80,7 +78,6 @@ public:
 
     void doInit() override ;
     void doReInit() override ;
-    void handleEvent(Event *) override ;
 
     bool write() override ;
 

@@ -35,60 +35,51 @@
 #include <map>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/helper/AdvancedTimer.h>
+#include <sofa/helper/ScopedAdvancedTimer.h>
+
 
 namespace sofa::component::topology::mapping
 {
 
-using namespace sofa::defaulttype;
-
 using namespace sofa::component::topology::mapping;
 using namespace sofa::core::topology;
 
-// Register in the Factory
-int Triangle2EdgeTopologicalMappingClass = core::RegisterObject("Special case of mapping where TriangleSetTopology is converted to EdgeSetTopology")
-        .add< Triangle2EdgeTopologicalMapping >();
+void registerTriangle2EdgeTopologicalMapping(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Topological mapping where TriangleSetTopology is converted to EdgeSetTopology")
+        .add< Triangle2EdgeTopologicalMapping >());
+}
 
 Triangle2EdgeTopologicalMapping::Triangle2EdgeTopologicalMapping()
     : sofa::core::topology::TopologicalMapping()
     , m_outTopoModifier(nullptr)
 {
+    m_inputType = geometry::ElementType::TRIANGLE;
+    m_outputType = geometry::ElementType::EDGE;
 }
 
 
 Triangle2EdgeTopologicalMapping::~Triangle2EdgeTopologicalMapping()
 {
-    sofa::type::vector<Index>& Loc2GlobVec = *(Loc2GlobDataVec.beginEdit());
+    auto Loc2GlobVec = sofa::helper::getWriteOnlyAccessor(Loc2GlobDataVec);
     Loc2GlobVec.clear();
     Glob2LocMap.clear();
-    Loc2GlobDataVec.endEdit();
 }
 
 
 void Triangle2EdgeTopologicalMapping::init()
 {
-    // recheck models
-    bool modelsOk = true;
-    if (!fromModel)
+    if (!this->checkTopologyInputTypes()) // method will display error message if false
     {
-        msg_error() << "Pointer to input topology is invalid.";
-        modelsOk = false;
+        this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+        return; 
     }
 
-    if (!toModel)
-    {
-        msg_error() << "Pointer to output topology is invalid.";
-        modelsOk = false;
-    }
 
     toModel->getContext()->get(m_outTopoModifier);
     if (!m_outTopoModifier)
     {
         msg_error() << "No EdgeSetTopologyModifier found in the Edge topology Node.";
-        modelsOk = false;
-    }
-
-    if (!modelsOk)
-    {
         this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
@@ -103,7 +94,7 @@ void Triangle2EdgeTopologicalMapping::init()
 
     // create topology maps and add edge into output topology
     const sofa::type::vector<core::topology::BaseMeshTopology::Edge> &edgeArray = fromModel->getEdges();
-    sofa::type::vector<Index>& Loc2GlobVec = *(Loc2GlobDataVec.beginEdit());
+    auto Loc2GlobVec = sofa::helper::getWriteOnlyAccessor(Loc2GlobDataVec);
     Loc2GlobVec.clear();
     Glob2LocMap.clear();
 
@@ -118,8 +109,6 @@ void Triangle2EdgeTopologicalMapping::init()
             Glob2LocMap[eId] = Loc2GlobVec.size() - 1;
         }
     }
-
-    Loc2GlobDataVec.endEdit();
 
     // Need to fully init the target topology
     toModel->init();
@@ -145,18 +134,18 @@ void Triangle2EdgeTopologicalMapping::updateTopologicalMappingTopDown()
     if (this->d_componentState.getValue() != sofa::core::objectmodel::ComponentState::Valid)
         return;
 
-    sofa::helper::AdvancedTimer::stepBegin("Update Triangle2EdgeTopologicalMapping");
+    SCOPED_TIMER("Update Triangle2EdgeTopologicalMapping");
 
     std::list<const TopologyChange *>::const_iterator itBegin=fromModel->beginChange();
     std::list<const TopologyChange *>::const_iterator itEnd=fromModel->endChange();
 
-    sofa::type::vector<Index>& Loc2GlobVec = *(Loc2GlobDataVec.beginEdit());
+    auto Loc2GlobVec = sofa::helper::getWriteAccessor(Loc2GlobDataVec);
 
     while( itBegin != itEnd )
     {
         TopologyChangeType changeType = (*itBegin)->getChangeType();
         std::string topoChangeType = "Triangle2EdgeTopologicalMapping - " + parseTopologyChangeTypeToString(changeType);
-        sofa::helper::AdvancedTimer::stepBegin(topoChangeType);
+        helper::ScopedAdvancedTimer topoChangetimer(topoChangeType);
 
         switch( changeType )
         {
@@ -442,12 +431,9 @@ void Triangle2EdgeTopologicalMapping::updateTopologicalMappingTopDown()
             break;
         };
 
-        sofa::helper::AdvancedTimer::stepEnd(topoChangeType);
         ++itBegin;
     }
-    Loc2GlobDataVec.endEdit();
 
-    sofa::helper::AdvancedTimer::stepEnd("Update Triangle2EdgeTopologicalMapping");
 }
 
 } //namespace sofa::component::topology::mapping

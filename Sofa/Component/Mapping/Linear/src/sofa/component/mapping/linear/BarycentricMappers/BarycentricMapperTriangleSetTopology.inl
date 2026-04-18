@@ -38,7 +38,7 @@ BarycentricMapperTriangleSetTopology<In,Out>::BarycentricMapperTriangleSetTopolo
 
 
 template <class In, class Out>
-typename BarycentricMapperTriangleSetTopology<In, Out>::Index 
+typename BarycentricMapperTriangleSetTopology<In, Out>::Index
 BarycentricMapperTriangleSetTopology<In,Out>::addPointInTriangle ( const Index triangleIndex, const SReal* baryCoords )
 {
     type::vector<MappingData>& vectorData = *(d_map.beginEdit());
@@ -52,7 +52,7 @@ BarycentricMapperTriangleSetTopology<In,Out>::addPointInTriangle ( const Index t
 }
 
 template <class In, class Out>
-typename BarycentricMapperTriangleSetTopology<In, Out>::Index 
+typename BarycentricMapperTriangleSetTopology<In, Out>::Index
 BarycentricMapperTriangleSetTopology<In,Out>::createPointInTriangle ( const typename Out::Coord& p, Index triangleIndex, const typename In::VecCoord* points )
 {
     SReal baryCoords[2];
@@ -72,28 +72,21 @@ BarycentricMapperTriangleSetTopology<In,Out>::createPointInTriangle ( const type
 
 
 template <class In, class Out>
-type::vector<Triangle> BarycentricMapperTriangleSetTopology<In,Out>::getElements()
+auto BarycentricMapperTriangleSetTopology<In,Out>::getElements() -> type::vector<Triangle>
 {
     return this->m_fromTopology->getTriangles();
 }
 
 template <class In, class Out>
-type::vector<SReal> BarycentricMapperTriangleSetTopology<In,Out>::getBaryCoef(const Real* f)
+auto BarycentricMapperTriangleSetTopology<In,Out>::getBarycentricCoefficients(const std::array<Real, MappingData::NumberOfCoordinates>& barycentricCoordinates) -> std::array<Real, Triangle::NumberOfNodes>
 {
-    return getBaryCoef(f[0],f[1]);
+    return {1-barycentricCoordinates[0]-barycentricCoordinates[1], barycentricCoordinates[0], barycentricCoordinates[1]};
 }
 
 template <class In, class Out>
-type::vector<SReal> BarycentricMapperTriangleSetTopology<In,Out>::getBaryCoef(const Real fx, const Real fy)
+void BarycentricMapperTriangleSetTopology<In,Out>::computeBase(Mat3x3& base, const typename In::VecCoord& in, const Triangle& element)
 {
-    type::vector<SReal> triangleCoef{1-fx-fy, fx, fy};
-    return triangleCoef;
-}
-
-template <class In, class Out>
-void BarycentricMapperTriangleSetTopology<In,Out>::computeBase(Mat3x3d& base, const typename In::VecCoord& in, const Triangle& element)
-{
-    Mat3x3d mt;
+    Mat3x3 mt;
     base[0] = in[element[1]]-in[element[0]];
     base[1] = in[element[2]]-in[element[0]];
     base[2] = cross(base[0],base[1]);
@@ -104,15 +97,15 @@ void BarycentricMapperTriangleSetTopology<In,Out>::computeBase(Mat3x3d& base, co
 }
 
 template <class In, class Out>
-void BarycentricMapperTriangleSetTopology<In,Out>::computeCenter(Vector3& center, const typename In::VecCoord& in, const Triangle& element)
+void BarycentricMapperTriangleSetTopology<In,Out>::computeCenter(Vec3& center, const typename In::VecCoord& in, const Triangle& element)
 {
     center = (in[element[0]]+in[element[1]]+in[element[2]])/3;
 }
 
 template <class In, class Out>
-void BarycentricMapperTriangleSetTopology<In,Out>::computeDistance(SReal& d, const Vector3& v)
+void BarycentricMapperTriangleSetTopology<In,Out>::computeDistance(SReal& d, const Vec3& v)
 {
-    d = std::max ( std::max ( -v[0],-v[1] ),std::max ( ( v[2]<0?-v[2]:v[2] )-0.01,v[0]+v[1]-1 ) );
+    d = std::max ( std::max ( -v[0],-v[1] ),std::max ( ( v[2]<0?-v[2]:v[2] )-0.01_sreal,v[0]+v[1]-1 ) );
 }
 
 template <class In, class Out>

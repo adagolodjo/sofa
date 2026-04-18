@@ -20,13 +20,11 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 
-#include "SofaLibrary.h"
+#include <sofa/core/SofaLibrary.h>
 #include <sofa/core/ObjectFactory.h>
 
 
-namespace sofa
-{
-namespace core
+namespace sofa::core
 {
 
 //Automatically create and destroy all the components available: easy way to verify the default constructor and destructor
@@ -46,7 +44,7 @@ void SofaLibrary::build( const std::vector< std::string >& examples)
     for (std::size_t i=0; i<entries.size(); ++i)
     {
         //Insert Template specification
-        ObjectFactory::CreatorMap::iterator creatorEntry = entries[i]->creatorMap.begin();
+        ObjectFactory::ObjectTemplateCreatorMap::iterator creatorEntry = entries[i]->creatorMap.begin();
         if (creatorEntry != entries[i]->creatorMap.end())
         {
             const objectmodel::BaseClass* baseClass = creatorEntry->second->getClass();
@@ -84,7 +82,7 @@ void SofaLibrary::build( const std::vector< std::string >& examples)
         //Process all the component of the current category, and add them to the group
         for (itComponent=rangeCategory.first; itComponent != rangeCategory.second; ++itComponent)
         {
-            ClassEntry::SPtr entry = itComponent->second;
+            const ClassEntry::SPtr entry = itComponent->second;
             const std::string &componentName=entry->className;
 
             //Add the component to the category
@@ -151,7 +149,5 @@ void SofaLibrary::clear()
         delete categories[i];
     }
     categories.clear();
-}
-
 }
 }

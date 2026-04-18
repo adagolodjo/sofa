@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_DifferenceEngine_CPP
-#include "DifferenceEngine.inl"
+#include <sofa/component/engine/transform/DifferenceEngine.inl>
 #include <sofa/core/ObjectFactory.h>
 
 namespace sofa::component::engine::transform
@@ -29,14 +29,14 @@ namespace sofa::component::engine::transform
 using namespace sofa::type;
 using namespace sofa::defaulttype;
 
-int DifferenceEngineClass = core::RegisterObject("Computing the difference between two vector of dofs")
-        .add< DifferenceEngine<Vec1d> >()
-        .add< DifferenceEngine<Vec3d> >(true) // default template
+void registerDifferenceEngine(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Computing the difference between two vector of dofs.")
+        .add< DifferenceEngine<Vec1> >()
+        .add< DifferenceEngine<Vec3> >(true));
+}
 
-        ;
-
-template class SOFA_COMPONENT_ENGINE_TRANSFORM_API DifferenceEngine<Vec1d>;
-template class SOFA_COMPONENT_ENGINE_TRANSFORM_API DifferenceEngine<Vec3d>;
-
+template class SOFA_COMPONENT_ENGINE_TRANSFORM_API DifferenceEngine<Vec1>;
+template class SOFA_COMPONENT_ENGINE_TRANSFORM_API DifferenceEngine<Vec3>;
 
 } //namespace sofa::component::engine::transform

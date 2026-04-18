@@ -3,25 +3,25 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#include "GUIManager.h"
+#include <sofa/gui/common/GUIManager.h>
 
-#include "BaseGUI.h"
+#include <sofa/gui/common/BaseGUI.h>
 #include <sofa/gui/common/ArgumentParser.h>
 
 #include <sofa/helper/Utils.h>
@@ -29,7 +29,7 @@
 #include <sofa/helper/system/FileSystem.h>
 #include <sofa/helper/system/FileRepository.h>
 #include <sofa/simulation/Node.h>
-#include <SofaSimulationCommon/init.h>
+#include <sofa/simulation/common/init.h>
 
 #include <fstream>
 
@@ -54,16 +54,18 @@ BaseGUI* GUIManager::getGUI()
 void GUIManager::RegisterParameters(ArgumentParser* argumentParser)
 {
     currentArgumentParser = argumentParser;
-    for(std::list<GUICreator>::iterator it =guiCreators.begin(), itend =guiCreators.end(); it != itend; ++it)
+    for (const auto& guiCreator : guiCreators)
     {
-        if (it->parameters)
-            it->parameters(argumentParser);
+        if (guiCreator.parameters)
+        {
+            guiCreator.parameters(argumentParser);
+        }
     }
 }
 
 const std::string &GUIManager::GetCurrentGUIName()
 {
-    return currentGUI->GetGUIName();
+    return sofa::gui::common::BaseGUI::GetGUIName();
 }
 
 int GUIManager::RegisterGUI(const char* name, CreateGUIFn* creator, RegisterGUIParameters* parameters, int priority)
@@ -71,7 +73,7 @@ int GUIManager::RegisterGUI(const char* name, CreateGUIFn* creator, RegisterGUIP
     if(guiCreators.size())
     {
         std::list<GUICreator>::iterator it = guiCreators.begin();
-        std::list<GUICreator>::iterator itend = guiCreators.end();
+        const std::list<GUICreator>::iterator itend = guiCreators.end();
         while (it != itend && strcmp(name, it->name))
             ++it;
         if (it != itend)
@@ -87,38 +89,34 @@ int GUIManager::RegisterGUI(const char* name, CreateGUIFn* creator, RegisterGUIP
     entry.parameters = parameters;
     entry.priority = priority;
     guiCreators.push_back(entry);
+
+    msg_info("GUIManager") << "Registered " << entry.name << " as a GUI.";
     return 0;
 }
 
 std::vector<std::string> GUIManager::ListSupportedGUI()
 {
     std::vector<std::string> names;
-    for(std::list<GUICreator>::iterator it = guiCreators.begin(), itend = guiCreators.end(); it != itend; ++it)
+    names.reserve(guiCreators.size());
+    for (const auto& guiCreator : guiCreators)
     {
-        names.push_back(it->name);
+        names.emplace_back(guiCreator.name);
     }
     return names;
 }
 
-std::string GUIManager::ListSupportedGUI(char separator)
+std::string GUIManager::ListSupportedGUI(const char separator)
 {
-    std::string names;
-    bool first = true;
-    for(std::list<GUICreator>::iterator it =guiCreators.begin(), itend =guiCreators.end(); it != itend; ++it)
-    {
-        if (!first) names += separator; else first = false;
-        names += it->name;
-    }
-    return names;
+    const auto guis = GUIManager::ListSupportedGUI();
+    return sofa::helper::join(guis.begin(), guis.end(), separator);
 }
 
 const char* GUIManager::GetValidGUIName()
 {
     const char* name;
-    std::string lastGuiFilename = BaseGUI::getConfigDirectoryPath() + "/lastUsedGUI.ini";
+    const std::string lastGuiFilename = BaseGUI::getConfigDirectoryPath() + "/lastUsedGUI.ini";
     if (guiCreators.empty())
     {
-
         msg_error("GUIManager") << "No GUI registered.";
         return nullptr;
     }
@@ -136,7 +134,7 @@ const char* GUIManager::GetValidGUIName()
 
             // const char* lastGuiNameChar = "qt";
             std::list<GUICreator>::iterator it1 = guiCreators.begin();
-            std::list<GUICreator>::iterator itend1 = guiCreators.end();
+            const std::list<GUICreator>::iterator itend1 = guiCreators.end();
             while(++it1 != itend1)
             {
                 if( strcmp(lastGuiNameChar, it1->name) == 0 )
@@ -152,7 +150,7 @@ const char* GUIManager::GetValidGUIName()
         }
 
         std::list<GUICreator>::iterator it =guiCreators.begin();
-        std::list<GUICreator>::iterator itend =guiCreators.end();
+        const std::list<GUICreator>::iterator itend =guiCreators.end();
         name = it->name;
         int prio = it->priority;
         while (++it != itend)
@@ -171,7 +169,7 @@ GUIManager::GUICreator* GUIManager::GetGUICreator(const char* name)
 {
     if (!name) name = GetValidGUIName();
     std::list<GUICreator>::iterator it =guiCreators.begin();
-    std::list<GUICreator>::iterator itend =guiCreators.end();
+    const std::list<GUICreator>::iterator itend =guiCreators.end();
     while (it != itend && strcmp(name, it->name))
         ++it;
     if (it == itend)
@@ -209,7 +207,7 @@ int GUIManager::Init(const char* argv0, const char* name)
     {
         name = GetValidGUIName(); // get the default gui name
     }
-    GUICreator *creator = GetGUICreator(name);
+    const GUICreator *creator = GetGUICreator(name);
     if(!creator)
     {
         return 1;
@@ -224,7 +222,7 @@ int GUIManager::createGUI(sofa::simulation::Node::SPtr groot, const char* filena
 {
     if (!currentGUI)
     {
-        GUICreator* creator = GetGUICreator(valid_guiname.c_str());
+        const GUICreator* creator = GetGUICreator(valid_guiname.c_str());
         if (!creator)
         {
             return 1;
@@ -235,23 +233,42 @@ int GUIManager::createGUI(sofa::simulation::Node::SPtr groot, const char* filena
             msg_error("GUIManager") << "GUI '"<<valid_guiname<<"' creation failed." ;
             return 1;
         }
-        //Save this GUI type as the last used GUI
-        const std::string lastGuiFilePath = BaseGUI::getConfigDirectoryPath() + "/lastUsedGUI.ini";
-        std::ofstream out(lastGuiFilePath.c_str(),std::ios::out);
-        out << valid_guiname << std::endl;
-        out.close();
+
+        if (currentGUI->canBeDefaultGUI())
+        {
+            //Save this GUI type as the last used GUI
+            const std::string lastGuiFilePath = BaseGUI::getConfigDirectoryPath() + "/lastUsedGUI.ini";
+            std::ofstream out(lastGuiFilePath.c_str(),std::ios::out);
+            out << valid_guiname << std::endl;
+            out.close();
+        }
     }
     return 0;
 }
 
 void GUIManager::closeGUI()
 {
-    if(currentGUI) currentGUI->closeGUI();
+    if(currentGUI)
+    {
+        currentGUI->closeGUI();
+        currentGUI = nullptr;
+    }
+    else
+    {
+        msg_error("GUIManager") << "Cannot close GUI: GUI is not setup properly";
+    }
 }
 
 void GUIManager::Redraw()
 {
-    if (currentGUI) currentGUI->redraw();
+    if (currentGUI)
+    {
+        currentGUI->redraw();
+    }
+    else
+    {
+        msg_error("GUIManager") << "Cannot redraw: GUI is not setup properly";
+    }
 }
 
 sofa::simulation::Node* GUIManager::CurrentSimulation()
@@ -269,7 +286,10 @@ void GUIManager::SetScene(sofa::simulation::Node::SPtr groot, const char* filena
         currentGUI->setScene(groot,filename,temporaryFile);
         currentGUI->configureGUI(groot);
     }
-
+    else
+    {
+        msg_error("GUIManager") << "Cannot set scene: GUI is not setup properly";
+    }
 }
 
 int GUIManager::MainLoop(sofa::simulation::Node::SPtr groot, const char* filename)
@@ -293,11 +313,21 @@ void GUIManager::SetDimension(int  width , int  height )
     {
         currentGUI->setViewerResolution(width,height);
     }
+    else
+    {
+        msg_error("GUIManager") << "Cannot set dimensions: GUI is not setup properly";
+    }
 }
 void GUIManager::SetFullScreen()
 {
-    if (currentGUI) currentGUI->setFullScreen();
-    else{ msg_error("GUIManager") <<"no currentGUI" ; }
+    if (currentGUI)
+    {
+        currentGUI->setFullScreen();
+    }
+    else
+    {
+        msg_error("GUIManager") << "Cannot set fullscreen: GUI is not setup properly";
+    }
 }
 
 void GUIManager::CenterWindow()
@@ -306,13 +336,25 @@ void GUIManager::CenterWindow()
     {
         currentGUI->centerWindow();
     }
+    else
+    {
+        msg_error("GUIManager") << "Cannot center window: GUI is not setup properly";
+    }
 }
 
 void GUIManager::SaveScreenshot(const char* filename)
 {
-    if (currentGUI) {
-        std::string output = (filename?std::string(filename):"output.png");
-        currentGUI->saveScreenshot(output);
+    if (currentGUI)
+    {
+        const std::string output = filename ? std::string(filename) : "output.png";
+        if (!currentGUI->saveScreenshot(output))
+        {
+            msg_error("GUIManager") << "Failed to save screenshot";
+        }
+    }
+    else
+    {
+        msg_error("GUIManager") << "Cannot save screenshot: GUI is not setup properly";
     }
 }
 

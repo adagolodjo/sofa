@@ -22,10 +22,8 @@
 #include <sofa/simulation/DeleteVisitor.h>
 #include <sofa/simulation/Node.h>
 
-namespace sofa
-{
 
-namespace simulation
+namespace sofa::simulation
 {
 
 
@@ -39,13 +37,13 @@ void DeleteVisitor::processNodeBottomUp(Node* node)
     }
     while (!node->object.empty())
     {
-        core::objectmodel::BaseObject::SPtr object = *node->object.begin();
+        core::objectmodel::BaseComponent::SPtr object = *node->object.begin();
         node->removeObject(object);
         object.reset();
     }
 }
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
+
 

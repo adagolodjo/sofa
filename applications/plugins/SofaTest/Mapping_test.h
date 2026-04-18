@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -33,8 +33,8 @@
 
 #include <sofa/linearalgebra/FullVector.h>
 #include <SofaEigen2Solver/EigenSparseMatrix.h>
-#include <SofaBaseMechanics/MechanicalObject.h>
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/component/statecontainer/MechanicalObject.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 #include <SceneCreator/SceneCreator.h>
 #include <sofa/core/Mapping.h>
 
@@ -73,7 +73,7 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
 {
     typedef _Mapping Mapping;
     typedef typename Mapping::In In;
-    typedef component::container::MechanicalObject<In> InDOFs;
+    typedef component::statecontainer::MechanicalObject<In> InDOFs;
     typedef typename InDOFs::Real  Real;
     typedef typename InDOFs::Coord  InCoord;
     typedef typename InDOFs::Deriv  InDeriv;
@@ -89,7 +89,7 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
     typedef Data<InMatrixDeriv> InDataMatrixDeriv;
 
     typedef typename Mapping::Out Out;
-    typedef component::container::MechanicalObject<Out> OutDOFs;
+    typedef component::statecontainer::MechanicalObject<Out> OutDOFs;
     typedef typename OutDOFs::Coord     OutCoord;
     typedef typename OutDOFs::Deriv     OutDeriv;
     typedef typename OutDOFs::VecCoord  OutVecCoord;
@@ -112,8 +112,8 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
     simulation::Node::SPtr root;         ///< Root of the scene graph, created by the constructor an re-used in the tests
     simulation::Simulation* simulation;  ///< created by the constructor an re-used in the tests
     std::pair<Real,Real> deltaRange; ///< The minimum and maximum magnitudes of the change of each scalar value of the small displacement is perturbation * numeric_limits<Real>::epsilon. This epsilon is 1.19209e-07 for float and 2.22045e-16 for double.
-    Real errorMax;     ///< The test is successfull if the (infinite norm of the) difference is less than  errorMax * numeric_limits<Real>::epsilon
-    Real errorFactorDJ;     ///< The test for geometric stiffness is successfull if the (infinite norm of the) difference is less than  errorFactorDJ * errorMax * numeric_limits<Real>::epsilon
+    Real errorMax;     ///< The test is successful if the (infinite norm of the) difference is less than  errorMax * numeric_limits<Real>::epsilon
+    Real errorFactorDJ;     ///< The test for geometric stiffness is successful if the (infinite norm of the) difference is less than  errorFactorDJ * errorMax * numeric_limits<Real>::epsilon
 
 
     static const unsigned char TEST_getJs = 1; ///< testing getJs used in assembly API
@@ -167,7 +167,7 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
     }
 
 
-    /** Returns OutCoord substraction a-b */
+    /** Returns OutCoord subtraction a-b */
     virtual OutDeriv difference( const OutCoord& a, const OutCoord& b )
     {
         return Out::coordDifference(a,b);
@@ -227,7 +227,7 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
         typedef component::linearsolver::EigenSparseMatrix<In,Out> EigenSparseMatrix;
         core::MechanicalParams mparams;
         mparams.setKFactor(1.0);
-        mparams.setSymmetricMatrix(false);
+        mparams.setSupportOnlySymmetricMatrix(false);
         inDofs->resize(parentInit.size());
         WriteInVecCoord xin = inDofs->writePositions();
         copyToData(xin,parentInit); // xin = parentInit
@@ -241,8 +241,8 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
 
         /// Updated to parentNew
         copyToData(xin,parentNew);
-        mapping->apply(&mparams, core::VecCoordId::position(), core::VecCoordId::position());
-        mapping->applyJ(&mparams, core::VecDerivId::velocity(), core::VecDerivId::velocity());
+        mapping->apply(&mparams, core::vec_id::write_access::position, core::vec_id::read_access::position);
+        mapping->applyJ(&mparams, core::vec_id::write_access::velocity, core::vec_id::read_access::velocity);
 
         /// test apply: check if the child positions are the expected ones
         bool succeed=true;
@@ -284,7 +284,7 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
         //        cout<<"random child forces  fc = "<<fc<<endl;
         WriteOutVecDeriv fout = outDofs->writeForces();
         copyToData( fout, fc );
-        mapping->applyJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        mapping->applyJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         copyFromData( fp, inDofs->readForces() );
         //          cout<<"parent forces fp = "<<fp<<endl;
 
@@ -301,19 +301,19 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
         // propagate small velocity
         WriteInVecDeriv vin = inDofs->writeVelocities();
         copyToData( vin, vp );
-        mapping->applyJ( &mparams, core::VecDerivId::velocity(), core::VecDerivId::velocity() );
+        mapping->applyJ( &mparams, core::vec_id::write_access::velocity, core::vec_id::read_access::velocity );
         ReadOutVecDeriv vout = outDofs->readVelocities();
         copyFromData( vc, vout);
         //          cout<<"child velocity vc = " << vc << endl;
 
         // apply geometric stiffness
-        inDofs->vRealloc( &mparams, core::VecDerivId::dx() ); // dx is not allocated by default
+        inDofs->vRealloc( &mparams, core::vec_id::write_access::dx() ); // dx is not allocated by default
         WriteInVecDeriv dxin = inDofs->writeDx();
         copyToData( dxin, vp );
         dfp.fill( InDeriv() );
         copyToData( fin, dfp );
-        mapping->updateK( &mparams, core::ConstVecDerivId::force() ); // updating stiffness matrix for the current state and force
-        mapping->applyDJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        mapping->updateK( &mparams, core::vec_id::write_access::force ); // updating stiffness matrix for the current state and force
+        mapping->applyDJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         copyFromData( dfp, inDofs->readForces() ); // fp + df due to geometric stiffness
         //        cout<<"dfp = " << dfp << endl;
 
@@ -366,7 +366,7 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
         fp.fill( InDeriv() );
         copyToData( fin, fp );  // reset parent forces before accumulating child forces
         copyToData( fout, preTreatment(fc) );
-        mapping->applyJT( &mparams, core::VecDerivId::force(), core::VecDerivId::force() );
+        mapping->applyJT( &mparams, core::vec_id::write_access::force, core::vec_id::read_access::force );
         copyFromData( fp, inDofs->readForces() );
 
 
@@ -378,7 +378,7 @@ struct Mapping_test: public Sofa_test<typename _Mapping::Real>
         WriteInVecCoord pin (inDofs->writePositions());
         copyToData( pin, xp1 );
         //            cout<<"new parent positions xp1 = " << xp1 << endl;
-        mapping->apply ( &mparams, core::VecCoordId::position(), core::VecCoordId::position() );
+        mapping->apply ( &mparams, core::vec_id::write_access::position, core::vec_id::read_access::position );
         ReadOutVecCoord pout = outDofs->readPositions();
         copyFromData( xc1, pout );
         //            cout<<"old child positions xc = " << xc << endl;

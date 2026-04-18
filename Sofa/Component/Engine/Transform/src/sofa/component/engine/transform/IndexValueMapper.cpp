@@ -21,8 +21,8 @@
 ******************************************************************************/
 #define INDEXVALUEMAPPER_CPP_
 
-#include "IndexValueMapper.inl"
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/component/engine/transform/IndexValueMapper.inl>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/ObjectFactory.h>
 
 namespace sofa::component::engine::transform
@@ -31,13 +31,12 @@ namespace sofa::component::engine::transform
 using namespace sofa;
 using namespace sofa::defaulttype;
 
-int IndexValueMapperClass = core::RegisterObject("Input values to output values mapper. Includes indices rules, such as replacement, resize")
-        .add< IndexValueMapper<Vec3Types> >(true)
- 
-        ;
+void registerIndexValueMapper(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Input values to output values mapper. Includes indices rules, such as replacement, resize.")
+        .add< IndexValueMapper<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_TRANSFORM_API IndexValueMapper<Vec3Types>;
- 
-
 
 } //namespace sofa::component::engine::transform

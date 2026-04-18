@@ -29,13 +29,8 @@
 #include <string>
 #include <sofa/helper/config.h>
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 class Message;
@@ -45,11 +40,10 @@ class SOFA_HELPER_API MessageHandler
 public:
     virtual ~MessageHandler(){}
     virtual void process(Message& m) = 0 ;
+    virtual std::string getName() const = 0;
 };
 
 
-} // logging
-} // helper
-} // sofa
+}
 
 #endif // MESSAGEHANDLER_H

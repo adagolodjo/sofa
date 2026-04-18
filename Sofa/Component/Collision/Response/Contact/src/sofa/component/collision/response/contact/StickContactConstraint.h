@@ -24,7 +24,7 @@
 
 #include <sofa/core/collision/Contact.h>
 #include <sofa/core/collision/Intersection.h>
-#include <sofa/component/constraint/lagrangian/model/BilateralInteractionConstraint.h>
+#include <sofa/component/constraint/lagrangian/model/BilateralLagrangianConstraint.h>
 #include <sofa/helper/Factory.h>
 #include <sofa/component/collision/response/mapper/BaseContactMapper.h>
 #include <sofa/component/collision/response/contact/ContactIdentifier.h>
@@ -58,7 +58,7 @@ protected:
     mapper::ContactMapper<CollisionModel1,DataTypes1> mapper1;
     mapper::ContactMapper<CollisionModel2,DataTypes2> mapper2;
 
-    constraint::lagrangian::model::BilateralInteractionConstraint<sofa::defaulttype::Vec3Types>::SPtr m_constraint;
+    constraint::lagrangian::model::BilateralLagrangianConstraint<sofa::defaulttype::Vec3Types>::SPtr m_constraint;
     core::objectmodel::BaseContext* parent;
 
     std::vector< sofa::core::collision::DetectionOutput* > contacts;
@@ -69,15 +69,15 @@ protected:
     StickContactConstraint(CollisionModel1* model1, CollisionModel2* model2, Intersection* intersectionMethod);
 
     ~StickContactConstraint() override;
+
 public:
-    Data<bool> f_keepAlive; ///< set to true to keep this contact alive even after collisions are no longer detected
+    Data<bool> d_keepAlive; ///< set to true to keep this contact alive even after collisions are no longer detected
 
     /// Return true if this contact should be kept alive, even if objects are no longer in collision
-    bool keepAlive() override { return f_keepAlive.getValue(); }
+    bool keepAlive() override { return d_keepAlive.getValue(); }
 
     /// Control the keepAlive flag of the contact.
-    void setKeepAlive(bool val) override { f_keepAlive.setValue(val); }
-
+    void setKeepAlive(bool val) override { d_keepAlive.setValue(val); }
 
     void cleanup() override;
 

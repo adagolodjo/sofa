@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_FORCEFIELD_TRIANGULARANISOTROPICFEMFORCEFIELD_CPP
-#include "TriangularAnisotropicFEMForceField.inl"
+#include <sofa/component/solidmechanics/fem/elastic/TriangularAnisotropicFEMForceField.inl>
 #include <sofa/core/ObjectFactory.h>
 
 
@@ -29,11 +29,11 @@ namespace sofa::component::solidmechanics::fem::elastic
 
 using namespace sofa::defaulttype;
 
-// Register in the Factory
-int TriangularAnisotropicFEMForceFieldClass = core::RegisterObject("Triangular finite element model using anisotropic material")
-        .add< TriangularAnisotropicFEMForceField<Vec3Types> >()
-
-        ;
+void registerTriangularAnisotropicFEMForceField(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Triangular finite element model using anisotropic material.")
+        .add< TriangularAnisotropicFEMForceField<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_SOLIDMECHANICS_FEM_ELASTIC_API TriangularAnisotropicFEMForceField<Vec3Types>;
 

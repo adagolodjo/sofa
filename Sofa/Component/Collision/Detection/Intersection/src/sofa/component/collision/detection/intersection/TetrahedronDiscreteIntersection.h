@@ -24,9 +24,9 @@
 
 #include <sofa/core/collision/Intersection.h>
 
-#include <sofa/component/collision/geometry/PointModel.h>
-#include <sofa/component/collision/geometry/RayModel.h>
-#include <sofa/component/collision/geometry/TetrahedronModel.h>
+#include <sofa/component/collision/geometry/PointCollisionModel.h>
+#include <sofa/component/collision/geometry/RayCollisionModel.h>
+#include <sofa/component/collision/geometry/TetrahedronCollisionModel.h>
 #include <sofa/component/collision/detection/intersection/DiscreteIntersection.h>
 
 namespace sofa::component::collision::detection::intersection
@@ -36,17 +36,13 @@ class SOFA_COMPONENT_COLLISION_DETECTION_INTERSECTION_API TetrahedronDiscreteInt
     typedef DiscreteIntersection::OutputVector OutputVector;
 
 public:
-    TetrahedronDiscreteIntersection(DiscreteIntersection* object);
+    TetrahedronDiscreteIntersection(DiscreteIntersection* intersection);
+    
+    bool testIntersection(collision::geometry::Tetrahedron&, collision::geometry::Point&, const core::collision::Intersection* currentIntersection);
+    bool testIntersection(collision::geometry::Ray&, collision::geometry::Tetrahedron&, const core::collision::Intersection* currentIntersection);
 
-    bool testIntersection(collision::geometry::Tetrahedron&, collision::geometry::Point&);
-    bool testIntersection(collision::geometry::Ray&, collision::geometry::Tetrahedron&);
-
-    int computeIntersection(collision::geometry::Tetrahedron&, collision::geometry::Point&, OutputVector*);
-    int computeIntersection(collision::geometry::Ray&, collision::geometry::Tetrahedron&, OutputVector*);
-
-protected:
-    DiscreteIntersection* intersection;
-
+    int computeIntersection(collision::geometry::Tetrahedron&, collision::geometry::Point&, OutputVector*, const core::collision::Intersection* currentIntersection);
+    int computeIntersection(collision::geometry::Ray&, collision::geometry::Tetrahedron&, OutputVector*, const core::collision::Intersection* currentIntersection);
 };
 
 } // namespace sofa::component::collision::detection::intersection

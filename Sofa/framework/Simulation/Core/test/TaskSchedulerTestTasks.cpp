@@ -1,6 +1,28 @@
+/******************************************************************************
+*                 SOFA, Simulation Open-Framework Architecture                *
+*                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
+*                                                                             *
+* This program is free software; you can redistribute it and/or modify it     *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
+*                                                                             *
+* This program is distributed in the hope that it will be useful, but WITHOUT *
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
+*                                                                             *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
+*******************************************************************************
+* Authors: The SOFA Team and external contributors (see Authors.txt)          *
+*                                                                             *
+* Contact information: contact@sofa-framework.org                             *
+******************************************************************************/
 #include "TaskSchedulerTestTasks.h"
 
 #include <sofa/simulation/TaskScheduler.h>
+#include <sofa/simulation/MainTaskSchedulerFactory.h>
 
 using sofa::simulation::Task;
 
@@ -20,7 +42,7 @@ namespace sofa
         
         int64_t x, y;
         
-        simulation::TaskScheduler* scheduler = simulation::TaskScheduler::getInstance();
+        simulation::TaskScheduler* scheduler = simulation::MainTaskSchedulerFactory::createInRegistry();
         
         FibonacciTask task0(_N - 1, &x, &status);
         FibonacciTask task1(_N - 2, &y, &status);
@@ -52,7 +74,7 @@ namespace sofa
         
         int64_t x, y;
         
-        simulation::TaskScheduler* scheduler = simulation::TaskScheduler::getInstance();
+        simulation::TaskScheduler* scheduler = simulation::MainTaskSchedulerFactory::createInRegistry();
         
         IntSumTask task0(_first, mid, &x, &status);
         IntSumTask task1(mid+1, _last, &y, &status);

@@ -20,6 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
+#include <sofa/config.h>
 #include <sofa/component/topology/container/grid/config.h>
 
 #include <sofa/component/topology/container/constant/MeshTopology.h>
@@ -43,22 +44,20 @@ class RegularGridTopology;
 
 /** A sparse grid topology. Like a sparse FFD building from the bounding box of the object. Starting from a RegularGrid, only valid cells containing matter (ie intersecting the original surface mesh or totally inside the object) are considered.
  * Valid cells are tagged by a Type BOUNDARY or INSIDE
- * WARNING: the corresponding node in the XML file has to be placed BEFORE the MechanicalObject node, in order to excute its init() before the MechanicalObject one in order to be able to give dofs
+ * WARNING: the corresponding node in the XML file has to be placed BEFORE the MechanicalObject node, in order to execute its init() before the MechanicalObject one in order to be able to give dofs
  */
 class SOFA_COMPONENT_TOPOLOGY_CONTAINER_GRID_API SparseGridTopology : public container::constant::MeshTopology
 {
 public:
     SOFA_CLASS(SparseGridTopology,MeshTopology);
-    using Vector3 = sofa::type::Vec3;
-    typedef sofa::type::Vec3i   Vec3i;
-    typedef sofa::type::fixed_array<Vector3,8> CubeCorners;
-    typedef sofa::type::BoundingBox BoundingBox;
+    typedef sofa::type::fixed_array<type::Vec3,8> CubeCorners;
     typedef enum {OUTSIDE,INSIDE,BOUNDARY} Type; ///< each cube has a type depending on its filling ratio
+
 protected:
     SparseGridTopology(bool _isVirtual=false);
 
     /// Define using the resolution and the spatial size. The resolution corresponds to the number of points if all the cells were filled.
-    SparseGridTopology(Vec3i numVertices, BoundingBox box, bool _isVirtual=false);
+    SparseGridTopology(type::Vec3i numVertices, type::BoundingBox box, bool _isVirtual=false);
 public:
     static const float WEIGHT27[8][27];
     static const Index cornerIndicesFromFineToCoarse[8][8];
@@ -68,15 +67,15 @@ public:
     /// building from a mesh file
     virtual void buildAsFinest();
 
-    /// building by condensating a finer sparse grid (used if setFinerSparseGrid has initializated _finerSparseGrid before calling init() )
+    /// building by condensating a finer sparse grid (used if setFinerSparseGrid has initialized _finerSparseGrid before calling init() )
     virtual void buildFromFiner();
 
-    /// building eventual virtual finer levels (cf _nbVirtualFinerLevels)
+    /// building eventual virtual finer levels (cf d_nbVirtualFinerLevels)
     virtual void buildVirtualFinerLevels();
 
-    typedef std::map<Vector3, Index> MapBetweenCornerPositionAndIndice;///< a vertex indice for a given vertex position in space
+    typedef std::map<type::Vec3, Index> MapBetweenCornerPositionAndIndice;///< a vertex indice for a given vertex position in space
 
-    /// connexion between several coarsened levels
+    /// connection between several coarsened levels
     typedef std::vector<type::fixed_array<Index,8> > HierarchicalCubeMap; ///< a cube indice -> corresponding 8 child indices on the potential _finerSparseGrid
     HierarchicalCubeMap _hierarchicalCubeMap;
     typedef type::vector<Index> InverseHierarchicalCubeMap; ///< a fine cube indice -> corresponding coarser cube indice
@@ -101,51 +100,51 @@ public:
     NodeCornersAdjacency _nodeCornersAdjacency;
 
 
-    type::vector< SparseGridTopology::SPtr > _virtualFinerLevels; ///< saving the virtual levels (cf _nbVirtualFinerLevels)
-    int getNbVirtualFinerLevels() const { return _nbVirtualFinerLevels.getValue();}
-    void setNbVirtualFinerLevels(int n) {_nbVirtualFinerLevels.setValue(n);}
+    type::vector< SparseGridTopology::SPtr > _virtualFinerLevels; ///< saving the virtual levels (cf nbVirtualFinerLevels)
+    int getNbVirtualFinerLevels() const { return d_nbVirtualFinerLevels.getValue();}
+    void setNbVirtualFinerLevels(int n) {d_nbVirtualFinerLevels.setValue(n);}
 
 
     /// Resolution
-    sofa::type::Vec<3, int> getN() const { return n.getValue();}
-    int getNx() const { return n.getValue()[0]; }
-    int getNy() const { return n.getValue()[1]; }
-    int getNz() const { return n.getValue()[2]; }
+    sofa::type::Vec<3, int> getN() const { return d_n.getValue();}
+    int getNx() const { return d_n.getValue()[0]; }
+    int getNy() const { return d_n.getValue()[1]; }
+    int getNz() const { return d_n.getValue()[2]; }
 
-    void setN(Vec3i _n) {n.setValue(_n);}
-    void setNx(int _n) { n.setValue(Vec3i(_n             ,n.getValue()[1],n.getValue()[2])); }
-    void setNy(int _n) { n.setValue(Vec3i(n.getValue()[0],_n             ,n.getValue()[2])); }
-    void setNz(int _n) { n.setValue(Vec3i(n.getValue()[0],n.getValue()[1],_n)             ); }
+    void setN(type::Vec3i _n) {d_n.setValue(_n);}
+    void setNx(int _n) { d_n.setValue(type::Vec3i(_n             , d_n.getValue()[1], d_n.getValue()[2])); }
+    void setNy(int _n) { d_n.setValue(type::Vec3i(d_n.getValue()[0], _n             , d_n.getValue()[2])); }
+    void setNz(int _n) { d_n.setValue(type::Vec3i(d_n.getValue()[0], d_n.getValue()[1], _n)             ); }
 
-    void setMin(Vector3 val) {_min.setValue(val);}
-    void setXmin(SReal val) { _min.setValue(Vector3(val             ,_min.getValue()[1],_min.getValue()[2])); }
-    void setYmin(SReal val) { _min.setValue(Vector3(_min.getValue()[0],val             ,_min.getValue()[2])); }
-    void setZmin(SReal val) { _min.setValue(Vector3(_min.getValue()[0],_min.getValue()[1],val)             ); }
+    void setMin(type::Vec3 val) {d_min.setValue(val);}
+    void setXmin(SReal val) { d_min.setValue(type::Vec3(val             , d_min.getValue()[1], d_min.getValue()[2])); }
+    void setYmin(SReal val) { d_min.setValue(type::Vec3(d_min.getValue()[0], val             , d_min.getValue()[2])); }
+    void setZmin(SReal val) { d_min.setValue(type::Vec3(d_min.getValue()[0], d_min.getValue()[1], val)             ); }
 
-    void setMax(Vector3 val) {_max.setValue(val);}
-    void setXmax(SReal val) { _max.setValue(Vector3(val             ,_max.getValue()[1],_max.getValue()[2])); }
-    void setYmax(SReal val) { _max.setValue(Vector3(_max.getValue()[0],val             ,_max.getValue()[2])); }
-    void setZmax(SReal val) { _max.setValue(Vector3(_max.getValue()[0],_max.getValue()[1],val)             ); }
+    void setMax(type::Vec3 val) {d_max.setValue(val);}
+    void setXmax(SReal val) { d_max.setValue(type::Vec3(val             , d_max.getValue()[1], d_max.getValue()[2])); }
+    void setYmax(SReal val) { d_max.setValue(type::Vec3(d_max.getValue()[0], val             , d_max.getValue()[2])); }
+    void setZmax(SReal val) { d_max.setValue(type::Vec3(d_max.getValue()[0], d_max.getValue()[1], val)             ); }
 
-    Vector3 getMin() {return _min.getValue();}
-    SReal getXmin() { return _min.getValue()[0]; }
-    SReal getYmin() { return _min.getValue()[1]; }
-    SReal getZmin() { return _min.getValue()[2]; }
+    type::Vec3 getMin() {return d_min.getValue();}
+    SReal getXmin() { return d_min.getValue()[0]; }
+    SReal getYmin() { return d_min.getValue()[1]; }
+    SReal getZmin() { return d_min.getValue()[2]; }
 
-    Vector3 getMax() {return _max.getValue();}
-    SReal getXmax() { return _max.getValue()[0]; }
-    SReal getYmax() { return _max.getValue()[1]; }
-    SReal getZmax() { return _max.getValue()[2]; }
+    type::Vec3 getMax() {return d_max.getValue();}
+    SReal getXmax() { return d_max.getValue()[0]; }
+    SReal getYmax() { return d_max.getValue()[1]; }
+    SReal getZmax() { return d_max.getValue()[2]; }
 
     bool hasPos()  const override { return true; }
 
     /// return the cube containing the given point (or -1 if not found),
     /// as well as deplacements from its first corner in terms of dx, dy, dz (i.e. barycentric coordinates).
-    virtual Index findCube(const Vector3& pos, SReal& fx, SReal &fy, SReal &fz);
+    virtual Index findCube(const type::Vec3& pos, SReal& fx, SReal &fy, SReal &fz);
 
     /// return the cube containing the given point (or -1 if not found),
     /// as well as deplacements from its first corner in terms of dx, dy, dz (i.e. barycentric coordinates).
-    virtual Index findNearestCube(const Vector3& pos, SReal& fx, SReal &fy, SReal &fz);
+    virtual Index findNearestCube(const type::Vec3& pos, SReal& fx, SReal &fy, SReal &fz);
 
     /// return indices of 6 neighboor cubes
     virtual type::fixed_array<Index,6> findneighboorCubes(Index indice );
@@ -169,52 +168,50 @@ public:
     type::vector< Index > _indicesOfRegularCubeInSparseGrid; ///< to redirect an indice of a cube in the regular grid to its indice in the sparse grid
     type::vector< Index > _indicesOfCubeinRegularGrid; ///< to redirect an indice of a cube in the sparse grid to its indice in the regular grid
 
-    Vector3 getPointPos(Index i ) { return Vector3( seqPoints.getValue()[i][0],seqPoints.getValue()[i][1],seqPoints.getValue()[i][2] ); }
+    type::Vec3 getPointPos(Index i ) { return type::Vec3(d_seqPoints.getValue()[i][0], d_seqPoints.getValue()[i][1], d_seqPoints.getValue()[i][2] ); }
 
     void getMesh( sofa::helper::io::Mesh &m);
 
-    void setDimVoxels( int a, int b, int c) { dataResolution.setValue(Vec3i(a,b,c));}
-    void setSizeVoxel( float a, float b, float c) { voxelSize.setValue(Vector3(a,b,c));}
+    void setDimVoxels( int a, int b, int c) { d_dataResolution.setValue(type::Vec3i(a, b, c));}
+    void setSizeVoxel( SReal a, SReal b, SReal c) { d_voxelSize.setValue(type::Vec3(a, b, c));}
 
     bool getVoxel(unsigned int x, unsigned int y, unsigned int z)
     {
-        return getVoxel(dataResolution.getValue()[0]*dataResolution.getValue()[1]*z + dataResolution.getValue()[0]*y + x);
+        return getVoxel(d_dataResolution.getValue()[0] * d_dataResolution.getValue()[1] * z + d_dataResolution.getValue()[0] * y + x);
     }
 
     bool getVoxel(unsigned int index) const
     {
-        return dataVoxels.getValue()[index]==1;
+        return d_dataVoxels.getValue()[index] == 1;
     }
 
-    Data< type::vector< unsigned char > >     dataVoxels;
-    Data<bool> _fillWeighted; ///< is quantity of matter inside a cell taken into account?
-
+    Data< type::vector< unsigned char > >     d_dataVoxels;
+    Data<bool> d_fillWeighted; ///< Is quantity of matter inside a cell taken into account? (.5 for boundary, 1 for inside)
     Data<bool> d_bOnlyInsideCells; ///< Select only inside cells (exclude boundary cells)
-
 
 protected:
     bool isVirtual;
     /// cutting number in all directions
-    Data< sofa::type::Vec< 3, int > > n;
-    Data< Vector3 > _min; ///< Min
-    Data< Vector3 > _max; ///< Max
-    Data< SReal > _cellWidth; ///< if > 0 : dimension of each cell in the created grid
-    Data< int > _nbVirtualFinerLevels; ///< create virtual (not in the animation tree) finer sparse grids in order to dispose of finest information (usefull to compute better mechanical properties for example)
+    Data< sofa::type::Vec< 3, int > > d_n;
+    Data< type::Vec3 > d_min; ///< Min
+    Data< type::Vec3 > d_max; ///< Max
+    Data< SReal > d_cellWidth; ///< if > 0 : dimension of each cell in the created grid
+    Data< int > d_nbVirtualFinerLevels; ///< create virtual (not in the animation tree) finer sparse grids in order to dispose of finest information (useful to compute better mechanical properties for example)
 
 public:
-    Data< Vec3i >			dataResolution; ///< Dimension of the voxel File
-    Data< Vector3 >         voxelSize; ///< Dimension of one voxel
-    Data< unsigned int >    marchingCubeStep; ///< Step of the Marching Cube algorithm
-    Data< unsigned int >    convolutionSize; ///< Dimension of the convolution kernel to smooth the voxels. 0 if no smoothing is required.
+    Data< type::Vec3i >		d_dataResolution; ///< Dimension of the voxel File
+    Data< type::Vec3 >      d_voxelSize; ///< Dimension of one voxel
+    Data< unsigned int >    d_marchingCubeStep; ///< Step of the Marching Cube algorithm
+    Data< unsigned int >    d_convolutionSize; ///< Dimension of the convolution kernel to smooth the voxels. 0 if no smoothing is required.
 
-    Data< type::vector< type::vector<Index> > >facets; ///< Input mesh facets
+    Data< type::vector< type::vector<Index> > >d_facets; ///< Input mesh facets
 
     /** Create the data structure based on resolution, size and filling.
           \param numPoints  Number of points in the x,y,and z directions
           \param box  Volume occupied by the grid
           \param filling Voxel filling: true if the cell is defined, false if the cell is empty. Voxel order is: for(each z){ for(each y){ for(each x) }}}
           */
-    void buildFromData( Vec3i numPoints, BoundingBox box, const type::vector<bool>& filling );
+    void buildFromData( type::Vec3i numPoints, type::BoundingBox box, const type::vector<bool>& filling );
 
 protected:
     virtual void updateEdges();
@@ -229,19 +226,19 @@ protected:
     type::vector< float > _massCoefs; ///< a stiffness coefficient per hexa (BOUNDARY=.5, FULL=1)
 
     /// start from a seed cell (i,j,k) the OUTSIDE filling is propagated to neighboor cells until meet a BOUNDARY cell (this function is called from all border cells of the RegularGrid)
-    void launchPropagationFromSeed(const Vec3i& point,
+    void launchPropagationFromSeed(const type::Vec3i& point,
             sofa::core::sptr<RegularGridTopology> regularGrid,
             type::vector<Type>& regularGrdidTypes,
             type::vector<bool>& alreadyTested,
-            std::stack<Vec3i>& seed) const;
+            std::stack<type::Vec3i>& seed) const;
 
-    void propagateFrom(  const Vec3i& point,
+    void propagateFrom(  const type::Vec3i& point,
             sofa::core::sptr<RegularGridTopology> regularGrid,
             type::vector<Type>& regularGridTypes,
             type::vector<bool>& alreadyTested,
             std::stack< sofa::type::Vec<3,int> > &seed) const;
 
-    void computeBoundingBox(const type::vector<Vector3>& vertices,
+    void computeBoundingBox(const type::vector<type::Vec3>& vertices,
             SReal& xmin, SReal& xmax,
             SReal& ymin, SReal& ymax,
             SReal& zmin, SReal& zmax) const;
@@ -281,13 +278,13 @@ protected:
     {
         if (value)
         {
-            (*dataVoxels.beginEdit())[index] = 1;
+            (*d_dataVoxels.beginEdit())[index] = 1;
         }
         else
         {
-            (*dataVoxels.beginEdit())[index] = 0;
+            (*d_dataVoxels.beginEdit())[index] = 0;
         }
-        dataVoxels.beginEdit();
+        d_dataVoxels.beginEdit();
     };
 
 

@@ -40,16 +40,8 @@
  * Time measurement *
  ********************/
 
-namespace sofa
-{
 
-namespace helper
-{
-
-namespace system
-{
-
-namespace thread
+namespace sofa::helper::system::thread
 {
 #if defined(WIN32)
 
@@ -205,14 +197,14 @@ ctime_t CTime::getTime()
 
 double CTime::toSecond(const ctime_t t)
 {
-    return 1.0*t/CTime::getTicksPerSec() ;
+    return static_cast<double>(t) / CTime::getTicksPerSec();
 }
 
-} // namespace thread
+} // namespace sofa::helper::system::thread
 
-} // namespace system
 
-} // namespace helper
 
-} // namespace sofa
+
+
+
 

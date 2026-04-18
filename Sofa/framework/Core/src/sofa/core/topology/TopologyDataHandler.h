@@ -37,7 +37,7 @@ namespace sofa::core::topology
 /////////////////////////////   Generic Topology Data Implementation   /////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template< class TopologyElementType, class VecT>
+template< class ElementType, class VecT>
 class TopologyDataHandler : public sofa::core::topology::TopologyHandler
 {
 public:
@@ -45,8 +45,8 @@ public:
     typedef typename container_type::value_type value_type;
     typedef sofa::core::topology::BaseTopologyData<VecT> t_topologicalData;
 
-    typedef core::topology::TopologyElementInfo<TopologyElementType> ElementInfo;
-    typedef core::topology::TopologyChangeElementInfo<TopologyElementType> ChangeElementInfo;
+    typedef geometry::ElementInfo<ElementType> ElementInfo;
+    typedef core::topology::TopologyChangeElementInfo<ElementType> ChangeElementInfo;
 
     typedef core::topology::BaseMeshTopology::Point Point;
     typedef core::topology::BaseMeshTopology::Edge Edge;
@@ -81,14 +81,9 @@ public:
 
 
     /// Function to link DataEngine with Data array from topology
-    void linkToPointDataArray() override;
-    void linkToEdgeDataArray() override;
-    void linkToTriangleDataArray() override;
-    void linkToQuadDataArray() override;
-    void linkToTetrahedronDataArray() override;
-    void linkToHexahedronDataArray() override;
-
-    bool isTopologyDataRegistered() override;
+    void linkToTopologyDataArray(sofa::geometry::ElementType elementType);
+    void unlinkFromTopologyDataArray(sofa::geometry::ElementType elementType);
+    void unlinkFromAllTopologyDataArray();
 
     using TopologyHandler::ApplyTopologyChange;
 
@@ -108,44 +103,8 @@ public:
     //virtual void ApplyTopologyChange(const EMoved_Removing* event) override;
 
 
-
-    ////////////////////////////////////// DEPRECATED ///////////////////////////////////////////
-
-    SOFA_ATTRIBUTE_DISABLED("v22.06 (PR#)", "v22.06 (PR#)", "This method to remove current elements has been removed, Destroy/Create function have been replaced by TopologyChangeCallback.")
-    virtual void applyDestroyFunction(Index, value_type&) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED("v22.06 (PR#)", "v22.06 (PR#)", "This method to add elements has been removed, Destroy/Create function have been replaced by TopologyChangeCallback.")
-    virtual void applyCreateFunction(Index, value_type& t,
-        const sofa::type::vector< Index >&,
-        const sofa::type::vector< SReal >&) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED("v22.06 (PR#)", "v22.06 (PR#)", "This method to add elements has been removed, Destroy/Create function have been replaced by TopologyChangeCallback.")
-    virtual void applyCreateFunction(Index i, value_type& t, const TopologyElementType&,
-        const sofa::type::vector< Index >& ancestors,
-        const sofa::type::vector< SReal >& coefs) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED("v22.06 (PR#)", "v22.06 (PR#)", "This method to add elements has been removed, Destroy/Create function have been replaced by TopologyChangeCallback.")
-    virtual void applyCreateFunction(Index i, value_type& t, const TopologyElementType& e,
-        const sofa::type::vector< Index >& ancestors,
-        const sofa::type::vector< SReal >& coefs,
-        const AncestorElem* /*ancestorElem*/) = delete;
-
-    SOFA_ATTRIBUTE_DISABLED("v22.06 (PR#)", "v22.06 (PR#)", "This method has been removed as it has never been used and is not needed. Use TopologyChangeCallback to add a callback.")
-    void setDefaultValue(const value_type& v) = delete;
-    
-    SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#2171)", "v21.06 (PR#2171)", "This method has been removed as it has never been used and is not needed. Use TopologyChangeCallback to add a callback.")
-    bool applyTestCreateFunction(Index /*index*/, const sofa::type::vector< Index >& /*ancestors*/, const sofa::type::vector< SReal >& /*coefs*/) = delete;
-
 protected:
     t_topologicalData* m_topologyData;
-
-public:
-    bool m_pointsLinked;
-    bool m_edgesLinked;
-    bool m_trianglesLinked;
-    bool m_quadsLinked;
-    bool m_tetrahedraLinked;
-    bool m_hexahedraLinked;
 
 };
 

@@ -21,8 +21,9 @@
 ******************************************************************************/
 #pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/MultiVecId.h>
+#include <sofa/core/behavior/StateAccessor.h>
 
 #include <sofa/defaulttype/fwd.h>
 #include <sofa/core/behavior/fwd.h>
@@ -30,6 +31,24 @@
 
 namespace sofa::core::behavior
 {
+
+/**
+ * Interface to apply a zero Dirichlet boundary condition on a matrix
+ *
+ * If K is a matrix to apply a zero Dirichlet boundary condition:
+ *  K_ii = 1
+ *  K_ij = 0 for i != j
+ *  K_ji = 0 for i != j
+ */
+struct ZeroDirichletCondition
+{
+    virtual ~ZeroDirichletCondition() = default;
+    /**
+     * Zero out a row and a column of a matrix. The element at the
+     * intersection of the row and the column is set to 1.
+     */
+    virtual void discardRowCol(sofa::Index /*row*/, sofa::Index /*col*/) {}
+};
 
 /**
 *  \brief Component computing projective constraints within a simulated body.
@@ -43,10 +62,10 @@ namespace sofa::core::behavior
 *  see the InteractionConstraint class).
 *
 */
-class SOFA_CORE_API BaseProjectiveConstraintSet : public virtual objectmodel::BaseObject
+class SOFA_CORE_API BaseProjectiveConstraintSet : public virtual StateAccessor
 {
 public:
-    SOFA_ABSTRACT_CLASS(BaseProjectiveConstraintSet, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(BaseProjectiveConstraintSet, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(BaseProjectiveConstraintSet)
 protected:
     BaseProjectiveConstraintSet()
@@ -112,6 +131,10 @@ public:
     { 
         msg_error() << "projectMatrix not implemented, projection will not be handled appropriately";
     }
+
+    /// Project the global matrix to constrained space by using the ZeroDirichletCondition interface
+    /// It allows to define what rows and columns to discard for the projection.
+    virtual void applyConstraint(sofa::core::behavior::ZeroDirichletCondition* /*matrix*/);
 
     /// @}
 

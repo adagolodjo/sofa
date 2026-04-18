@@ -1,7 +1,7 @@
 #ifndef LABELGRIDIMAGETOOLBOXACTION_H
 #define LABELGRIDIMAGETOOLBOXACTION_H
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 #include <QSpinBox>
 #include <QPushButton>
@@ -22,8 +22,6 @@ class SOFA_IMAGE_GUI_API LabelGridImageToolBoxNoTemplated;
 }}}
 
 namespace sofa
-{
-namespace gui
 {
 namespace qt
 {
@@ -69,7 +67,6 @@ private:
     
 };
 
-}
 }
 }
 

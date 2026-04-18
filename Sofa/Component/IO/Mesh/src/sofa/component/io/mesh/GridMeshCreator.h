@@ -21,8 +21,8 @@
 ******************************************************************************/
 #pragma once
 #include <sofa/component/io/mesh/config.h>
-
 #include <sofa/core/loader/MeshLoader.h>
+
 namespace sofa::component::io::mesh
 {
 
@@ -41,18 +41,18 @@ public:
     bool canLoad() override { return true; }
     bool doLoad() override; ///< create the grid
 
-    Data< type::Vec2i > resolution;  ///< Number of vertices in each direction
-    Data< int > trianglePattern;            ///< 0: no triangles, 1: alternate triangles, 2: upward triangles, 3: downward triangles.
+    Data< type::Vec2i > d_resolution; ///< Number of vertices in each direction
+    Data< int > d_trianglePattern; ///< 0: no triangles, 1: alternate triangles, 2: upward triangles, 3: downward triangles
 
 protected:
     GridMeshCreator();
 
     void doClearBuffers() override;
     ///< index of a vertex, given its integer coordinates (between 0 and resolution) in the plane.
-    unsigned vert( unsigned x, unsigned y) { return x + y*resolution.getValue()[0]; }
+    unsigned vert( unsigned x, unsigned y) { return x + y * d_resolution.getValue()[0]; }
 
     // To avoid edge redundancy, we insert the edges to a set, an then dump the set. Edge (a,b) is considered equal to (b,a), so only one of them is inserted
-    std::set<Edge> uniqueEdges;                                ///< edges without redundancy
+    std::set<topology::Edge> uniqueEdges;                                ///< edges without redundancy
     void insertUniqueEdge(unsigned a, unsigned b);             ///< insert an edge if it is not redundant
     void insertTriangle(unsigned a, unsigned b, unsigned c);   ///< insert a triangle (no reduncy checking !) and unique edges
     void insertQuad(unsigned a, unsigned b, unsigned c, unsigned d);   ///< insert a quad (no reduncy checking !) and unique edges

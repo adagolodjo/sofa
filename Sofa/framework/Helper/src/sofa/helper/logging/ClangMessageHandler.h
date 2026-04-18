@@ -26,26 +26,18 @@
 #ifndef CLANGMESSAGEHANDLER_H
 #define CLANGMESSAGEHANDLER_H
 
-#include "MessageHandler.h"
+#include <sofa/helper/logging/MessageHandler.h>
 #include <sofa/helper/config.h>
 
-namespace sofa
-{
-
-namespace helper
-{
-
-namespace logging
+namespace sofa::helper::logging
 {
 
 class SOFA_HELPER_API ClangMessageHandler : public MessageHandler
 {
 public:
     void process(Message &m) override ;
+    std::string getName() const override { return "ClangMessageHandler"; }
 };
-
-} // logging
-} // helper
-} // sofa
+} // namespace sofa::helper::logging
 
 #endif // CLANGMESSAGEHANDLER_H

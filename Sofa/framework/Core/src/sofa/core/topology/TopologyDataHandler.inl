@@ -25,33 +25,29 @@
 namespace sofa::core::topology
 {
 
-template <typename TopologyElementType, typename VecT>
-TopologyDataHandler< TopologyElementType, VecT>::TopologyDataHandler(t_topologicalData *_topologicalData,
+template <typename ElementType, typename VecT>
+TopologyDataHandler< ElementType, VecT>::TopologyDataHandler(t_topologicalData *_topologicalData,
         sofa::core::topology::BaseMeshTopology *_topology, value_type defaultValue)
     : TopologyHandler()
     , m_topologyData(_topologicalData)
-    , m_pointsLinked(false), m_edgesLinked(false), m_trianglesLinked(false)
-    , m_quadsLinked(false), m_tetrahedraLinked(false), m_hexahedraLinked(false)
 {
     SOFA_UNUSED(defaultValue);
     m_topology = dynamic_cast<sofa::core::topology::TopologyContainer*>(_topology);
 }
 
 
-template <typename TopologyElementType, typename VecT>
-TopologyDataHandler< TopologyElementType, VecT>::TopologyDataHandler(t_topologicalData* _topologicalData,
+template <typename ElementType, typename VecT>
+TopologyDataHandler< ElementType, VecT>::TopologyDataHandler(t_topologicalData* _topologicalData,
     value_type defaultValue)
     : TopologyHandler()
     , m_topologyData(_topologicalData)
-    , m_pointsLinked(false), m_edgesLinked(false), m_trianglesLinked(false)
-    , m_quadsLinked(false), m_tetrahedraLinked(false), m_hexahedraLinked(false)
 {
-
+    SOFA_UNUSED(defaultValue);
 }
 
 
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::init()
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType,  VecT>::init()
 {
     // Name creation
     if (m_prefix.empty()) m_prefix = "TopologyDataHandler( " + this->m_topologyData->getOwner()->getName() + " )";
@@ -60,208 +56,112 @@ void TopologyDataHandler<TopologyElementType,  VecT>::init()
 }
 
 
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::handleTopologyChange()
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType,  VecT>::handleTopologyChange()
 {
-    if (!this->isTopologyDataRegistered() || m_topology == nullptr)
+    if (!this->isTopologyHandlerRegistered() || m_topology == nullptr)
         return;
 
     sofa::core::topology::TopologyHandler::ApplyTopologyChanges(m_topology->m_changeList.getValue(), m_topology->getNbPoints());
 }
 
 
-/// Function to link DataEngine with Data array from topology
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::linkToPointDataArray()
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType, VecT>::linkToTopologyDataArray(sofa::geometry::ElementType elementType)
 {
-    if (m_pointsLinked) // avoid second registration
-        return;
-
     if (m_topology == nullptr)
     {
-        msg_error(m_topologyData->getOwner()) << "Owner topology has not been set. Data '" << m_data_name << "' won't be linked to Point Data Array.";
+        msg_error(m_topologyData->getOwner()) << "Owner topology has not been set. Data '" << m_data_name << "' won't be linked to Data Array.";
         return;
     }
 
-    if (m_topology->linkTopologyHandlerToData(this, sofa::core::topology::TopologyElementType::POINT))
+    if (m_topology->linkTopologyHandlerToData(this, elementType))
     {
-        m_topology->addTopologyHandler(this, sofa::core::topology::TopologyElementType::POINT);
-        m_pointsLinked = true;
+        if (m_topology->addTopologyHandler(this, elementType) == false)
+        {
+            msg_warning(m_topologyData->getOwner()) << "TopologyHandler linked to Data '" << m_data_name << "' has already been registered.";
+        }
+        else
+        {
+            m_registeredElements.insert(elementType);
+        }
     }
     else
     {
-        msg_error(m_topologyData->getOwner()) << "Owner topology is not able to link with a Point Data Array, Data '" << m_data_name << "' won't be linked.";
+        msg_error(m_topologyData->getOwner()) << "Owner topology is not able to link with a valid Data Array, Data '" << m_data_name << "' won't be linked.";
         return;
     }
+}
+
+
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType, VecT>::unlinkFromTopologyDataArray(sofa::geometry::ElementType elementType)
+{
+    const auto it = m_registeredElements.find(elementType);
+    if (it == m_registeredElements.end()) // case if this element type has never been registered or topology has already been deleted
+        return;
+
+    const bool res = m_topology->unlinkTopologyHandlerToData(this, elementType);
+    msg_error_when(!res, m_topologyData->getOwner()) << "Owner topology is not able to unlink with Data Array, Data '" << m_data_name << "' won't be unlinked.";
     
+    m_topology->removeTopologyHandler(this, elementType);
+    m_registeredElements.erase(it);
 }
 
 
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::linkToEdgeDataArray()
+
+
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType, VecT>::unlinkFromAllTopologyDataArray()
 {
-    if (m_edgesLinked) // avoid second registration
+    if (m_registeredElements.empty()) // Will be false if topology has already been deleted
         return;
 
-    if (m_topology == nullptr)
+    for (auto elementType : m_registeredElements)
     {
-        msg_error(m_topologyData->getOwner()) << "Owner topology has not been set. Data '" << m_data_name << "' won't be linked to Edge Data Array.";
-        return;
+        const bool res = m_topology->unlinkTopologyHandlerToData(this, elementType);
+        msg_error_when(!res, m_topologyData->getOwner()) << "Owner topology is not able to unlink with Data Array, Data '" << m_data_name << "' won't be unlinked.";
+
+        m_topology->removeTopologyHandler(this, elementType);
     }
 
-    if (m_topology->linkTopologyHandlerToData(this, sofa::core::topology::TopologyElementType::EDGE))
-    {
-        m_topology->addTopologyHandler(this, sofa::core::topology::TopologyElementType::EDGE);
-        m_edgesLinked = true;
-    }
-    else
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology is not able to link with a Edge Data Array, Data '" << m_data_name << "' won't be linked.";
-        return;
-    }
-}
-
-
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::linkToTriangleDataArray()
-{
-    if (m_trianglesLinked) // avoid second registration
-        return;
-
-    if (m_topology == nullptr)
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology has not been set. Data '" << m_data_name << "' won't be linked to Triangle Data Array.";
-        return;
-    }
-
-    if (m_topology->linkTopologyHandlerToData(this, sofa::core::topology::TopologyElementType::TRIANGLE))
-    {
-        m_topology->addTopologyHandler(this, sofa::core::topology::TopologyElementType::TRIANGLE);
-        m_trianglesLinked = true;
-    }
-    else
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology is not able to link with a Triangle Data Array, Data '" << m_data_name << "' won't be linked.";
-        return;
-    }
-}
-
-
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::linkToQuadDataArray()
-{
-    if (m_quadsLinked) // avoid second registration
-        return;
-
-    if (m_topology == nullptr)
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology has not been set. Data '" << m_data_name << "' won't be linked to Quad Data Array.";
-        return;
-    }
-
-    if (m_topology->linkTopologyHandlerToData(this, sofa::core::topology::TopologyElementType::QUAD))
-    {
-        m_topology->addTopologyHandler(this, sofa::core::topology::TopologyElementType::QUAD);
-        m_quadsLinked = true;
-    }
-    else
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology is not able to link with a Quad Data Array, Data '" << m_data_name << "' won't be linked.";
-        return;
-    }
-}
-
-
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::linkToTetrahedronDataArray()
-{
-    if (m_tetrahedraLinked) // avoid second registration
-        return;
-
-    if (m_topology == nullptr)
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology has not been set. Data '" << m_data_name << "' won't be linked to Tetrahedron Data Array.";
-        return;
-    }
-
-    if (m_topology->linkTopologyHandlerToData(this, sofa::core::topology::TopologyElementType::TETRAHEDRON))
-    {
-        m_topology->addTopologyHandler(this, sofa::core::topology::TopologyElementType::TETRAHEDRON);
-        m_tetrahedraLinked = true;
-    }
-    else
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology is not able to link with a Tetrahedron Data Array, Data '" << m_data_name << "' won't be linked.";
-        return;
-    }
-}
-
-
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::linkToHexahedronDataArray()
-{
-    if (m_hexahedraLinked) // avoid second registration
-        return;
-
-    if (m_topology == nullptr)
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology has not been set. Data '" << m_data_name << "' won't be linked to Hexahedron Data Array.";
-        return;
-    }
-
-    if (m_topology->linkTopologyHandlerToData(this, sofa::core::topology::TopologyElementType::HEXAHEDRON))
-    {
-        m_topology->addTopologyHandler(this, sofa::core::topology::TopologyElementType::HEXAHEDRON);
-        m_hexahedraLinked = true;
-    }
-    else
-    {
-        msg_error(m_topologyData->getOwner()) << "Owner topology is not able to link with a Hexahedron Data Array, Data '" << m_data_name << "' won't be linked.";
-        return;
-    }
+    m_registeredElements.clear();
 }
 
 
 /// Apply swap between indices elements.
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::ApplyTopologyChange(const EIndicesSwap* event)
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType,  VecT>::ApplyTopologyChange(const EIndicesSwap* event)
 {
     m_topologyData->swap(event->index[0], event->index[1]);
 }
 
-template<class TopologyElementType, class VecT>
-bool TopologyDataHandler<TopologyElementType, VecT>::isTopologyDataRegistered()
-{
-    return m_topologyData != nullptr;
-}
 
 /// Apply adding elements.
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::ApplyTopologyChange(const EAdded* event)
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType,  VecT>::ApplyTopologyChange(const EAdded* event)
 {
-    //this->add(event->getNbAddedElements(), event->getElementArray(),
-    //    event->ancestorsList, event->coefs);
     m_topologyData->add(event->getIndexArray(), event->getElementArray(),
         event->ancestorsList, event->coefs, event->ancestorElems);
 }
 
 /// Apply removing elements.
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::ApplyTopologyChange(const ERemoved* event)
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType,  VecT>::ApplyTopologyChange(const ERemoved* event)
 {
     m_topologyData->remove(event->getArray());
 }
 
 /// Apply renumbering on elements.
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::ApplyTopologyChange(const ERenumbering* event)
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType,  VecT>::ApplyTopologyChange(const ERenumbering* event)
 {
     m_topologyData->renumber(event->getIndexArray());
 }
 
 /// Apply moving elements.
-template <typename TopologyElementType, typename VecT>
-void TopologyDataHandler<TopologyElementType,  VecT>::ApplyTopologyChange(const EMoved* /*event*/)
+template <typename ElementType, typename VecT>
+void TopologyDataHandler<ElementType,  VecT>::ApplyTopologyChange(const EMoved* /*event*/)
 {
     msg_warning(m_topologyData->getOwner()) << "MOVED topology event not handled on " << ElementInfo::name()
         << " (it should not even exist!)";

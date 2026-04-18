@@ -21,6 +21,7 @@
 ******************************************************************************/
 #pragma once
 
+#include <optional>
 #include <sofa/helper/config.h>
 #include<string>
 
@@ -40,11 +41,53 @@ namespace sofa::helper
 struct SOFA_HELPER_API ScopedAdvancedTimer
 {
     AdvancedTimer::IdStep m_id;
+    std::optional<AdvancedTimer::IdObj> m_objId;
 
     explicit ScopedAdvancedTimer(const std::string& message);
     explicit ScopedAdvancedTimer( const char* message );
+
+    template<class T>
+    explicit ScopedAdvancedTimer(const char* message, T* obj);
+
     ~ScopedAdvancedTimer();
 };
 
+
+template <class T>
+ScopedAdvancedTimer::ScopedAdvancedTimer(const char* message, T* obj)
+    : m_id(message)
+    , m_objId(obj->getName())
+{
+    AdvancedTimer::stepBegin(m_id, *m_objId);
+}
+
 } /// sofa::helper
 
+#ifdef TRACY_ENABLE
+    #include <tracy/Tracy.hpp>
+    #define SCOPED_TIMER_TR(name) ZoneScopedN(name)
+    #define SCOPED_TIMER_DYN_TR(name) ZoneTransientN( ___tracy_scoped_zone,name, true)
+    #define SCOPED_TIMER_VARNAME_TR(varname, name) ZoneNamedN(varname##_tr, name, true)
+    #define SCOPED_TIMER_VARNAME_DYN_TR(varname, name) ZoneTransientN(varname##_tr, name, true)
+#else
+    #define SCOPED_TIMER_TR(name)
+    #define SCOPED_TIMER_DYN_TR(name)
+    #define SCOPED_TIMER_VARNAME_TR(varname, name)
+    #define SCOPED_TIMER_VARNAME_DYN_TR(varname, name)
+#endif
+
+#ifdef SOFA_ENABLE_SCOPED_ADVANCED_TIMER
+    #define SCOPED_TIMER_AD(name) sofa::helper::ScopedAdvancedTimer sofaScopedTimer(name)
+    #define SCOPED_TIMER_VARNAME_AD(varname, name) sofa::helper::ScopedAdvancedTimer varname##_ad(name)
+#else
+    #define SCOPED_TIMER_AD(name)
+    #define SCOPED_TIMER_VARNAME_AD(varname, name)
+#endif
+
+consteval const char* ensure_name_must_be_a_compile_time_string_literal(const char* s) { return s; }
+#define ENSURE_SCOPED_ADVANCED_TIMER_ARG_IS_CONSTEXPR(s) (void)ensure_name_must_be_a_compile_time_string_literal(s)
+
+#define SCOPED_TIMER(name) ENSURE_SCOPED_ADVANCED_TIMER_ARG_IS_CONSTEXPR(name) ; SCOPED_TIMER_TR(name); SCOPED_TIMER_AD(name)
+#define SCOPED_TIMER_DYN(name) SCOPED_TIMER_DYN_TR(name); SCOPED_TIMER_AD(name)
+#define SCOPED_TIMER_VARNAME(varname, name) ENSURE_SCOPED_ADVANCED_TIMER_ARG_IS_CONSTEXPR(name) ; SCOPED_TIMER_VARNAME_TR(varname, name); SCOPED_TIMER_VARNAME_AD(varname, name)
+#define SCOPED_TIMER_VARNAME_DYN(varname, name) SCOPED_TIMER_VARNAME_DYN_TR(varname, name); SCOPED_TIMER_VARNAME_AD(varname, name)

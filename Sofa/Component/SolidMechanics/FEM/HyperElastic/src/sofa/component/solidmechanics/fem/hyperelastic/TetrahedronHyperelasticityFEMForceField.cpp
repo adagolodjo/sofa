@@ -22,7 +22,7 @@
 
 #define SOFA_COMPONENT_FORCEFIELD_TETRAHEDRONHYPERELASTICITYFEMFORCEFIELD_CPP
 
-#include "TetrahedronHyperelasticityFEMForceField.inl"
+#include <sofa/component/solidmechanics/fem/hyperelastic/TetrahedronHyperelasticityFEMForceField.inl>
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/defaulttype/VecTypes.h>
 
@@ -31,13 +31,11 @@ namespace sofa::component::solidmechanics::fem::hyperelastic
 
 using namespace sofa::defaulttype;
 
-//////////****************To register in the factory******************
-
-// Register in the Factory
-int TetrahedronHyperelasticityFEMForceFieldClass = core::RegisterObject("Generic Tetrahedral finite elements")
-.add< TetrahedronHyperelasticityFEMForceField<Vec3Types> >()
-
-;
+void registerTetrahedronHyperelasticityFEMForceField(sofa::core::ObjectFactory* factory)
+{
+	factory->registerObjects(core::ObjectRegistrationData("Generic Hyperelastic Tetrahedral finite elements.")
+		.add< TetrahedronHyperelasticityFEMForceField<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_SOLIDMECHANICS_FEM_HYPERELASTIC_API TetrahedronHyperelasticityFEMForceField<Vec3Types>;
 

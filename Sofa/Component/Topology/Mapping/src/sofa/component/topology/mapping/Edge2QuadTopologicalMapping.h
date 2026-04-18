@@ -20,16 +20,20 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #pragma once
+
 #include <sofa/component/topology/mapping/config.h>
 
-#include <sofa/core/topology/TopologicalMapping.h>
-
 #include <sofa/type/Vec.h>
-#include <sofa/defaulttype/RigidTypes.h>
-#include <map>
+#include <sofa/core/topology/TopologicalMapping.h>
+#include <sofa/core/State.h>
 
-#include <sofa/core/BaseMapping.h>
-#include <sofa/core/behavior/MechanicalState.h>
+
+
+namespace sofa::component::topology::container::dynamic
+{
+    class QuadSetTopologyContainer;
+    class QuadSetTopologyModifier;
+}
 
 namespace sofa::component::topology::mapping
 {
@@ -43,24 +47,17 @@ namespace sofa::component::topology::mapping
 * Edge2QuadTopologicalMapping class is templated by the pair (INPUT TOPOLOGY, OUTPUT TOPOLOGY)
 *
 */
-
 class SOFA_COMPONENT_TOPOLOGY_MAPPING_API Edge2QuadTopologicalMapping : public sofa::core::topology::TopologicalMapping
 {
 public:
     SOFA_CLASS(Edge2QuadTopologicalMapping,sofa::core::topology::TopologicalMapping);
-
-    typedef sofa::core::State<defaulttype::Rigid3Types>::Coord Coord;
-    typedef Coord::value_type Real;
-    enum { M=Coord::spatial_dimensions };
-    typedef type::Mat<M,M,Real> Mat;
-    typedef type::Vec<M,Real> Vec;
-    typedef type::vector<unsigned int> VecIndex;
-
-    typedef sofa::core::topology::BaseMeshTopology::Edge Edge;
-    typedef sofa::core::topology::BaseMeshTopology::Quad Quad;
+        
+    using Index = sofa::core::topology::BaseMeshTopology::Index;
+    using Edge = sofa::core::topology::BaseMeshTopology::Edge;
+    using Quad = sofa::core::topology::BaseMeshTopology::Quad;
+    using VecIndex = type::vector<Index>;
 
 protected:
-
     /** \brief Constructor.
     *
     * @param from the topology issuing TopologyChange objects (the "source").
@@ -76,11 +73,9 @@ protected:
     {}
 
 public:
-
     /** \brief Initializes the target BaseTopology from the source BaseTopology.
     */
     void init() override;
-
 
     /** \brief Translates the TopologyChange objects from the source to the target.
     *
@@ -92,16 +87,17 @@ public:
 
     Index getFromIndex(Index ind) override;
 
-protected:
 
-    Data<unsigned int> d_nbPointsOnEachCircle; ///< number of points to create along the circles around each point of the input topology (10 by default)
-    Data<double> d_radius; ///< radius of the circles around each point of the input topology (1 by default)
-    Data<double> d_radiusFocal; ///< in case of ellipse, (extra) radius on the focal axis (0 by default)
-    Data<Vec> d_focalAxis; ///< in case of ellipse, focal axis (default [0,0,1])
+    Data<unsigned int> d_nbPointsOnEachCircle; ///< Discretization of created circles
+    Data<SReal> d_radius; ///< Radius of created circles in yz plan
+    Data<SReal> d_radiusFocal; ///< If greater than 0., radius in focal axis of created ellipses
+    Data<type::Vec3> d_focalAxis; ///< In case of ellipses
 
     Data<VecIndex> d_edgeList; ///< list of input edges for the topological mapping: by default, all considered
     Data<bool> d_flipNormals; ///< Flip Normal ? (Inverse point order when creating quad)
 
+    SingleLink<Edge2QuadTopologicalMapping, topology::container::dynamic::QuadSetTopologyContainer, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_toQuadContainer; ///< Output container storing Quads
+    SingleLink<Edge2QuadTopologicalMapping, topology::container::dynamic::QuadSetTopologyModifier, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_toQuadModifier; ///< Output modifier handling Quads
 };
 
 } //namespace sofa::component::topology::mapping

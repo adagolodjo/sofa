@@ -29,15 +29,14 @@ namespace sofa::component::playback
 
 using namespace defaulttype;
 
+void registerWriteTopology(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Write topology containers information to file at each timestep.")
+        .add< WriteTopology >());
+}
 
-
-int WriteTopologyClass = core::RegisterObject("Write topology containers informations to file at each timestep")
-        .add< WriteTopology >();
-
-
-
-WriteTopologyCreator::WriteTopologyCreator(const core::ExecParams* params)
-    :Visitor(params)
+WriteTopologyCreator::WriteTopologyCreator(const core::ExecParams* eparams)
+    :Visitor(eparams)
     ,sceneName("")
 #if SOFA_COMPONENT_PLAYBACK_HAVE_ZLIB
     , extension(".txt.gz")
@@ -51,8 +50,8 @@ WriteTopologyCreator::WriteTopologyCreator(const core::ExecParams* params)
 {
 }
 
-WriteTopologyCreator::WriteTopologyCreator(const std::string &n, bool _writeContainers, bool _writeShellContainers, bool _createInMapping, const core::ExecParams* params, int c)
-    :Visitor(params)
+WriteTopologyCreator::WriteTopologyCreator(const std::string &n, bool _writeContainers, bool _writeShellContainers, bool _createInMapping, const core::ExecParams* eparams, int c)
+    :Visitor(eparams)
     , sceneName(n)
 #if SOFA_COMPONENT_PLAYBACK_HAVE_ZLIB
     , extension(".txt.gz")
@@ -80,7 +79,7 @@ simulation::Visitor::Result WriteTopologyCreator::processNodeTopDown( simulation
 
 void WriteTopologyCreator::addWriteTopology(core::topology::BaseMeshTopology* topology, simulation::Node* gnode)
 {
-    sofa::core::objectmodel::BaseContext* context = gnode->getContext();
+    const sofa::core::objectmodel::BaseContext* context = gnode->getContext();
     sofa::core::BaseMapping *mapping;
     context->get(mapping);
     if ( createInMapping || mapping == nullptr)
@@ -92,16 +91,18 @@ void WriteTopologyCreator::addWriteTopology(core::topology::BaseMeshTopology* to
         {
             wt = sofa::core::objectmodel::New<WriteTopology>();
             gnode->addObject(wt);
-            wt->f_writeContainers.setValue(recordContainers);
-            wt->f_writeShellContainers.setValue(recordShellContainers);
-            for (core::objectmodel::TagSet::iterator it=this->subsetsToManage.begin(); it != this->subsetsToManage.end(); ++it)
-                wt->addTag(*it);
+            wt->d_writeContainers.setValue(recordContainers);
+            wt->d_writeShellContainers.setValue(recordShellContainers);
+            for (const auto& subset : this->subsetsToManage)
+            {
+                wt->addTag(subset);
+            }
         }
 
         std::ostringstream ofilename;
         ofilename << sceneName << "_" << counterWriteTopology << "_" << topology->getName()  << "_topology" << extension ;
 
-        wt->f_filename.setValue(ofilename.str()); wt->init(); wt->f_listening.setValue(true);  //Activated at init
+        wt->d_filename.setValue(ofilename.str()); wt->init(); wt->f_listening.setValue(true);  //Activated at init
 
         ++counterWriteTopology;
 

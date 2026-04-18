@@ -22,6 +22,7 @@
 #pragma once
 
 #include <sofa/component/solidmechanics/spring/FastTriangularBendingSprings.h>
+#include <sofa/core/behavior/ForceField.inl>
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/core/topology/TopologyChange.h>
 #include <fstream> // for reading the file
@@ -88,8 +89,8 @@ void FastTriangularBendingSprings<DataTypes>::applyTriangleCreation(const sofa::
                     t1 = this->m_topology->getTriangle(shell[0]);
                 }
 
-                int i1 = this->m_topology->getEdgeIndexInTriangle(te1, edgeIndex); // index of the vertex opposed to the current edge in the other triangle (?)
-                int i2 = this->m_topology->getEdgeIndexInTriangle(te2, edgeIndex); // index of the vertex opposed to the current edge in the new triangle (?)
+                const int i1 = this->m_topology->getEdgeIndexInTriangle(te1, edgeIndex); // index of the vertex opposed to the current edge in the other triangle (?)
+                const int i2 = this->m_topology->getEdgeIndexInTriangle(te2, edgeIndex); // index of the vertex opposed to the current edge in the new triangle (?)
                 core::topology::BaseMeshTopology::Edge edge = this->m_topology->getEdge(edgeIndex);                  // indices of the vertices of the current edge
 
                 const core::topology::BaseMeshTopology::PointID& v1 = t1[i1];
@@ -182,8 +183,8 @@ void FastTriangularBendingSprings<DataTypes>::applyTriangleDestruction(const sof
                 te2 = this->m_topology->getEdgesInTriangle(keepingTri[1]);
                 t2 = this->m_topology->getTriangle(keepingTri[1]);
 
-                int i1 = this->m_topology->getEdgeIndexInTriangle(te1, edgeIndex);
-                int i2 = this->m_topology->getEdgeIndexInTriangle(te2, edgeIndex);
+                const int i1 = this->m_topology->getEdgeIndexInTriangle(te1, edgeIndex);
+                const int i2 = this->m_topology->getEdgeIndexInTriangle(te2, edgeIndex);
 
                 core::topology::BaseMeshTopology::Edge edge = this->m_topology->getEdge(edgeIndex);
 
@@ -214,7 +215,7 @@ void FastTriangularBendingSprings<DataTypes>::applyTriangleDestruction(const sof
 template<class DataTypes>
 void FastTriangularBendingSprings<DataTypes>::applyPointDestruction(const sofa::type::vector<Index> &tab)
 {
-    bool debug_mode = false;
+    const bool debug_mode = false;
 
     unsigned int last = this->m_topology->getNbPoints() -1;
     unsigned int i,j;
@@ -280,7 +281,7 @@ void FastTriangularBendingSprings<DataTypes>::applyPointRenumbering(const sofa::
 
 template<class DataTypes>
 FastTriangularBendingSprings<DataTypes>::FastTriangularBendingSprings(/*double _ks, double _kd*/)
-    : d_bendingStiffness(initData(&d_bendingStiffness,(SReal) 1.0,"bendingStiffness","bending stiffness of the material"))
+    : d_bendingStiffness(initData(&d_bendingStiffness,(SReal) 1.0,"bendingStiffness","Bending stiffness of the material"))
     , d_minDistValidity(initData(&d_minDistValidity,(SReal) 0.000001,"minDistValidity","Distance under which a spring is not valid"))
     , l_topology(initLink("topology", "link to the topology container"))
     , d_edgeSprings(initData(&d_edgeSprings, "edgeInfo", "Internal edge data"))
@@ -312,7 +313,7 @@ void FastTriangularBendingSprings<DataTypes>::init()
     if (m_topology == nullptr)
     {
         msg_error() << "No topology component found at path: " << l_topology.getLinkedPath() << ", nor in current context: " << this->getContext()->name;
-        sofa::core::objectmodel::BaseObject::d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+        this->d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
         return;
     }
 
@@ -431,7 +432,36 @@ void FastTriangularBendingSprings<DataTypes>::addKToMatrix(sofa::linearalgebra::
     }
 }
 
+template <class _DataTypes>
+void FastTriangularBendingSprings<_DataTypes>::buildStiffnessMatrix(core::behavior::StiffnessMatrix* matrix)
+{
+    static constexpr auto blockSize = DataTypes::deriv_total_size;
+    static constexpr auto spatialDimension = DataTypes::spatial_dimensions;
+    sofa::type::Mat<spatialDimension, spatialDimension, Real> localMatrix(type::NOINIT);
 
+    auto dfdx = matrix->getForceDerivativeIn(this->mstate)
+                       .withRespectToPositionsIn(this->mstate);
+
+    for (const auto& spring : d_edgeSprings.getValue())
+    {
+        typename EdgeSpring::StiffnessMatrix K;
+        spring.getStiffness(K);
+        for (sofa::Index n1 = 0; n1 < spatialDimension; n1++)
+        {
+            for (sofa::Index n2 = 0; n2 < spatialDimension; n2++)
+            {
+                K.getsub(spatialDimension * n1, spatialDimension * n2, localMatrix);
+                dfdx(blockSize * spring.vid[n1], blockSize * spring.vid[n2]) += localMatrix;
+            }
+        }
+    }
+}
+
+template <class _DataTypes>
+void FastTriangularBendingSprings<_DataTypes>::buildDampingMatrix(core::behavior::DampingMatrix*)
+{
+    // No damping in this ForceField
+}
 
 
 template<class DataTypes>
@@ -441,15 +471,15 @@ void FastTriangularBendingSprings<DataTypes>::draw(const core::visual::VisualPar
     if (!vparams->displayFlags().getShowForceFields()) return;
     if (!this->mstate) return;
 
-    vparams->drawTool()->saveLastState();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
-    const VecCoord& x = this->mstate->read(core::ConstVecCoordId::position())->getValue();
+    const VecCoord& x = this->mstate->read(core::vec_id::read_access::position)->getValue();
 
     vparams->drawTool()->disableLighting();
 
     const type::vector<EdgeSpring>& edgeInf = d_edgeSprings.getValue();
     constexpr sofa::type::RGBAColor color = sofa::type::RGBAColor::green();
-    std::vector<sofa::type::Vector3> vertices;
+    std::vector<sofa::type::Vec3> vertices;
 
     for(i=0; i<edgeInf.size(); ++i)
     {
@@ -519,7 +549,7 @@ void FastTriangularBendingSprings<_DataTypes>::EdgeSpring::getStiffness( Stiffne
     for( unsigned j=0; j<4; j++ )
         for( unsigned k=0; k<4; k++ )
         {
-            K[j*3][k*3] = K[j*3+1][k*3+1] = K[j*3+2][k*3+2] = -lambda * alpha[j] * alpha[k];
+            K(j*3,k*3) = K(j*3+1,k*3+1) = K(j*3+2,k*3+2) = -lambda * alpha[j] * alpha[k];
         }
 }
 

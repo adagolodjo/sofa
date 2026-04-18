@@ -23,7 +23,7 @@
 #include <sofa/gui/component/config.h>
 
 #include <sofa/gui/component/performer/InteractionPerformer.h>
-#include <sofa/component/collision/geometry/RayModel.h>
+#include <sofa/component/collision/geometry/RayCollisionModel.h>
 #include <sofa/component/statecontainer/MechanicalObject.h>
 
 #include <sofa/core/collision/DetectionOutput.h>
@@ -42,7 +42,7 @@ struct BodyPicked
     sofa::core::CollisionModel *body;
     sofa::core::behavior::BaseMechanicalState *mstate;
     sofa::Index indexCollisionElement;
-    type::Vector3 point;
+    type::Vec3 point;
     SReal dist;
     SReal rayLength;
     operator bool() { return mstate != nullptr; }
@@ -120,7 +120,7 @@ protected:
     MouseContainer       *mouseInSofa;
 };
 
-#if  !defined(SOFA_COMPONENT_COLLISION_MOUSEINTERACTOR_CPP)
+#if !defined(SOFA_COMPONENT_COLLISION_MOUSEINTERACTOR_CPP)
 extern template class SOFA_GUI_COMPONENT_API MouseInteractor<defaulttype::Vec2Types>;
 extern template class SOFA_GUI_COMPONENT_API MouseInteractor<defaulttype::Vec3Types>;
 extern template class SOFA_GUI_COMPONENT_API MouseInteractor<defaulttype::Rigid3Types>;

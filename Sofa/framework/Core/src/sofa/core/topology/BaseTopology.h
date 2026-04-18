@@ -39,7 +39,7 @@ class GeometryAlgorithms;
 /// Provides low-level topology methods (e.g. AddPoint, RemoveEdge, etc).
 class TopologyModifier;
 
-/// Contains the actual topology data and give acces to it.
+/// Contains the actual topology data and give access to it.
 class TopologyContainer;
 
 /// Translates topology events (TopologyChange objects) from a topology so that they apply on another one.
@@ -140,7 +140,7 @@ protected:
     */
     void addStateChange(const TopologyChange *topologyChange);
 
-    /// Contains the actual topology data and give acces to it (nature of these data heavily depends on the kind of topology).
+    /// Contains the actual topology data and give access to it (nature of these data heavily depends on the kind of topology).
     TopologyContainer *m_topologyContainer;
 };
 
@@ -174,6 +174,8 @@ public:
     const SeqQuads& getQuads()         override { static SeqQuads     empty; return empty; }
     const SeqTetrahedra& getTetrahedra()       override { static SeqTetrahedra    empty; return empty; }
     const SeqHexahedra& getHexahedra()         override { static SeqHexahedra     empty; return empty; }
+    const SeqPrisms& getPrisms() override { static SeqPrisms empty; return empty; }
+    const SeqPyramids& getPyramids() override { static SeqPyramids empty; return empty; }
 
     /** \brief Get the current revision of this mesh.
     *
@@ -238,11 +240,15 @@ public:
 
     /// TopologyHandler interactions
     ///@{
-    const std::list<TopologyHandler*>& getTopologyHandlerList(sofa::geometry::ElementType elementType) const;
+    const std::set<TopologyHandler*>& getTopologyHandlerList(sofa::geometry::ElementType elementType) const;
 
     /** \brief Adds a TopologyHandler, linked to a certain type of Element.
     */
-    void addTopologyHandler(TopologyHandler* _TopologyHandler, sofa::geometry::ElementType elementType);
+    [[nodiscard]] bool addTopologyHandler(TopologyHandler* _TopologyHandler, sofa::geometry::ElementType elementType);
+
+    /** \brief Remove a TopologyHandler, linked to a certain type of Element.
+    */
+    void removeTopologyHandler(TopologyHandler* _TopologyHandler, sofa::geometry::ElementType elementType);
 
 
     /** \brief Free each Topology changes in the list and remove them from the list
@@ -256,14 +262,19 @@ public:
     */
     virtual bool linkTopologyHandlerToData(TopologyHandler* topologyHandler, sofa::geometry::ElementType elementType);
 
-    /// Array of topology modifications that have already occured (addition) or will occur next (deletion).
+    /** \ brief Generic function to link potential data (related to a type of element) with a topologyHandler
+    *
+    */
+    virtual bool unlinkTopologyHandlerToData(TopologyHandler* topologyHandler, sofa::geometry::ElementType elementType);
+
+    /// Array of topology modifications that have already occurred (addition) or will occur next (deletion).
     Data <std::list<const TopologyChange *> >m_changeList;
 
-    /// Array of state modifications that have already occured (addition) or will occur next (deletion).
+    /// Array of state modifications that have already occurred (addition) or will occur next (deletion).
     Data <std::list<const TopologyChange *> >m_stateChangeList;
 
     /// List of topology engines which will interact on all topological Data.
-    std::array< std::list<TopologyHandler*>, sofa::geometry::NumberOfElementType> m_topologyHandlerListPerElement{};
+    std::array< std::set<TopologyHandler*>, sofa::geometry::NumberOfElementType> m_topologyHandlerListPerElement{};
 
     bool insertInNode( objectmodel::BaseNode* node ) override { Inherit1::insertInNode(node); Inherit2::insertInNode(node); return true; }
     bool removeInNode( objectmodel::BaseNode* node ) override { Inherit1::removeInNode(node); Inherit2::removeInNode(node); return true; }

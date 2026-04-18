@@ -23,7 +23,7 @@
 
 #include <sofa/component/solidmechanics/fem/hyperelastic/config.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/type/Vec.h>
 
 namespace sofa::component::solidmechanics::fem::hyperelastic::material
@@ -32,17 +32,17 @@ namespace sofa::component::solidmechanics::fem::hyperelastic::material
 /**
  * Generic material class
  */
-class SOFA_COMPONENT_SOLIDMECHANICS_FEM_HYPERELASTIC_API BaseMaterial : public virtual core::objectmodel::BaseObject
+class SOFA_COMPONENT_SOLIDMECHANICS_FEM_HYPERELASTIC_API BaseMaterial : public virtual core::objectmodel::BaseComponent
 {
 public:
-    SOFA_CLASS(BaseMaterial,core::objectmodel::BaseObject);
+    SOFA_CLASS(BaseMaterial,core::objectmodel::BaseComponent);
 
     BaseMaterial() {}
     ~BaseMaterial() override {}
 
     void init() override
     {
-        this->core::objectmodel::BaseObject::init();
+        this->core::objectmodel::BaseComponent::init();
     }
 
 
@@ -51,8 +51,8 @@ public:
     // The same principe for computing the strain given the displacement
 
 
-    virtual void computeStress (type::Vector3 & ,type::Vector3 &,unsigned int &) {}
-    virtual void computeDStress (type::Vector3 & ,type::Vector3 &) {}
+    virtual void computeStress (type::Vec3 & ,type::Vec3 &,unsigned int &) {}
+    virtual void computeDStress (type::Vec3 & ,type::Vec3 &) {}
 
     virtual void computeStress (unsigned int /*iElement*/)=0;//to be pure virtual
 	

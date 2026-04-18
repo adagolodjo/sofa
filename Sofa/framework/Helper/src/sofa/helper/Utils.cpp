@@ -20,124 +20,50 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #include <sofa/helper/Utils.h>
+#include <sofa/helper/StringUtils.h>
 #include <sofa/helper/system/FileSystem.h>
-#include <sofa/helper/system/Locale.h>
 #include <sofa/helper/system/FileRepository.h>
 #include <algorithm>
 
 #ifdef WIN32
 # include <Windows.h>
 # include <StrSafe.h>
+# include <Shlobj_core.h>
 #elif defined __APPLE__
 # include <mach-o/dyld.h>       // for _NSGetExecutablePath()
 # include <errno.h>
+# include <sysdir.h>  // for sysdir_start_search_path_enumeration
+# include <glob.h>    // for glob needed to expand ~ to user dir
 #else
 # include <string.h>            // for strerror()
 # include <unistd.h>            // for readlink()
 # include <errno.h>
 # include <linux/limits.h>      // for PATH_MAX
+# include <cstdlib>
+# include <sys/types.h>
+# include <pwd.h>
 #endif
 
 #include <cstdlib>
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #include <sofa/helper/logging/Messaging.h>
 
 
 using sofa::helper::system::FileSystem;
 
-namespace sofa
+
+namespace sofa::helper
 {
-namespace helper
-{
-
-std::wstring Utils::widenString(const std::string& s)
-{
-    // Set LC_CTYPE according to the environnement variable, for mbsrtowcs().
-    system::TemporaryLocale locale(LC_CTYPE, "");
-
-    const char * src = s.c_str();
-    // Call mbsrtowcs() once to find out the length of the converted string.
-    size_t length = mbsrtowcs(nullptr, &src, 0, nullptr);
-    if (length == size_t(-1)) {
-        int error = errno;
-        msg_warning("Utils::widenString()") << strerror(error);
-        return L"";
-    }
-
-    // Call mbsrtowcs() again with a correctly sized buffer to actually do the conversion.
-    wchar_t * buffer = new wchar_t[length + 1];
-    length = mbsrtowcs(buffer, &src, length + 1, nullptr);
-    if (length == size_t(-1)) {
-        int error = errno;
-        msg_warning("Utils::widenString()") << strerror(error);
-        delete[] buffer;
-        return L"";
-    }
-
-    if (src != nullptr) {
-        msg_warning("Utils::widenString()") << "Conversion failed (\"" << s << "\")";
-        delete[] buffer;
-        return L"";
-    }
-
-    std::wstring result(buffer);
-    delete[] buffer;
-    return result;
-}
-
-
-std::string Utils::narrowString(const std::wstring& ws)
-{
-    // Set LC_CTYPE according to the environnement variable, for wcstombs().
-    system::TemporaryLocale locale(LC_CTYPE, "");
-
-    const wchar_t * src = ws.c_str();
-    // Call wcstombs() once to find out the length of the converted string.
-    size_t length = wcstombs(nullptr, src, 0);
-    if (length == size_t(-1)) {
-        msg_warning("Utils::narrowString()") << "Conversion failed";
-        return "";
-    }
-
-    // Call wcstombs() again with a correctly sized buffer to actually do the conversion.
-    char * buffer = new char[length + 1];
-    length = wcstombs(buffer, src, length + 1);
-    if (length == size_t(-1)) {
-        msg_warning("Utils::narrowString()") << "Conversion failed";
-        delete[] buffer;
-        return "";
-    }
-
-    std::string result(buffer);
-    delete[] buffer;
-    return result;
-}
-
-
-std::string Utils::downcaseString(const std::string& s)
-{
-    std::string result = s;
-    std::transform(result.begin(), result.end(), result.begin(), ::tolower);
-    return result;
-}
-
-
-std::string Utils::upcaseString(const std::string& s)
-{
-    std::string result = s;
-    std::transform(result.begin(), result.end(), result.begin(), ::toupper);
-    return result;
-}
-
 
 #if defined WIN32
 std::string Utils::GetLastError() {
     LPVOID lpErrMsgBuf;
     LPVOID lpMessageBuf;
-    DWORD dwErrorCode = ::GetLastError();
+    const DWORD dwErrorCode = ::GetLastError();
 
     // Get the string corresponding to the error code
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER
@@ -158,10 +84,10 @@ std::string Utils::GetLastError() {
                     TEXT("error %d: %s"),
                     dwErrorCode, lpErrMsgBuf);
 
-    std::wstring wsMessage((LPCTSTR)lpMessageBuf);
+    const std::wstring wsMessage((LPCTSTR)lpMessageBuf);
     LocalFree(lpErrMsgBuf);
     LocalFree(lpMessageBuf);
-    return narrowString(wsMessage);
+    return helper::narrowString(wsMessage);
 }
 #endif
 
@@ -171,13 +97,13 @@ static std::string computeExecutablePath()
 
 #if defined(WIN32)
     std::vector<TCHAR> lpFilename(MAX_PATH);
-    int ret = GetModuleFileName(nullptr, /* nullptr --> executable of the current process */
-        &lpFilename[0],
-        MAX_PATH);
+    const int ret = GetModuleFileName(nullptr, /* nullptr --> executable of the current process */
+                                      &lpFilename[0],
+                                      MAX_PATH);
     if (ret == 0 || ret == MAX_PATH) {
         msg_error("Utils::computeExecutablePath()") << Utils::GetLastError();
     } else {
-        path = Utils::narrowString(std::wstring(&lpFilename[0]));
+        path = helper::narrowString(std::wstring(&lpFilename[0]));
     }
 
 #elif defined(__APPLE__)
@@ -217,16 +143,20 @@ const std::string& Utils::getExecutableDirectory()
     return path;
 }
 
-static std::string computeSofaPathPrefix()
+/// @brief variable to store custom path set using @sa setSofaCustomPathPrefix to override classical
+/// SOFA_ROOT or getExecutablePath method
+static std::string s_sofaPathPrefix;
+
+std::string computeSofaPathPrefix()
 {
-    char* pathVar = getenv("SOFA_ROOT");
+    const char* pathVar = getenv("SOFA_ROOT");
     if (pathVar != nullptr && FileSystem::exists(pathVar))
     {
         return FileSystem::convertBackSlashesToSlashes(pathVar);
     }
     else {
         const std::string exePath = Utils::getExecutablePath();
-        std::size_t pos = exePath.rfind("/bin/");
+        const std::size_t pos = exePath.rfind("/bin/");
         if (pos == std::string::npos) {
             // This triggers a segfault on MacOS (static call problem): see https://github.com/sofa-framework/sofa/issues/636
             // msg_error("Utils::getSofaPathPrefix()") << "failed to deduce the root path of Sofa from the application path: (" << exePath << ")";
@@ -242,13 +172,19 @@ static std::string computeSofaPathPrefix()
 
 const std::string& Utils::getSofaPathPrefix()
 {
-    static const std::string prefix = computeSofaPathPrefix();
-    return prefix;
+    if (s_sofaPathPrefix.empty())
+        s_sofaPathPrefix = computeSofaPathPrefix();
+    return s_sofaPathPrefix;
+}
+
+void Utils::setSofaCustomPathPrefix(const std::string& path)
+{
+    s_sofaPathPrefix = FileSystem::cleanPath(path);
 }
 
 const std::string Utils::getSofaPathTo(const std::string& pathFromBuildDir)
 {
-    std::string path = Utils::getSofaPathPrefix() + "/" + pathFromBuildDir;
+    std::string path = FileSystem::append(Utils::getSofaPathPrefix(), pathFromBuildDir);
     if(FileSystem::exists(path))
     {
         return path;
@@ -271,7 +207,7 @@ std::map<std::string, std::string> Utils::readBasicIniFile(const std::string& pa
     std::string line;
     while (std::getline(iniFile, line))
     {
-        size_t equalPos = line.find_first_of('=');
+        const size_t equalPos = line.find_first_of('=');
         if (equalPos != std::string::npos)
         {
             const std::string key = line.substr(0, equalPos);
@@ -283,7 +219,144 @@ std::map<std::string, std::string> Utils::readBasicIniFile(const std::string& pa
     return map;
 }
 
+// no standard/portable way
+const std::string& Utils::getUserHomeDirectory()
+{
+    auto computeUserHomeDirectory = []()
+    {
+#ifdef WIN32 // Windows: ${HOME}
+        const char* homeDir = std::getenv("USERPROFILE");
+        return homeDir ? std::string(homeDir) : std::string("");
+#elif defined(__APPLE__) // macOS : ${HOME} (usually /Users/username)
+        glob_t globbuf;
+        if (glob("~", GLOB_TILDE, nullptr, &globbuf) == 0)
+        {
+            std::string result(globbuf.gl_pathv[0]);
+            globfree(&globbuf);
+            return result;
+        }
+        else // Unable to expand tilde, fallback to env method
+        {
+            const char* homeDir;
 
-} // namespace helper
-} // namespace sofa
+            // if HOME is defined
+            if ((homeDir = std::getenv("HOME")) != nullptr)
+            {
+                return std::string(homeDir);
+            }
+            else
+            {
+                return std::string("");
+            }
+        }
+#else // Linux: ${HOME}
+    const char* homeDir;
+
+    // if HOME is defined
+    if ((homeDir = std::getenv("HOME")) == nullptr)
+    {
+        // else system calls are used
+        struct passwd* pw = getpwuid(getuid());
+        if (pw != nullptr)
+            homeDir = pw->pw_dir;
+    }
+
+    return homeDir ? std::string(homeDir) : std::string("");
+
+#endif
+    };
+
+    static std::string homeDir = FileSystem::cleanPath(computeUserHomeDirectory());
+    return homeDir;
+}
+
+const std::string& Utils::getSofaDataDirectory()
+{
+    constexpr std::string_view sofaDataDirSuffix = "SOFAData";
+
+    static std::string sofaDataDirectory = FileSystem::append(getUserHomeDirectory(), sofaDataDirSuffix);
+    FileSystem::cleanPath(sofaDataDirectory);
+    FileSystem::ensureFolderExists(sofaDataDirectory);
+
+    return sofaDataDirectory;
+}
+
+
+// no standard/portable way
+const std::string& Utils::getUserLocalDirectory()
+{
+    auto computeUserLocalDirectory = []()
+    {
+#ifdef WIN32 // Windows: "LocalAppData" directory i.e ${HOME}\AppData\Local
+        std::wstring wresult;
+        wchar_t* path = nullptr;
+        const auto hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &path);
+        if (SUCCEEDED(hr))
+        {
+            wresult = std::wstring(path);
+        }
+        if (path)
+        {
+            CoTaskMemFree(path);
+        }
+
+        return sofa::helper::narrowString(wresult);
+#elif defined(__APPLE__) // macOS : ${HOME}/Library/Application Support
+        // https://stackoverflow.com/questions/5123361/finding-library-application-support-from-c
+
+         char path[PATH_MAX];
+         auto state = sysdir_start_search_path_enumeration(SYSDIR_DIRECTORY_APPLICATION_SUPPORT,
+                                                           SYSDIR_DOMAIN_MASK_USER);
+         if ((state = sysdir_get_next_search_path_enumeration(state, path)))
+         {
+             glob_t globbuf;
+             if (glob(path, GLOB_TILDE, nullptr, &globbuf) == 0)
+             {
+                 std::string result(globbuf.gl_pathv[0]);
+                 globfree(&globbuf);
+                 return result;
+             }
+             else
+             {
+                 // "Unable to expand tilde"
+                 return std::string("");
+             }
+         }
+         else
+         {
+             // "Failed to get settings folder"
+             return std::string("");
+         }
+#else // Linux: either ${XDG_CONFIG_HOME} if defined, or ${HOME}/.config (should be equivalent)
+        const char* configDir;
+
+        // if env.var XDG_CONFIG_HOME is defined
+        if ((configDir = std::getenv("XDG_CONFIG_HOME")) == nullptr)
+        {
+            return FileSystem::append(getUserHomeDirectory(), ".config");
+        }
+        else
+        {
+            return std::string(configDir);
+        }
+#endif
+    };
+
+    static std::string userLocalDir = FileSystem::cleanPath(computeUserLocalDirectory());
+    return userLocalDir;
+}
+
+const std::string& Utils::getSofaUserLocalDirectory()
+{
+    constexpr std::string_view sofaLocalDirSuffix = "SOFA";
+
+    static const auto sofaLocalDirectory = FileSystem::cleanPath(FileSystem::append(getUserLocalDirectory(), sofaLocalDirSuffix));
+    FileSystem::ensureFolderExists(sofaLocalDirectory);
+
+    return sofaLocalDirectory;
+}
+
+
+} // namespace sofa::helper
+
 

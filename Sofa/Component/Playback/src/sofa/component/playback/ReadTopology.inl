@@ -33,10 +33,10 @@ namespace sofa::component::playback
 {
 
 ReadTopology::ReadTopology()
-    : f_filename( initData(&f_filename, "filename", "input file name"))
-    , f_interval( initData(&f_interval, 0.0, "interval", "time duration between inputs"))
-    , f_shift( initData(&f_shift, 0.0, "shift", "shift between times in the file and times when they will be read"))
-    , f_loop( initData(&f_loop, false, "loop", "set to 'true' to re-read the file when reaching the end"))
+    : d_filename(initData(&d_filename, "filename", "input file name"))
+    , d_interval(initData(&d_interval, 0.0, "interval", "time duration between inputs"))
+    , d_shift(initData(&d_shift, 0.0, "shift", "shift between times in the file and times when they will be read"))
+    , d_loop(initData(&d_loop, false, "loop", "set to 'true' to re-read the file when reaching the end"))
     , m_topology(nullptr)
     , infile(nullptr)
 #if SOFA_COMPONENT_PLAYBACK_HAVE_ZLIB
@@ -90,7 +90,7 @@ void ReadTopology::reset()
     }
 #endif
 
-    const std::string& filename = f_filename.getFullPath();
+    const std::string& filename = d_filename.getFullPath();
     if (filename.empty())
     {
         msg_error() << "Empty filename";
@@ -161,7 +161,7 @@ bool ReadTopology::readNext(double time, std::vector<std::string>& validLines)
     validLines.clear();
     std::string line, cmd;
 
-    double epsilon = 0.00000001;
+    const double epsilon = 0.00000001;
 
 
     while ((double)nextTime <= (time + epsilon))
@@ -173,7 +173,7 @@ bool ReadTopology::readNext(double time, std::vector<std::string>& validLines)
 
             if (gzeof(gzfile))
             {
-                if (!f_loop.getValue())
+                if (!d_loop.getValue())
                     break;
                 gzrewind(gzfile);
                 loopTime = nextTime;
@@ -184,7 +184,7 @@ bool ReadTopology::readNext(double time, std::vector<std::string>& validLines)
             buf[0] = '\0';
             while (gzgets(gzfile,buf,sizeof(buf))!=nullptr && buf[0])
             {
-                size_t l = strlen(buf);
+                const size_t l = strlen(buf);
                 if (buf[l-1] == '\n')
                 {
                     buf[l-1] = '\0';
@@ -204,7 +204,7 @@ bool ReadTopology::readNext(double time, std::vector<std::string>& validLines)
             {
                 if (infile->eof())
                 {
-                    if (!f_loop.getValue())
+                    if (!d_loop.getValue())
                         break;
                     infile->clear();
                     infile->seekg(0);
@@ -231,7 +231,7 @@ bool ReadTopology::readNext(double time, std::vector<std::string>& validLines)
 
 void ReadTopology::processReadTopology()
 {
-    double time = getContext()->getTime() + f_shift.getValue();
+    double time = getContext()->getTime() + d_shift.getValue();
 
     std::vector<std::string> validLines;
     if (!readNext(time, validLines)) return;

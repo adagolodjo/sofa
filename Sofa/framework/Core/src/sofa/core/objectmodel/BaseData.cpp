@@ -25,16 +25,8 @@
 #include <sofa/helper/StringUtils.h>
 #include <sofa/helper/logging/Messaging.h>
 
-namespace sofa
+namespace sofa::core::objectmodel
 {
-
-namespace core
-{
-
-namespace objectmodel
-{
-
-//#define SOFA_DDG_TRACE
 
 BaseData::BaseData(const char* h, DataFlags dataflags) : BaseData(sofa::helper::safeCharToString(h), dataflags)
 {
@@ -57,7 +49,7 @@ BaseData::BaseData( const char* helpMsg, bool isDisplayed, bool isReadOnly) : Ba
 
 
 BaseData::BaseData( const std::string& h, bool isDisplayed, bool isReadOnly)
-    : help(h), ownerClass(""), group(""), widget("")
+    : help(h), group(""), widget("")
     , m_counter(), m_isSet(), m_dataFlags(FLAG_DEFAULT), m_owner(nullptr), m_name("")
     , parentData(*this)
 {
@@ -69,7 +61,7 @@ BaseData::BaseData( const std::string& h, bool isDisplayed, bool isReadOnly)
 }
 
 BaseData::BaseData( const BaseInitData& init)
-    : help(init.helpMsg), ownerClass(init.ownerClass), group(init.group), widget(init.widget)
+    : help(init.helpMsg), group(init.group), widget(init.widget)
     , m_counter(), m_isSet(), m_dataFlags(init.dataFlags)
     , m_owner(init.owner), m_name(init.name)
     , parentData(*this)
@@ -136,17 +128,29 @@ bool BaseData::setParent(BaseData* parent, const std::string& path)
         addInput(parent);
         BaseData::setDirtyValue();
         m_counter++;
-        m_isSet = true;
-    }else if (!path.empty())
+    }
+    // the referenced parent data has not been created yet but a path has been given
+    else if (!path.empty())
+    {
         parentData.setPath(path);
+    }
+
+    m_isSet = true;
 
     return true;
+}
+
+std::string BaseData::getPathName() const
+{
+    if(m_owner)
+        return m_owner->getPathName()+"."+getName();
+    return getName();
 }
 
 std::string BaseData::getLinkPath() const
 {
     if(m_owner)
-        return "@"+m_owner->getPathName()+"."+getName();
+        return "@"+getPathName();
     return "";
 }
 
@@ -166,20 +170,16 @@ void BaseData::doDelInput(DDGNode* n)
 void BaseData::update()
 {
     cleanDirty();
-    for(DDGLinkIterator it=inputs.begin(); it!=inputs.end(); ++it)
+    for (DDGNode* input : inputs)
     {
-        (*it)->updateIfDirty();
+        input->updateIfDirty();
     }
 
     /// Check if there is a parent (so a predecessor in the DDG), if so
     /// update the internal value.
-    auto parent = parentData.resolvePathAndGetTarget();
+    const auto parent = parentData.resolvePathAndGetTarget();
     if (parent)
     {
-#ifdef SOFA_DDG_TRACE
-        if (m_owner)
-            dmsg_warning(m_owner) << "Data " << m_name << ": update from parent " << parentBaseData->m_name;
-#endif
         updateValueFromLink(parent);
         // If the value is dirty clean it
         if(this->isDirty())
@@ -337,9 +337,10 @@ std::string BaseData::decodeTypeName(const std::type_info& t)
     return sofa::helper::NameDecoder::decodeTypeName(t);
 }
 
-} // namespace objectmodel
+std::ostream& operator<<(std::ostream &out, const sofa::core::objectmodel::BaseData& df)
+{
+    out<<df.getValueString();
+    return out;
+}
 
-} // namespace core
-
-} // namespace sofa
-
+} // namespace sofa::core::objectmodel

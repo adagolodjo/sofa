@@ -21,6 +21,10 @@
 ******************************************************************************/
 #include <sofa/testing/NumericTest.h>
 
+#include <cstdlib>
+#include <cerrno>
+#include <climits>
+
 #include <sofa/type/trait/Rebind.h>
 using sofa::testing::NumericTest ;
 
@@ -41,6 +45,8 @@ using sofa::helper::logging::CountingMessageHandler ;
 using sofa::helper::logging::MessageDispatcher ;
 using sofa::helper::logging::Message ;
 
+#include <sofa/type/hardening.h>
+
 template<class T>
 class vector_test : public NumericTest<>,
         public ::testing::WithParamInterface<std::vector<std::string>>
@@ -49,7 +55,7 @@ public:
     void checkVector(const std::vector<std::string>& params) ;
     void checkVectorAccessFailure() const;
 
-    void checkRebind();
+    void checkRebind() const;
 };
 
 template<class T>
@@ -103,14 +109,18 @@ void vector_test<T>::checkVectorAccessFailure() const
 }
 
 template <class T>
-void vector_test<T>::checkRebind()
+void vector_test<T>::checkRebind() const
 {
-    constexpr bool hasRebind = sofa::type::HasRebindTypedef<vector<T>, int>::value;
+    constexpr bool hasRebind = sofa::type::CanTypeRebind<vector<T>, int>;
+    static_assert(hasRebind);
     EXPECT_TRUE(hasRebind);
-    using rebinded = typename sofa::type::Rebind<vector<T>, int >::to;
-    using vec_int = vector<int>;
-    constexpr bool isRebindOK = std::is_same_v<rebinded, vec_int >;
-    EXPECT_TRUE(isRebindOK);
+    if constexpr (hasRebind)
+    {
+        using rebinded = typename sofa::type::Rebind<vector<T>, int >::to;
+        using vec_int = vector<int>;
+        constexpr bool isRebindOK = std::is_same_v<rebinded, vec_int >;
+        EXPECT_TRUE(isRebindOK);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -245,8 +255,18 @@ public:
 template<class T>
 void vector_benchmark<T>::benchmark(const std::vector<std::string>& params)
 {
-    int loop1 = atoi(params[0].c_str());
-    int loop2 = atoi(params[1].c_str());
+    int loop1{}, loop2{};
+    if(!sofa::type::hardening::safeStrToInt(params[0], loop1))
+    {
+        std::cerr << "Error while reading " << params[0];
+        return;
+    }
+    if(!sofa::type::hardening::safeStrToInt(params[1], loop2))
+    {
+        std::cerr << "Error while reading " << params[1];
+        return;
+    }
+
     std::stringstream tmp;
     for(int i=0;i<loop1;i++)
     {

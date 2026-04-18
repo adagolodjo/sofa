@@ -37,8 +37,6 @@ Derives from BaseObject in order to model the parameters as Datas, which makes t
 class SOFA_SIMULATION_GRAPH_API DAGSimulation: public Simulation
 {
 public:
-    SOFA_CLASS(DAGSimulation, Simulation);
-
     DAGSimulation();
     ~DAGSimulation() override; // this is a terminal class
 
@@ -52,8 +50,4 @@ public:
     bool isDirectedAcyclicGraph() override { return true; }
 };
 
-/** Get the (unique) simulation which controls the scene.
-Automatically creates one if no Simulation has been set.
- */
-SOFA_SIMULATION_GRAPH_API Simulation* getSimulation();
 } // namespace sofa::simulation::graph

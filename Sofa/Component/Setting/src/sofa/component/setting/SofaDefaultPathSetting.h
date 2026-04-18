@@ -37,8 +37,7 @@ public:
 protected:
     SofaDefaultPathSetting();   ///<Default constructor.
 public:
-    sofa::core::objectmodel::Data<std::string> recordPath;  ///<Path where will be saved the data of the recorded simulation.
-    sofa::core::objectmodel::Data<std::string> gnuplotPath; ///<Path where will be saved the gnuplot files.
+    sofa::core::objectmodel::Data<std::string> d_gnuplotPath; ///< Path where will be saved the gnuplot files
 };
 
 } // namespace sofa::component::setting

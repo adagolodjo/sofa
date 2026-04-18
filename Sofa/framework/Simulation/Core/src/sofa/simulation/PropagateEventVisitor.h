@@ -26,10 +26,7 @@
 #include <sofa/core/objectmodel/Event.h>
 
 
-namespace sofa
-{
-
-namespace simulation
+namespace sofa::simulation
 {
 
 /**
@@ -46,7 +43,7 @@ public:
     ~PropagateEventVisitor() override;
 
     Visitor::Result processNodeTopDown(simulation::Node* node) override;
-    void processObject(simulation::Node*, core::objectmodel::BaseObject* obj);
+    void processObject(simulation::Node*, core::objectmodel::BaseComponent* obj);
 
     const char* getClassName() const override { return "PropagateEventVisitor"; }
     virtual std::string getInfos() const override { return std::string(m_event->getClassName());  }
@@ -54,8 +51,6 @@ protected:
     sofa::core::objectmodel::Event* m_event;
 };
 
-
-}
 
 }
 

@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -22,22 +22,16 @@
 #pragma once
 
 #include <sofa/testing/BaseSimulationTest.h>
-using sofa::testing::BaseSimulationTest;
-
 #include <sofa/testing/NumericTest.h>
-using sofa::testing::NumericTest;
-
-#include <SofaSimulationGraph/DAGSimulation.h>
 #include <sofa/simulation/MechanicalVisitor.h>
 #include <sofa/linearalgebra/EigenBaseSparseMatrix.h>
-#include <SofaBaseLinearSolver/SingleMatrixAccessor.h>
+#include <sofa/core/behavior/SingleMatrixAccessor.h>
 #include <SceneCreator/SceneCreator.h>
 #include <SceneCreator/SceneUtils.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/component/statecontainer/MechanicalObject.h>
 #include <sofa/core/behavior/BaseForceField.h>
-
-#include <SofaBaseMechanics/initSofaBaseMechanics.h>
+#include <sofa/core/behavior/BaseLocalForceFieldMatrix.h>
 
 #include <sofa/simulation/mechanicalvisitor/MechanicalComputeDfVisitor.h>
 using sofa::simulation::mechanicalvisitor::MechanicalComputeDfVisitor;
@@ -52,15 +46,15 @@ namespace sofa {
 
 
 /** @brief Helper for writing ForceField tests.
- * The constructor creates a root node and adds it a State and a ForceField (of the paremeter type of this template class).
+ * The constructor creates a root node and adds it a State and a ForceField (of the parameter type of this template class).
  * Pointers to node, state and force are available.
  * Deriving the ForceField test from this class makes it easy to write: just call function run_test with positions, velocities and the corresponding expected forces.
  * This function automatically checks not only the forces (function addForce), but also the stiffness (methods addDForce and addKToMatrix), using finite differences.
  * @author François Faure, 2014
  *
  */
-template <typename _ForceFieldType>
-struct ForceField_test : public BaseSimulationTest, NumericTest<typename _ForceFieldType::DataTypes::Real>
+template <typename _ForceFieldType> requires std::is_base_of_v<core::behavior::BaseForceField, _ForceFieldType>
+struct ForceField_test : public sofa::testing::BaseSimulationTest, public sofa::testing::NumericTest<typename _ForceFieldType::DataTypes::Real>
 {
     typedef _ForceFieldType ForceField;
     typedef typename ForceField::DataTypes DataTypes;
@@ -83,7 +77,7 @@ struct ForceField_test : public BaseSimulationTest, NumericTest<typename _ForceF
     /// @name Precision and control parameters
     /// {
     SReal errorMax;       ///< tolerance in precision test. The actual value is this one times the epsilon of the Real numbers (typically float or double)
-    SReal errorFactorPotentialEnergy;  ///< The test for potential energy is successfull if the (infinite norm of the) difference is less than  errorFactorPotentialEnergy * errorMax *epsilon (default = 1)
+    SReal errorFactorPotentialEnergy;  ///< The test for potential energy is successful if the (infinite norm of the) difference is less than  errorFactorPotentialEnergy * errorMax *epsilon (default = 1)
     /**
      * @brief Minimum/Maximum amplitudes of the random perturbation used to check the stiffness using finite differences
      * @warning Should be more than errorMax/stiffness. This is not checked automatically.
@@ -113,8 +107,8 @@ struct ForceField_test : public BaseSimulationTest, NumericTest<typename _ForceF
         , flags( TEST_ALL )
     {
         using modeling::addNew;
-        simulation::Simulation* simu;
-        sofa::simulation::setSimulation(simu = new sofa::simulation::graph::DAGSimulation());
+        simulation::Simulation* simu = sofa::simulation::getSimulation();
+        assert(simu);
 
         ///  node 1
         node = simu->createNewGraph("root");
@@ -134,18 +128,159 @@ struct ForceField_test : public BaseSimulationTest, NumericTest<typename _ForceF
         , flags( TEST_ALL )
     {
         using modeling::addNew;
-        simulation::Simulation* simu;
-        sofa::simulation::setSimulation(simu = new sofa::simulation::graph::DAGSimulation());
+        simulation::Simulation* simu = sofa::simulation::getSimulation();
+        assert(simu);
 
         /// Load the scene
         node = simu->createNewGraph("root");
-        node = sofa::simulation::getSimulation()->load(filename.c_str());
+        node = sofa::simulation::node::load(filename.c_str());
 
         ///  Get mechanical object
         dof = node->get<DOF>(node->SearchDown);
 
         // Add force field
         force = addNew<ForceField>(node);
+    }
+
+    void setupState( const VecCoord& x, const VecDeriv& v)
+    {
+        std::size_t n = x.size();
+        this->dof->resize(static_cast<sofa::Size>(n));
+        typename DOF::WriteVecCoord xdof = this->dof->writePositions();
+        sofa::testing::copyToData( xdof, x );
+        typename DOF::WriteVecDeriv vdof = this->dof->writeVelocities();
+        sofa::testing::copyToData( vdof, v );
+    }
+
+    void computeForce(core::MechanicalParams* mparams) const
+    {
+        MechanicalResetForceVisitor resetForce(mparams, core::vec_id::write_access::force);
+        node->execute(resetForce);
+        MechanicalComputeForceVisitor computeForce( mparams, core::vec_id::write_access::force );
+        this->node->execute(computeForce);
+    }
+
+    void checkForce(const VecDeriv& ef, const std::string& message = "")
+    {
+        typename DOF::ReadVecDeriv f= this->dof->readForces();
+        EXPECT_LT( this->vectorMaxDiff(f,ef), errorMax*this->epsilon() ) << message;
+    }
+
+    void checkPotentialEnergy(const core::MechanicalParams* mparams, SReal potentialEnergyBefore, const VecDeriv& curF, const VecDeriv& dX)
+    {
+        if( !(flags & TEST_POTENTIAL_ENERGY) ) return;
+
+        // Get potential energy after displacement of dofs
+        SReal potentialEnergyAfterDisplacement = force->getPotentialEnergy(mparams);
+
+        // Check getPotentialEnergy() we should have dE = -dX.F
+
+        // Compute dE = E(x+dx)-E(x)
+        SReal differencePotentialEnergy = potentialEnergyAfterDisplacement-potentialEnergyBefore;
+
+        // Compute the expected difference of potential energy: -dX.F (dot product between applied displacement and Force)
+        SReal expectedDifferencePotentialEnergy = 0;
+        for( unsigned i=0; i<dX.size(); ++i){
+            expectedDifferencePotentialEnergy = expectedDifferencePotentialEnergy - dot(dX[i],curF[i]);
+        }
+
+        SReal absoluteErrorPotentialEnergy = std::abs(differencePotentialEnergy - expectedDifferencePotentialEnergy);
+        if( absoluteErrorPotentialEnergy> errorFactorPotentialEnergy*errorMax*this->epsilon() )
+        {
+            ADD_FAILURE()<<"dPotentialEnergy differs from -dX.F (threshold=" << errorFactorPotentialEnergy*errorMax*this->epsilon() << ")" << std::endl
+                        << "dPotentialEnergy is " << differencePotentialEnergy << std::endl
+                        << "-dX.F is " << expectedDifferencePotentialEnergy << std::endl
+                        << "Failed seed number = " << this->seed << std::endl;
+        }
+    }
+
+    void checkComputeDf(core::MechanicalParams* mparams, const VecDeriv& dX, const VecDeriv& changeOfForce)
+    {
+        MechanicalResetForceVisitor resetForce(mparams, core::vec_id::write_access::force);
+        node->execute(resetForce);
+        dof->vRealloc( mparams, core::vec_id::write_access::dx); // dx is not allocated by default
+        typename DOF::WriteVecDeriv wdx = dof->writeDx();
+        sofa::testing::copyToData ( wdx, dX );
+        MechanicalComputeDfVisitor computeDf( mparams, core::vec_id::write_access::force );
+        node->execute(computeDf);
+        VecDeriv dF;
+        sofa::testing::copyFromData( dF, dof->readForces() );
+
+        EXPECT_LE(this->vectorMaxDiff(changeOfForce, dF), errorMax * this->epsilon()) <<
+            "dF differs from change of force\n"
+            "Failed seed number = " << this->seed;
+    }
+
+    void checkAddKToMatrix(core::MechanicalParams* mparams, const VecDeriv& dX, const VecDeriv& changeOfForce)
+    {
+        typedef sofa::linearalgebra::EigenBaseSparseMatrix<SReal> Sqmat;
+        const std::size_t n = dX.size();
+        const sofa::SignedIndex matrixSize = static_cast<sofa::SignedIndex>(n * DataTypes::deriv_total_size);
+        Sqmat K( matrixSize, matrixSize);
+        sofa::core::behavior::SingleMatrixAccessor accessor( &K );
+        mparams->setKFactor(1.0);
+        force->addKToMatrix( mparams, &accessor);
+        K.compress();
+
+        modeling::Vector dx;
+        sofa::testing::data_traits<DataTypes>::VecDeriv_to_Vector( dx, dX );
+
+        modeling::Vector Kdx = K * dx;
+        modeling::Vector df;
+        sofa::testing::data_traits<DataTypes>::VecDeriv_to_Vector( df, changeOfForce );
+
+        if( debug )
+        {
+            std::cout << "        [addKToMatrix] dX = " << dX << std::endl;
+            std::cout << "     change of force = " << changeOfForce << std::endl;
+            std::cout << "                 Kdx = " << Kdx.transpose() << std::endl;
+        }
+
+        EXPECT_LE( this->vectorMaxDiff(Kdx, df), errorMax * this->epsilon() ) <<
+            "Kdx (from addKToMatrix) differs from change of force"
+            "\nFailed seed number = " << this->seed;
+    }
+
+    void checkBuildStiffnessMatrix(core::MechanicalParams* mparams, const VecDeriv& dX, const VecDeriv& changeOfForce)
+    {
+        typedef sofa::linearalgebra::EigenBaseSparseMatrix<SReal> Sqmat;
+        const std::size_t n = dX.size();
+        const sofa::SignedIndex matrixSize = static_cast<sofa::SignedIndex>(n * DataTypes::deriv_total_size);
+        Sqmat K( matrixSize, matrixSize);
+
+        struct StiffnessMatrixAccumulatorTest : public core::behavior::StiffnessMatrixAccumulator
+        {
+            StiffnessMatrixAccumulatorTest(Sqmat& m) : matrix(m) {}
+            void add(sofa::SignedIndex row, sofa::SignedIndex col, float value) override { matrix.add(row, col, (SReal)value); }
+            void add(sofa::SignedIndex row, sofa::SignedIndex col, double value) override { matrix.add(row, col, (SReal)value); }
+            Sqmat& matrix;
+        };
+
+        StiffnessMatrixAccumulatorTest accumulator(K);
+        sofa::core::behavior::StiffnessMatrix stiffnessMatrix;
+        stiffnessMatrix.setMatrixAccumulator(&accumulator, dof.get());
+        stiffnessMatrix.setMechanicalParams(mparams);
+
+        force->buildStiffnessMatrix(&stiffnessMatrix);
+        K.compress();
+
+        modeling::Vector dx;
+        sofa::testing::data_traits<DataTypes>::VecDeriv_to_Vector( dx, dX );
+
+        modeling::Vector Kdx = K * dx;
+        modeling::Vector df;
+        sofa::testing::data_traits<DataTypes>::VecDeriv_to_Vector( df, changeOfForce );
+
+        if( debug )
+        {
+            std::cout << "  [buildStiffnessMatrix] dX = " << dX << std::endl;
+            std::cout << "     change of force = " << changeOfForce << std::endl;
+            std::cout << "                 Kdx = " << Kdx.transpose() << std::endl;
+        }
+
+        EXPECT_LE( this->vectorMaxDiff(Kdx, df), errorMax * this->epsilon() ) <<
+            "Kdx (from buildStiffnessMatrix) differs from change of force"
+            "\nFailed seed number = " << this->seed;
     }
 
     /**
@@ -159,45 +294,41 @@ struct ForceField_test : public BaseSimulationTest, NumericTest<typename _ForceF
      * The change of potential energy is compared to the dot product between displacement and force.
      * The  change of force is compared to the change computed by function addDForce, and to the product of the position change with the stiffness matrix.
      */
-    void run_test( const VecCoord& x, const VecDeriv& v, const VecDeriv& ef )
-    {        
-        sofa::component::initSofaBaseMechanics();
-
+    void run_test( const VecCoord& x, const VecDeriv& v, const VecDeriv& ef, bool initScene = true )
+    {
         if( !(flags & TEST_POTENTIAL_ENERGY) ) msg_warning("ForceFieldTest") << "Potential energy is not tested";
-
 
         if( deltaRange.second / errorMax <= sofa::testing::g_minDeltaErrorRatio )
             ADD_FAILURE() << "The comparison threshold is too large for the finite difference delta";
 
-        ASSERT_TRUE(x.size()==v.size());
-        ASSERT_TRUE(x.size()==ef.size());
+        ASSERT_EQ(x.size(), v.size());
+        ASSERT_EQ(x.size(), ef.size());
         std::size_t n = x.size();
 
         // copy the position and velocities to the scene graph
-        this->dof->resize(n);
-        typename DOF::WriteVecCoord xdof = this->dof->writePositions();
-        sofa::testing::copyToData( xdof, x );
-        typename DOF::WriteVecDeriv vdof = this->dof->writeVelocities();
-        sofa::testing::copyToData( vdof, v );
+        setupState(x, v);
 
         // init scene and compute force
-        sofa::simulation::getSimulation()->init(this->node.get());
+        if (initScene)
+        {
+            sofa::simulation::node::initRoot(this->node.get());
+        }
+
         core::MechanicalParams mparams;
         mparams.setKFactor(1.0);
-        MechanicalResetForceVisitor resetForce(&mparams, core::VecDerivId::force());
-        node->execute(resetForce);
-        MechanicalComputeForceVisitor computeForce( &mparams, core::VecDerivId::force() );
-        this->node->execute(computeForce);
+
+        computeForce(&mparams);
 
         // check force
-        typename DOF::ReadVecDeriv f= this->dof->readForces();
-        if(debug){
+        if(debug)
+        {
+            typename DOF::ReadVecDeriv f= this->dof->readForces();
             std::cout << "run_test,          x = " << x << std::endl;
             std::cout << "                   v = " << v << std::endl;
             std::cout << "            expected f = " << ef << std::endl;
             std::cout << "            actual f = " <<  f.ref() << std::endl;
         }
-        ASSERT_TRUE( this->vectorMaxDiff(f,ef)< errorMax*this->epsilon() );
+        checkForce(ef);
 
         if( !checkStiffness ) return;
 
@@ -207,21 +338,22 @@ struct ForceField_test : public BaseSimulationTest, NumericTest<typename _ForceF
         VecDeriv curF;
         sofa::testing::copyFromData( curF, dof->readForces() );
 
-
-
         // Get potential Energy before applying a displacement to dofs
-        SReal potentialEnergyBeforeDisplacement = (flags & TEST_POTENTIAL_ENERGY) ? ((const core::behavior::BaseForceField*)force.get())->getPotentialEnergy(&mparams) : 0;
+        SReal potentialEnergyBeforeDisplacement = (flags & TEST_POTENTIAL_ENERGY) ? force->getPotentialEnergy(&mparams) : 0;
 
         // change position
         VecDeriv dX(n);
-        for( unsigned i=0; i<n; i++ ){
-            dX[i] = DataTypes::randomDeriv( deltaRange.first * this->epsilon(), deltaRange.second * this->epsilon() );  // todo: better random, with negative values
-            xdof[i] += dX[i];
+        {
+            typename DOF::WriteVecCoord xdof = this->dof->writePositions();
+            for( unsigned i=0; i<n; i++ ){
+                dX[i] = DataTypes::randomDeriv( deltaRange.first * this->epsilon(), deltaRange.second * this->epsilon() );  // todo: better random, with negative values
+                xdof[i] += dX[i];
+            }
         }
 
         // compute new force and difference between previous force
-        node->execute(resetForce);
-        node->execute(computeForce);
+        computeForce(&mparams);
+
         VecDeriv newF;
         sofa::testing::copyFromData( newF, dof->readForces() );
         VecDeriv changeOfForce(curF);
@@ -229,71 +361,13 @@ struct ForceField_test : public BaseSimulationTest, NumericTest<typename _ForceF
             changeOfForce[i] = newF[i] - curF[i];
         }
 
-        if( flags & TEST_POTENTIAL_ENERGY )
-        {
-            // Get potential energy after displacement of dofs
-            SReal potentialEnergyAfterDisplacement = ((const core::behavior::BaseForceField*)force.get())->getPotentialEnergy(&mparams);
+        checkPotentialEnergy(&mparams, potentialEnergyBeforeDisplacement, curF, dX);
 
-            // Check getPotentialEnergy() we should have dE = -dX.F
+        checkComputeDf(&mparams, dX, changeOfForce);
 
-            // Compute dE = E(x+dx)-E(x)
-            SReal differencePotentialEnergy = potentialEnergyAfterDisplacement-potentialEnergyBeforeDisplacement;
+        checkAddKToMatrix(&mparams, dX, changeOfForce);
 
-            // Compute the expected difference of potential energy: -dX.F (dot product between applied displacement and Force)
-            SReal expectedDifferencePotentialEnergy = 0;
-            for( unsigned i=0; i<n; ++i){
-                expectedDifferencePotentialEnergy = expectedDifferencePotentialEnergy - dot(dX[i],curF[i]);
-            }
-
-            SReal absoluteErrorPotentialEnergy = std::abs(differencePotentialEnergy - expectedDifferencePotentialEnergy);
-            if( absoluteErrorPotentialEnergy> errorFactorPotentialEnergy*errorMax*this->epsilon() ){
-                ADD_FAILURE()<<"dPotentialEnergy differs from -dX.F (threshold=" << errorFactorPotentialEnergy*errorMax*this->epsilon() << ")" << std::endl
-                            << "dPotentialEnergy is " << differencePotentialEnergy << std::endl
-                            << "-dX.F is " << expectedDifferencePotentialEnergy << std::endl
-                            << "Failed seed number = " << this->seed << std::endl;
-            }
-        }
-
-
-        // check computeDf: compare its result to actual change
-        node->execute(resetForce);
-        dof->vRealloc( &mparams, core::VecDerivId::dx()); // dx is not allocated by default
-        typename DOF::WriteVecDeriv wdx = dof->writeDx();
-        sofa::testing::copyToData ( wdx, dX );
-        MechanicalComputeDfVisitor computeDf( &mparams, core::VecDerivId::force() );
-        node->execute(computeDf);
-        VecDeriv dF;
-        sofa::testing::copyFromData( dF, dof->readForces() );
-
-        if( this->vectorMaxDiff(changeOfForce,dF)> errorMax*this->epsilon() ){
-            ADD_FAILURE()<<"dF differs from change of force" << std::endl << "Failed seed number = " << this->seed << std::endl;
-        }
-
-        // check stiffness matrix: compare its product with dx to actual force change
-        typedef sofa::linearalgebra::EigenBaseSparseMatrix<SReal> Sqmat;
-        Sqmat K( n*DataTypes::deriv_total_size, n*DataTypes::deriv_total_size );
-        component::linearsolver::SingleMatrixAccessor accessor( &K );
-        mparams.setKFactor(1.0);
-        force->addKToMatrix( &mparams, &accessor);
-        K.compress();
-        //        cout << "stiffness: " << K << endl;
-        modeling::Vector dx;
-        sofa::testing::data_traits<DataTypes>::VecDeriv_to_Vector( dx, dX );
-
-        modeling::Vector Kdx = K * dx;
-        if( debug ){
-            std::cout << "                  dX = " << dX << std::endl;
-            std::cout << "                newF = " << newF << std::endl;
-            std::cout << "     change of force = " << changeOfForce << std::endl;
-            std::cout << "           addDforce = " << dF << std::endl;
-            std::cout << "                 Kdx = " << Kdx.transpose() << std::endl;
-        }
-
-        modeling::Vector df;
-        sofa::testing::data_traits<DataTypes>::VecDeriv_to_Vector( df, changeOfForce );
-        if( this->vectorMaxDiff(Kdx,df)> errorMax*this->epsilon() )
-            ADD_FAILURE()<<"Kdx differs from change of force"<< std::endl << "Failed seed number = " << this->seed << std::endl;
-
+        checkBuildStiffnessMatrix(&mparams, dX, changeOfForce);
     }
 
 

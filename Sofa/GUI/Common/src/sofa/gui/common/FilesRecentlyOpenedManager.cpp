@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -70,13 +70,13 @@ void FilesRecentlyOpenedManager::openFile(const std::string &path)
     if (path.empty() || !FileSystem::exists(path))
         return;
 
-    // Remove previous occurence of the file, if any
-    type::vector<std::string>::iterator fileFound = std::find(files.begin(), files.end(), path);
+    // Remove previous occurrence of the file, if any
+    const type::vector<std::string>::iterator fileFound = std::find(files.begin(), files.end(), path);
     if (fileFound != files.end())
         files.erase(fileFound);
 
     // Add the current file to the list
-    type::vector<std::string>::iterator front=files.begin();
+    const type::vector<std::string>::iterator front=files.begin();
     files.insert(front, path);
 
     // Only keep a given number of files

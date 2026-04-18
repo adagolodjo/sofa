@@ -20,23 +20,40 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #include <sofa/component/mechanicalload/init.h>
+#include <sofa/core/ObjectFactory.h>
+#include <sofa/helper/system/PluginManager.h>
 
 namespace sofa::component::mechanicalload
 {
-    
+
+extern void registerConicalForceField(sofa::core::ObjectFactory* factory);
+extern void registerConstantForceField(sofa::core::ObjectFactory* factory);
+extern void registerDiagonalVelocityDampingForceField(sofa::core::ObjectFactory* factory);
+extern void registerEdgePressureForceField(sofa::core::ObjectFactory* factory);
+extern void registerEllipsoidForceField(sofa::core::ObjectFactory* factory);
+extern void registerGravity(sofa::core::ObjectFactory* factory);
+extern void registerInteractionEllipsoidForceField(sofa::core::ObjectFactory* factory);
+extern void registerLinearForceField(sofa::core::ObjectFactory* factory);
+extern void registerOscillatingTorsionPressureForceField(sofa::core::ObjectFactory* factory);
+extern void registerPlaneForceField(sofa::core::ObjectFactory* factory);
+extern void registerQuadPressureForceField(sofa::core::ObjectFactory* factory);
+extern void registerSphereForceField(sofa::core::ObjectFactory* factory);
+extern void registerSurfacePressureForceField(sofa::core::ObjectFactory* factory);
+extern void registerTaitSurfacePressureForceField(sofa::core::ObjectFactory* factory);
+extern void registerTorsionForceField(sofa::core::ObjectFactory* factory);
+extern void registerTrianglePressureForceField(sofa::core::ObjectFactory* factory);
+extern void registerUniformVelocityDampingForceField(sofa::core::ObjectFactory* factory);
+
 extern "C" {
     SOFA_EXPORT_DYNAMIC_LIBRARY void initExternalModule();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleName();
     SOFA_EXPORT_DYNAMIC_LIBRARY const char* getModuleVersion();
+    SOFA_EXPORT_DYNAMIC_LIBRARY void registerObjects(sofa::core::ObjectFactory* factory);
 }
 
 void initExternalModule()
 {
-    static bool first = true;
-    if (first)
-    {
-        first = false;
-    }
+    init();
 }
 
 const char* getModuleName()
@@ -49,9 +66,37 @@ const char* getModuleVersion()
     return MODULE_VERSION;
 }
 
+void registerObjects(sofa::core::ObjectFactory* factory)
+{
+    registerConicalForceField(factory);
+    registerConstantForceField(factory);
+    registerDiagonalVelocityDampingForceField(factory);
+    registerEdgePressureForceField(factory);
+    registerEllipsoidForceField(factory);
+    registerGravity(factory);
+    registerInteractionEllipsoidForceField(factory);
+    registerLinearForceField(factory);
+    registerOscillatingTorsionPressureForceField(factory);
+    registerPlaneForceField(factory);
+    registerQuadPressureForceField(factory);
+    registerSphereForceField(factory);
+    registerSurfacePressureForceField(factory);
+    registerTaitSurfacePressureForceField(factory);
+    registerTorsionForceField(factory);
+    registerTrianglePressureForceField(factory);
+    registerUniformVelocityDampingForceField(factory);
+}
+
 void init()
 {
-    initExternalModule();
+    static bool first = true;
+    if (first)
+    {
+        // make sure that this plugin is registered into the PluginManager
+        sofa::helper::system::PluginManager::getInstance().registerPlugin(MODULE_NAME);
+
+        first = false;
+    }
 }
 
 } // namespace sofa::component::mechanicalload

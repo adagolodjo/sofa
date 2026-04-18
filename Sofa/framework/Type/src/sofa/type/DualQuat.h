@@ -55,8 +55,9 @@ class SOFA_TYPE_API DualQuatCoord3
     typedef type::Vec<3,real> Pos;
     typedef type::Vec<3,real> Vec3;
     typedef type::Vec<4,real> Quat;
-    enum { total_size = 8 };
-    enum { spatial_dimensions = 3 };
+
+    static constexpr Size total_size = 8;
+    static constexpr Size spatial_dimensions = 3;
 
     Quat dual;
     Quat orientation;
@@ -69,11 +70,6 @@ public:
     template<typename real2>
     DualQuatCoord3(const DualQuatCoord3<real2>& c)
         : dual(c.getDual()), orientation(c.getOrientation()) {}
-
-    template<typename real2>
-    // Deprecated flag is commented, as MSVC2017 cannot handle the associated template syntax. (works well with MSVC2019)
-    //SOFA_ATTRIBUTE_DISABLED("v21.06 (PR#1790)", "v21.12", "Use DualQuatCoord3(c.getCenter(), c.getOrientation()) instead.")
-    DualQuatCoord3(const sofa::defaulttype::RigidCoord<3, real2>& c) = delete;
 
     DualQuatCoord3(const Pos& p, const sofa::type::Quat<real>& q)
     {
@@ -135,17 +131,17 @@ public:
     template<typename  real2>
     void toRotationMatrix( type::Mat<3,3,real2>& m) const
     {
-        m[0][0] = (real2) (1.0f - 2.0f * (orientation[1] * orientation[1] + orientation[2] * orientation[2]));
-        m[0][1] = (real2) (2.0f * (orientation[0] * orientation[1] - orientation[2] * orientation[3]));
-        m[0][2] = (real2) (2.0f * (orientation[2] * orientation[0] + orientation[1] * orientation[3]));
+        m(0,0) = (real2) (1.0f - 2.0f * (orientation[1] * orientation[1] + orientation[2] * orientation[2]));
+        m(0,1) = (real2) (2.0f * (orientation[0] * orientation[1] - orientation[2] * orientation[3]));
+        m(0,2) = (real2) (2.0f * (orientation[2] * orientation[0] + orientation[1] * orientation[3]));
 
-        m[1][0] = (real2) (2.0f * (orientation[0] * orientation[1] + orientation[2] * orientation[3]));
-        m[1][1] = (real2) (1.0f - 2.0f * (orientation[2] * orientation[2] + orientation[0] * orientation[0]));
-        m[1][2] = (real2) (2.0f * (orientation[1] * orientation[2] - orientation[0] * orientation[3]));
+        m(1,0) = (real2) (2.0f * (orientation[0] * orientation[1] + orientation[2] * orientation[3]));
+        m(1,1) = (real2) (1.0f - 2.0f * (orientation[2] * orientation[2] + orientation[0] * orientation[0]));
+        m(1,2) = (real2) (2.0f * (orientation[1] * orientation[2] - orientation[0] * orientation[3]));
 
-        m[2][0] = (real2) (2.0f * (orientation[2] * orientation[0] - orientation[1] * orientation[3]));
-        m[2][1] = (real2) (2.0f * (orientation[1] * orientation[2] + orientation[0] * orientation[3]));
-        m[2][2] = (real2) (1.0f - 2.0f * (orientation[1] * orientation[1] + orientation[0] * orientation[0]));
+        m(2,0) = (real2) (2.0f * (orientation[2] * orientation[0] - orientation[1] * orientation[3]));
+        m(2,1) = (real2) (2.0f * (orientation[1] * orientation[2] + orientation[0] * orientation[3]));
+        m(2,2) = (real2) (1.0f - 2.0f * (orientation[1] * orientation[1] + orientation[0] * orientation[0]));
     }
 
 

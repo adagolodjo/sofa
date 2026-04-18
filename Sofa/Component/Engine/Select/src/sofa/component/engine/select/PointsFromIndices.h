@@ -26,7 +26,7 @@
 
 #include <sofa/type/Vec.h>
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/behavior/MechanicalState.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 
@@ -65,7 +65,7 @@ private:
     bool contains(VecCoord& v, Coord c);
 };
 
-#if  !defined(SOFA_COMPONENT_ENGINE_POINTSFROMINDICES_CPP)
+#if !defined(SOFA_COMPONENT_ENGINE_POINTSFROMINDICES_CPP)
 extern template class SOFA_COMPONENT_ENGINE_SELECT_API PointsFromIndices<defaulttype::Vec3Types>;
  
 #endif

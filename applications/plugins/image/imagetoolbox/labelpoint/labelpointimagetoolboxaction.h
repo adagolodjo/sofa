@@ -5,7 +5,7 @@
 
 #include "../labelimagetoolboxaction.h"
 
-#include <image/image_gui/config.h>
+#include <image_gui/config.h>
 
 namespace sofa
 {
@@ -19,8 +19,6 @@ class SOFA_IMAGE_GUI_API LabelPointImageToolBox;
 }}}
 
 namespace sofa
-{
-namespace gui
 {
 namespace qt
 {
@@ -55,7 +53,6 @@ private:
     
 };
 
-}
 }
 }
 

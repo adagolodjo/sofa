@@ -49,22 +49,17 @@ public:
 
     using Index = sofa::Index;
 
-    Data<Deriv> pressure; ///< pressure is a vector with specified direction
-  	Data<MatSym3> cauchyStress; ///< the Cauchy stress applied on triangles
+    Data<Deriv> d_pressure; ///< Pressure force per unit area
+  	Data<MatSym3> d_cauchyStress; ///< Cauchy Stress applied on the normal of each triangle
 
-    Data<sofa::type::vector<Index> > triangleList; ///< Indices of triangles separated with commas where a pressure is applied
+    Data<sofa::type::vector<Index> > d_triangleList; ///< Indices of triangles separated with commas where a pressure is applied
 
-    /// the normal used to define the edge subjected to the pressure force.
-    Data<Deriv> normal;
-
-    Data<Real> dmin; ///< coordinates min of the plane for the vertex selection
-    Data<Real> dmax;///< coordinates max of the plane for the vertex selection
-    Data<bool> p_showForces; ///< draw triangles which have a given pressure
-    Data<bool> p_useConstantForce; ///< applied force is computed as the pressure vector times the area at rest
+    Data<bool> d_showForces; ///< draw triangles which have a given pressure
+    Data<bool> d_useConstantForce; ///< applied force is computed as the pressure vector times the area at rest
 
     /// Link to be set to the topology container in the component graph.
     SingleLink<TrianglePressureForceField<DataTypes>, sofa::core::topology::BaseMeshTopology, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_topology;
-  
+
 protected:
 
     class TrianglePressureInformation
@@ -101,7 +96,7 @@ protected:
         }
     };
 
-    core::topology::TriangleSubsetData<sofa::type::vector<TrianglePressureInformation> > trianglePressureMap; ///< map between triangle indices and their pressure
+    core::topology::TriangleSubsetData<sofa::type::vector<TrianglePressureInformation> > d_trianglePressureMap; ///< Map between triangle indices and their pressure
 
     sofa::core::topology::BaseMeshTopology* m_topology;
 
@@ -120,19 +115,17 @@ public:
     /// Constant pressure has null variation
     void addKToMatrix(const core::MechanicalParams* /*mparams*/, const sofa::core::behavior::MultiMatrixAccessor* /*matrix*/ ) override {}
 
+    void buildDampingMatrix(core::behavior::DampingMatrix* /*matrix*/) final;
+
+    using Inherit1::getPotentialEnergy;
     SReal getPotentialEnergy(const core::MechanicalParams* /*mparams*/, const DataVecCoord&  /* x */) const override;
     void draw(const core::visual::VisualParams* vparams) override;
 
-    void setDminAndDmax(const SReal _dmin, const SReal _dmax){dmin.setValue((Real)_dmin); dmax.setValue((Real)_dmax);}
-    void setNormal(const Coord n) { normal.setValue(n);}
-    void setPressure(Deriv _pressure) { this->pressure = _pressure; updateTriangleInformation(); }
+    void setPressure(Deriv _pressure) { this->d_pressure = _pressure; updateTriangleInformation(); }
 
 protected :
-    void selectTrianglesAlongPlane();
-    void selectTrianglesFromString();
     void updateTriangleInformation();
     void initTriangleInformation();
-    bool isPointInPlane(Coord p);
 };
 
 #if !defined(SOFA_COMPONENT_FORCEFIELD_TRIANGLEPRESSUREFORCEFIELD_CPP)

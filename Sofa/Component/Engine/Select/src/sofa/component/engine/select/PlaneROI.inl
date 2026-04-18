@@ -29,7 +29,7 @@ namespace sofa::component::engine::select
 
 template <class DataTypes>
 PlaneROI<DataTypes>::PlaneROI()
-    : planes( initData(&planes, "plane", "Plane defined by 3 points and a depth distance") )
+    : planes( initData(&planes, "plane", "List of planes defined by 3 points and a depth distance") )
     , f_X0( initData (&f_X0, "position", "Rest position coordinates of the degrees of freedom") )
     , f_edges(initData (&f_edges, "edges", "Edge Topology") )
     , f_triangles(initData (&f_triangles, "triangles", "Triangle Topology") )
@@ -50,7 +50,7 @@ PlaneROI<DataTypes>::PlaneROI()
     , p_drawEdges( initData(&p_drawEdges,false,"drawEdges","Draw Edges") )
     , p_drawTriangles( initData(&p_drawTriangles,false,"drawTriangles","Draw Triangles") )
     , p_drawTetrahedra( initData(&p_drawTetrahedra,false,"drawTetrahedra","Draw Tetrahedra") )
-    , _drawSize( initData(&_drawSize, 0.0f,"drawSize","rendering size for box and topological elements") )
+    , _drawSize( initData(&_drawSize, 1.0f,"drawSize","rendering size for box and topological elements") )
 {
     planes.beginEdit()->push_back(Vec10(sofa::type::Vec<9,Real>(0,0,0,0,0,0,0,0,0),0));
     planes.endEdit();
@@ -281,9 +281,9 @@ void PlaneROI<DataTypes>::doUpdate()
         return;
 
     // Read accessor for input topology
-    helper::ReadAccessor< Data<type::vector<Edge> > > edges = f_edges;
-    helper::ReadAccessor< Data<type::vector<Triangle> > > triangles = f_triangles;
-    helper::ReadAccessor< Data<type::vector<Tetra> > > tetrahedra = f_tetrahedra;
+    const helper::ReadAccessor< Data<type::vector<Edge> > > edges = f_edges;
+    const helper::ReadAccessor< Data<type::vector<Triangle> > > triangles = f_triangles;
+    const helper::ReadAccessor< Data<type::vector<Tetra> > > tetrahedra = f_tetrahedra;
 
     const VecCoord* x0 = &f_X0.getValue();
 
@@ -396,13 +396,13 @@ void PlaneROI<DataTypes>::draw(const core::visual::VisualParams* vparams)
     if (!vparams->displayFlags().getShowBehaviorModels())
         return;
 
-    vparams->drawTool()->saveLastState();
+    const auto stateLifeCycle = vparams->drawTool()->makeStateLifeCycle();
 
     vparams->drawTool()->disableLighting();
 
     const VecCoord* x0 = &f_X0.getValue();
     constexpr const sofa::type::RGBAColor& color = sofa::type::RGBAColor::cyan();
-    std::vector<sofa::type::Vector3> vertices;
+    std::vector<sofa::type::Vec3> vertices;
 
     if( _drawSize.getValue() == 0) // old classical drawing by points
     {
@@ -481,7 +481,7 @@ void PlaneROI<DataTypes>::draw(const core::visual::VisualParams* vparams)
     {
         vertices.clear();
 
-        helper::ReadAccessor< Data<type::vector<Edge> > > edgesInROI = f_edgesInROI;
+        const helper::ReadAccessor< Data<type::vector<Edge> > > edgesInROI = f_edgesInROI;
         for (unsigned int i=0; i<edgesInROI.size() ; ++i)
         {
             Edge e = edgesInROI[i];
@@ -498,7 +498,7 @@ void PlaneROI<DataTypes>::draw(const core::visual::VisualParams* vparams)
     {
         vertices.clear();
 
-        helper::ReadAccessor< Data<type::vector<Triangle> > > trianglesInROI = f_trianglesInROI;
+        const helper::ReadAccessor< Data<type::vector<Triangle> > > trianglesInROI = f_trianglesInROI;
         for (unsigned int i=0; i<trianglesInROI.size() ; ++i)
         {
             Triangle t = trianglesInROI[i];
@@ -515,7 +515,7 @@ void PlaneROI<DataTypes>::draw(const core::visual::VisualParams* vparams)
     {
         vertices.clear();
 
-        helper::ReadAccessor< Data<type::vector<Tetra> > > tetrahedraInROI = f_tetrahedraInROI;
+        const helper::ReadAccessor< Data<type::vector<Tetra> > > tetrahedraInROI = f_tetrahedraInROI;
         for (unsigned int i=0; i<tetrahedraInROI.size() ; ++i)
         {
             Tetra t = tetrahedraInROI[i];
@@ -534,7 +534,7 @@ void PlaneROI<DataTypes>::draw(const core::visual::VisualParams* vparams)
         vparams->drawTool()->drawLines(vertices, _drawSize.getValue(), color);
     }
 
-    vparams->drawTool()->restoreLastState();
+
 }
 
 } //namespace sofa::component::engine::select

@@ -23,10 +23,11 @@
 #include <sofa/testing/BaseTest.h>
 #include <sofa/helper/system/FileRepository.h>
 
-#include <SofaGeneralLoader/MeshGmshLoader.h>
+#include <sofa/component/io/mesh/MeshGmshLoader.h>
+
 #include <sofa/helper/BackTrace.h>
 
-using namespace sofa::component::loader;
+using namespace sofa::component::io::mesh;
 using sofa::testing::BaseTest;
 using sofa::helper::BackTrace;
 
@@ -50,7 +51,7 @@ namespace meshgmshloader_test
         /**
             * Constructor call for each test
             */
-        void SetUp() override {}
+        void doSetUp() override {}
 
         /**
             * Helper function to check mesh loading.

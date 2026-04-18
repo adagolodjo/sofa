@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(Sofa.Simulation.Core)
 
 set(SRC_ROOT "src/sofa/simulation")
@@ -11,14 +11,12 @@ set(HEADER_FILES
     ${SRC_ROOT}/AnimateVisitor.h
     ${SRC_ROOT}/BaseMechanicalVisitor.h
     ${SRC_ROOT}/BehaviorUpdatePositionVisitor.h
-    ${SRC_ROOT}/CactusStackStorage.h
     ${SRC_ROOT}/CleanupVisitor.h
     ${SRC_ROOT}/CollisionAnimationLoop.h
     ${SRC_ROOT}/CollisionBeginEvent.h
     ${SRC_ROOT}/CollisionEndEvent.h
     ${SRC_ROOT}/CollisionVisitor.h
     ${SRC_ROOT}/Colors.h
-    ${SRC_ROOT}/CpuTask.h
     ${SRC_ROOT}/DeactivatedNodeVisitor.h
     ${SRC_ROOT}/DefaultAnimationLoop.h
     ${SRC_ROOT}/DefaultVisualManagerLoop.h
@@ -29,14 +27,13 @@ set(HEADER_FILES
     ${SRC_ROOT}/InitVisitor.h
     ${SRC_ROOT}/IntegrateBeginEvent.h
     ${SRC_ROOT}/IntegrateEndEvent.h
-    ${SRC_ROOT}/LocalStorage.h
     ${SRC_ROOT}/MechanicalOperations.h
     ${SRC_ROOT}/MechanicalVPrintVisitor.h
     ${SRC_ROOT}/MechanicalVisitor.h
     ${SRC_ROOT}/MutationListener.h
     ${SRC_ROOT}/Node.h
     ${SRC_ROOT}/Node.inl
-    ${SRC_ROOT}/ParallelVisitorScheduler.h
+    ${SRC_ROOT}/ParallelSparseMatrixProduct.h
     ${SRC_ROOT}/PauseEvent.h
     ${SRC_ROOT}/PipelineImpl.h
     ${SRC_ROOT}/PositionEvent.h
@@ -46,6 +43,7 @@ set(HEADER_FILES
     ${SRC_ROOT}/ResetVisitor.h
     ${SRC_ROOT}/SceneLoaderFactory.h
     ${SRC_ROOT}/Simulation.h
+    ${SRC_ROOT}/SimulationLoop.h
     ${SRC_ROOT}/SolveVisitor.h
     ${SRC_ROOT}/StateChangeVisitor.h
     ${SRC_ROOT}/TopologyChangeVisitor.h
@@ -59,29 +57,31 @@ set(HEADER_FILES
     ${SRC_ROOT}/VelocityThresholdVisitor.h
     ${SRC_ROOT}/Visitor.h
     ${SRC_ROOT}/VisitorExecuteFunc.h
-    ${SRC_ROOT}/VisitorScheduler.h
     ${SRC_ROOT}/VisualVisitor.h
     ${SRC_ROOT}/WriteStateVisitor.h
     ${SRC_ROOT}/XMLPrintVisitor.h
     ${SRC_ROOT}/init.h
     ${SRC_ROOT}/BaseSimulationExporter.h
-    ${SRC_ROOT}/TaskScheduler.h
-    ${SRC_ROOT}/DefaultTaskScheduler.h
-    ${SRC_ROOT}/Task.h
-    ${SRC_ROOT}/InitTasks.h
     ${SRC_ROOT}/Locks.h
-    ${SRC_ROOT}/WorkerThread.h
+    ${SRC_ROOT}/SceneCheck.h
+    ${SRC_ROOT}/SceneCheckRegistry.h
+    ${SRC_ROOT}/SceneCheckMainRegistry.h
+    ${SRC_ROOT}/MappingGraph.h
+
+    ${SRC_ROOT}/events/BuildConstraintSystemEndEvent.h
     ${SRC_ROOT}/events/SimulationInitDoneEvent.h
     ${SRC_ROOT}/events/SimulationInitStartEvent.h
     ${SRC_ROOT}/events/SimulationInitTexturesDoneEvent.h
     ${SRC_ROOT}/events/SimulationStartEvent.h
     ${SRC_ROOT}/events/SimulationStopEvent.h
+    ${SRC_ROOT}/events/SolveConstraintSystemEndEvent.h
+
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAccFromFVisitor.h
-    ${SRC_ROOT}/mechanicalvisitor/MechanicalAccumulateConstraint.h
+    ${SRC_ROOT}/mechanicalvisitor/MechanicalAccumulateJacobian.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAccumulateJacobian.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAccumulateMatrixDeriv.h
-    ${SRC_ROOT}/mechanicalvisitor/MechanicalAddMBKdxVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAddMBK_ToMatrixVisitor.h
+    ${SRC_ROOT}/mechanicalvisitor/MechanicalAddMBKdxVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAddMDxVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAddSeparateGravityVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalApplyConstraintsVisitor.h
@@ -99,6 +99,7 @@ set(HEADER_FILES
     ${SRC_ROOT}/mechanicalvisitor/MechanicalGetMatrixDimensionVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalGetMomentumVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalGetNonDiagonalMassesCountVisitor.h
+    ${SRC_ROOT}/mechanicalvisitor/MechanicalIdentityBlocksInJacobianVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalIntegrateConstraintVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalIntegrationVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalMultiVectorFromBaseVectorVisitor.h
@@ -129,6 +130,21 @@ set(HEADER_FILES
     ${SRC_ROOT}/mechanicalvisitor/MechanicalVOpVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalVReallocVisitor.h
     ${SRC_ROOT}/mechanicalvisitor/MechanicalVSizeVisitor.h
+
+    ${SRC_ROOT}/task/CpuTask.h
+    ${SRC_ROOT}/task/CpuTaskStatus.h
+    ${SRC_ROOT}/task/DefaultTaskScheduler.h
+    ${SRC_ROOT}/task/InitTasks.h
+    ${SRC_ROOT}/task/MainTaskSchedulerFactory.h
+    ${SRC_ROOT}/task/MainTaskSchedulerRegistry.h
+    ${SRC_ROOT}/task/ParallelForEach.h
+    ${SRC_ROOT}/task/Task.h
+    ${SRC_ROOT}/task/TaskScheduler.h
+    ${SRC_ROOT}/task/TaskSchedulerFactory.h
+    ${SRC_ROOT}/task/TaskSchedulerRegistry.h
+    ${SRC_ROOT}/task/TaskSchedulerUser.h
+    ${SRC_ROOT}/task/WorkerThread.h
+    ${SRC_ROOT}/task/TaskSchedulerSettings.h
 )
 
 set(SOURCE_FILES
@@ -137,13 +153,12 @@ set(SOURCE_FILES
     ${SRC_ROOT}/AnimateVisitor.cpp
     ${SRC_ROOT}/BaseMechanicalVisitor.cpp
     ${SRC_ROOT}/BehaviorUpdatePositionVisitor.cpp
-    ${SRC_ROOT}/CactusStackStorage.cpp
     ${SRC_ROOT}/CleanupVisitor.cpp
     ${SRC_ROOT}/CollisionAnimationLoop.cpp
     ${SRC_ROOT}/CollisionBeginEvent.cpp
     ${SRC_ROOT}/CollisionEndEvent.cpp
     ${SRC_ROOT}/CollisionVisitor.cpp
-    ${SRC_ROOT}/CpuTask.cpp
+    ${SRC_ROOT}/Colors.cpp
     ${SRC_ROOT}/DeactivatedNodeVisitor.cpp
     ${SRC_ROOT}/DefaultAnimationLoop.cpp
     ${SRC_ROOT}/DefaultVisualManagerLoop.cpp
@@ -154,12 +169,12 @@ set(SOURCE_FILES
     ${SRC_ROOT}/InitVisitor.cpp
     ${SRC_ROOT}/IntegrateBeginEvent.cpp
     ${SRC_ROOT}/IntegrateEndEvent.cpp
+    ${SRC_ROOT}/MappingGraph.cpp
     ${SRC_ROOT}/MechanicalOperations.cpp
     ${SRC_ROOT}/MechanicalVPrintVisitor.cpp
     ${SRC_ROOT}/MechanicalVisitor.cpp
     ${SRC_ROOT}/MutationListener.cpp
     ${SRC_ROOT}/Node.cpp
-    ${SRC_ROOT}/ParallelVisitorScheduler.cpp
     ${SRC_ROOT}/PauseEvent.cpp
     ${SRC_ROOT}/PipelineImpl.cpp
     ${SRC_ROOT}/PositionEvent.cpp
@@ -168,6 +183,9 @@ set(SOURCE_FILES
     ${SRC_ROOT}/RequiredPlugin.cpp
     ${SRC_ROOT}/ResetVisitor.cpp
     ${SRC_ROOT}/SceneLoaderFactory.cpp
+    ${SRC_ROOT}/SceneCheck.cpp
+    ${SRC_ROOT}/SceneCheckRegistry.cpp
+    ${SRC_ROOT}/SceneCheckMainRegistry.cpp
     ${SRC_ROOT}/Simulation.cpp
     ${SRC_ROOT}/SolveVisitor.cpp
     ${SRC_ROOT}/StateChangeVisitor.cpp
@@ -181,30 +199,27 @@ set(SOURCE_FILES
     ${SRC_ROOT}/VectorOperations.cpp
     ${SRC_ROOT}/VelocityThresholdVisitor.cpp
     ${SRC_ROOT}/Visitor.cpp
-    ${SRC_ROOT}/VisitorScheduler.cpp
     ${SRC_ROOT}/VisualVisitor.cpp
     ${SRC_ROOT}/WriteStateVisitor.cpp
     ${SRC_ROOT}/XMLPrintVisitor.cpp
     ${SRC_ROOT}/init.cpp
     ${SRC_ROOT}/fwd.cpp
     ${SRC_ROOT}/BaseSimulationExporter.cpp
-    ${SRC_ROOT}/TaskScheduler.cpp
-    ${SRC_ROOT}/DefaultTaskScheduler.cpp
-    ${SRC_ROOT}/Task.cpp
-    ${SRC_ROOT}/InitTasks.cpp
-    ${SRC_ROOT}/WorkerThread.cpp
+
+    ${SRC_ROOT}/events/BuildConstraintSystemEndEvent.cpp
     ${SRC_ROOT}/events/SimulationInitDoneEvent.cpp
     ${SRC_ROOT}/events/SimulationInitStartEvent.cpp
     ${SRC_ROOT}/events/SimulationInitTexturesDoneEvent.cpp
     ${SRC_ROOT}/events/SimulationStartEvent.cpp
     ${SRC_ROOT}/events/SimulationStopEvent.cpp
+    ${SRC_ROOT}/events/SolveConstraintSystemEndEvent.cpp
 
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAccFromFVisitor.cpp
-    ${SRC_ROOT}/mechanicalvisitor/MechanicalAccumulateConstraint.cpp
+    ${SRC_ROOT}/mechanicalvisitor/MechanicalAccumulateJacobian.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAccumulateJacobian.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAccumulateMatrixDeriv.cpp
-    ${SRC_ROOT}/mechanicalvisitor/MechanicalAddMBKdxVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAddMBK_ToMatrixVisitor.cpp
+    ${SRC_ROOT}/mechanicalvisitor/MechanicalAddMBKdxVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAddMDxVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalAddSeparateGravityVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalApplyConstraintsVisitor.cpp
@@ -222,6 +237,7 @@ set(SOURCE_FILES
     ${SRC_ROOT}/mechanicalvisitor/MechanicalGetMatrixDimensionVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalGetMomentumVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalGetNonDiagonalMassesCountVisitor.cpp
+    ${SRC_ROOT}/mechanicalvisitor/MechanicalIdentityBlocksInJacobianVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalIntegrateConstraintVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalIntegrationVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalMultiVectorFromBaseVectorVisitor.cpp
@@ -252,13 +268,48 @@ set(SOURCE_FILES
     ${SRC_ROOT}/mechanicalvisitor/MechanicalVOpVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalVReallocVisitor.cpp
     ${SRC_ROOT}/mechanicalvisitor/MechanicalVSizeVisitor.cpp
+
+    ${SRC_ROOT}/task/CpuTask.cpp
+    ${SRC_ROOT}/task/CpuTaskStatus.cpp
+    ${SRC_ROOT}/task/DefaultTaskScheduler.cpp
+    ${SRC_ROOT}/task/InitTasks.cpp
+    ${SRC_ROOT}/task/MainTaskSchedulerFactory.cpp
+    ${SRC_ROOT}/task/MainTaskSchedulerRegistry.cpp
+    ${SRC_ROOT}/task/Task.cpp
+    ${SRC_ROOT}/task/TaskScheduler.cpp
+    ${SRC_ROOT}/task/TaskSchedulerFactory.cpp
+    ${SRC_ROOT}/task/TaskSchedulerRegistry.cpp
+    ${SRC_ROOT}/task/TaskSchedulerUser.cpp
+    ${SRC_ROOT}/task/WorkerThread.cpp
+    ${SRC_ROOT}/task/TaskSchedulerSettings.cpp
 )
 
-find_package(Sofa.Core REQUIRED)
+set(DEPRECATED_DIR "compat/sofa/simulation")
+set(DEPRECATED_HEADER_FILES
+    ${DEPRECATED_DIR}/CpuTask.h
+    ${DEPRECATED_DIR}/CpuTaskStatus.h
+    ${DEPRECATED_DIR}/DefaultTaskScheduler.h
+    ${DEPRECATED_DIR}/InitTasks.h
+    ${DEPRECATED_DIR}/MainTaskSchedulerFactory.h
+    ${DEPRECATED_DIR}/MainTaskSchedulerRegistry.h
+    ${DEPRECATED_DIR}/ParallelForEach.h
+    ${DEPRECATED_DIR}/Task.h
+    ${DEPRECATED_DIR}/TaskScheduler.h
+    ${DEPRECATED_DIR}/TaskSchedulerFactory.h
+    ${DEPRECATED_DIR}/TaskSchedulerRegistry.h
+    ${DEPRECATED_DIR}/WorkerThread.h
+)
+
+sofa_find_package(Sofa.Core REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED ${HEADER_FILES} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC Sofa.Core)
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/compat>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}_compat>
+)
 
 # is this a compiler/linker version specific problem?
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
@@ -277,10 +328,12 @@ sofa_create_package_with_targets(
     INCLUDE_INSTALL_DIR "${PROJECT_NAME}"
 )
 
+install(DIRECTORY compat/ DESTINATION include/${PROJECT_NAME}_compat COMPONENT headers)
+
 # Tests
 # If SOFA_BUILD_TESTS exists and is OFF, then these tests will be auto-disabled
 cmake_dependent_option(SOFA_SIMULATION_CORE_BUILD_TESTS "Compile the automatic tests" ON "SOFA_BUILD_TESTS OR NOT DEFINED SOFA_BUILD_TESTS" OFF)
-if(SOFA_SIMULATION_GRAPH_BUILD_TESTS)
+if(SOFA_SIMULATION_CORE_BUILD_TESTS)
     add_subdirectory(test)
     add_subdirectory(simutest)
 endif()

@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_HAUSDORFFDISTANCE_CPP
-#include "HausdorffDistance.inl"
+#include <sofa/component/engine/analyze/HausdorffDistance.inl>
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/defaulttype/VecTypes.h>
 #include <sofa/defaulttype/RigidTypes.h>
@@ -30,14 +30,15 @@ namespace sofa::component::engine::analyze
 
 using namespace sofa::defaulttype;
 
-int HausdorffDistanceClass = core::RegisterObject("Compute the Hausdorff distance of two point clouds")
+void registerHausdorffDistance(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Compute the Hausdorff distance of two point clouds.")
         .add< HausdorffDistance<Vec1Types> >()
         .add< HausdorffDistance<Vec2Types> >()
         .add< HausdorffDistance<Vec3Types> >(true)
         .add< HausdorffDistance<Rigid2Types> >()
-        .add< HausdorffDistance<Rigid3Types> >()
- 
-        ;
+        .add< HausdorffDistance<Rigid3Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_ANALYZE_API HausdorffDistance<Vec1Types>;
 template class SOFA_COMPONENT_ENGINE_ANALYZE_API HausdorffDistance<Vec2Types>;

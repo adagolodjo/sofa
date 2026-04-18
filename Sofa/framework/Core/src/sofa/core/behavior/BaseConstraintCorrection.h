@@ -21,29 +21,33 @@
 ******************************************************************************/
 #pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/MultiVecId.h>
+#include <sofa/linearalgebra/BaseMatrix.h>
+#include <sofa/core/ConstraintOrder.h>
 
 namespace sofa::core::behavior
 {
 
 class ConstraintSolver;
 
-/// @todo All methods in this class need to be commented
-
 /**
  *  \brief Component computing constraint forces within a simulated body using the compliance method.
  */
-class SOFA_CORE_API BaseConstraintCorrection : public virtual objectmodel::BaseObject
+class SOFA_CORE_API BaseConstraintCorrection : public virtual objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(BaseConstraintCorrection, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(BaseConstraintCorrection, objectmodel::BaseComponent);
 
     virtual bool isActive() { return this->getContext()->isActive(); }
 
     /// @name Compliance Matrix API
     /// @{
 
+    /// Compute the compliance matrix projected in the constraint space and accumulate it into \p W
+    ///
+    /// The computation is W += J A^-1 J^T where J is the constraint Jacobian matrix and A is the
+    /// mechanical matrix
     virtual void addComplianceInConstraintSpace(const ConstraintParams *, linearalgebra::BaseMatrix* W) = 0;
 
     /// Fill the matrix m with the full Compliance Matrix
@@ -106,31 +110,33 @@ public:
 
     /// Rebuild the system using a mass and force factor
     /// Experimental API used to investigate convergence issues.
-    virtual void rebuildSystem(double /*massFactor*/, double /*forceFactor*/);
+    SOFA_ATTRIBUTE_DEPRECATED__REBUILDSYSTEM() virtual void rebuildSystem(SReal /*massFactor*/, SReal /*forceFactor*/);
 
     /// Compute the residual in the newton iterations due to the constraints forces
     /// i.e. compute Vecid::force() += J^t lambda
     /// the result is accumulated in Vecid::force()
+    SOFA_ATTRIBUTE_DEPRECATED__COMPUTERESIDUAL()
     virtual void computeResidual(const core::ExecParams* /*params*/, linearalgebra::BaseVector * /*lambda*/) ;
 
-    /// @name Deprecated API
-    /// @{
     virtual void applyContactForce(const linearalgebra::BaseVector *f) = 0;
     virtual void resetContactForce() = 0;
-    /// @}
 
     /// @name Unbuilt constraint system during resolution
     /// @{
+
+    /// Is the constraint managed by this constraint correction?
     virtual bool hasConstraintNumber(int /*index*/);
-    virtual void resetForUnbuiltResolution(double * /*f*/, std::list<unsigned int>& /*renumbering*/);
-    virtual void addConstraintDisplacement(double * /*d*/, int /*begin*/, int /*end*/);
-    virtual void setConstraintDForce(double * /*df*/, int /*begin*/, int /*end*/, bool /*update*/);	  // f += df
+    virtual void resetForUnbuiltResolution(SReal* /*f*/, std::list<unsigned int>& /*renumbering*/);
+    virtual void addConstraintDisplacement(SReal* /*d*/, int /*begin*/, int /*end*/);
+    virtual void setConstraintDForce(SReal* /*df*/, int /*begin*/, int /*end*/, bool /*update*/);	  // f += df
     virtual void getBlockDiagonalCompliance(linearalgebra::BaseMatrix* /*W*/, int /*begin*/,int /*end*/);
     /// @}
 
 protected:
     BaseConstraintCorrection();
     ~BaseConstraintCorrection() override;
+
+    static SReal correctionFactor(const sofa::core::behavior::OdeSolver* solver, const ConstraintOrder& constraintOrder);
 
 private:
     BaseConstraintCorrection(const BaseConstraintCorrection& n) = delete ;

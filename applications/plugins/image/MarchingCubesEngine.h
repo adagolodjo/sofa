@@ -25,7 +25,7 @@
 #include <image/config.h>
 #include "ImageTypes.h"
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/topology/BaseMeshTopology.h>
 #include <sofa/core/visual/VisualParams.h>
 
@@ -184,8 +184,8 @@ protected:
         vparams->drawTool()->enableLighting();
 
         std::size_t size = tri.size();
-        std::vector<type::Vector3> points;
-        std::vector<type::Vector3> normals;
+        std::vector<type::Vec3> points;
+        std::vector<type::Vec3> normals;
         std::vector<sofa::type::RGBAColor> colors;
         points.resize(3*size);
         normals.resize(size);

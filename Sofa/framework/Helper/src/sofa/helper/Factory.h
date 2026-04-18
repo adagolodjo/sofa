@@ -72,7 +72,7 @@ protected:
 public:
     bool registerCreator(Key key, Creator* creator, bool multi=false)
     {
-        if(!multi && this->registry.find(key) != this->registry.end())
+        if(!multi && this->registry.contains(key))
             return false; // key used
         logFactoryRegister(gettypename(typeid(Object)), gettypename(creator->type()), key, multi);
         this->registry.insert(std::pair<Key, Creator*>(key, creator));
@@ -181,8 +181,8 @@ public:
     typedef ObjectPtr Fn(RealObject* obj, Argument arg);
     Fn* constructor;
 
-    CreatorFn(Key key, Fn* constructor, bool multi=false)
-        : Key(key), constructor(constructor)
+    CreatorFn(Key key, Fn* ctor, bool multi=false)
+        : Key(key), constructor(ctor)
     {
         Factory::getInstance()->registerCreator(key, this, multi);
     }

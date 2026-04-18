@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 {
     sofa::component::initSofaComponentAll();
 
-    // TODO: create additionnal handlers depending on command-line parameters
+    // TODO: create additional handlers depending on command-line parameters
 
     QApplication* application = new QApplication(argc, argv);
     (void)application;
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     sofa::simulation::setSimulation(new sofa::simulation::graph::DAGSimulation());
 
 	Q_INIT_RESOURCE(icons);
-    sofa::gui::qt::SofaModeler* sofaModeler = new sofa::gui::qt::SofaModeler();
+    sofa::qt::SofaModeler* sofaModeler = new sofa::qt::SofaModeler();
 
     //application->setMainWidget(sofaModeler);
     sofaModeler->show();

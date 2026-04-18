@@ -19,19 +19,18 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_COLLISIONMODEL_H
-#define SOFA_CORE_COLLISIONMODEL_H
+#pragma once
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/CollisionElement.h>
+#include <sofa/helper/set.h>
+
+#include <sofa/core/objectmodel/lifecycle/RenamedData.h>
 
 //todo(dmarchal 2018-06-19) I really wonder why a collision model has a dependency to a RGBAColors.
 #include <sofa/type/RGBAColor.h>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 namespace visual
@@ -71,10 +70,10 @@ public:
  *    to the final elements)
  *
  */
-class SOFA_CORE_API CollisionModel : public virtual objectmodel::BaseObject
+class SOFA_CORE_API CollisionModel : public virtual objectmodel::BaseComponent
 {
 public:
-    SOFA_ABSTRACT_CLASS(CollisionModel, objectmodel::BaseObject);
+    SOFA_ABSTRACT_CLASS(CollisionModel, objectmodel::BaseComponent);
     SOFA_BASE_CAST_IMPLEMENTATION(CollisionModel)
 
     enum{
@@ -92,9 +91,18 @@ public:
         ENUM_TYPE_SIZE
     };
 
+
+    enum ContinuousIntersectionTypeFlag
+    {
+        None       = 0,
+        Inertia    = 1,
+        FreeMotion = 2
+    };
+
+
     typedef CollisionElementIterator Iterator;
     typedef topology::BaseMeshTopology Topology;
-    typedef sofa::type::Vector3::value_type Real;
+    typedef sofa::type::Vec3::value_type Real;
     using Index = sofa::Index;
     using Size = sofa::Size;
 
@@ -212,7 +220,7 @@ public:
     /// within the given timestep.
     ///
     /// Default to computeBoundingTree().
-    virtual void computeContinuousBoundingTree(SReal /*dt*/, int maxDepth=0) { computeBoundingTree(maxDepth); }
+    virtual void computeContinuousBoundingTree(SReal dt, ContinuousIntersectionTypeFlag continuousIntersectionFlag = ContinuousIntersectionTypeFlag::Inertia, int maxDepth=0);
 
     /// \brief Return the list (as a pair of iterators) of <i>internal children</i> of
     /// an element.
@@ -276,7 +284,7 @@ public:
     virtual void draw(const core::visual::VisualParams* /*vparams*/, Index /*index*/) {}
 
     /// Render the whole collision model.
-    void draw(const core::visual::VisualParams* ) override {}
+    void draw(const core::visual::VisualParams* vparams) final;
 
     /// Return the first (i.e. root) CollisionModel in the hierarchy.
     CollisionModel* getFirst();
@@ -307,7 +315,7 @@ public:
             root->addSlave(pmodel); 
             pmodel->setMoving(isMoving());
             pmodel->setSimulated(isSimulated());
-            pmodel->proximity.setParent(&proximity);
+            pmodel->d_contactDistance.setParent(&d_contactDistance);
 			
             pmodel->group.beginEdit()->insert(group.getValue().begin(), group.getValue().end());
             pmodel->group.endEdit();
@@ -321,30 +329,34 @@ public:
 
     /// @name Experimental methods
     /// @{
+    SOFA_ATTRIBUTE_DEPRECATED__NAME_CHANGED()
+    [[nodiscard]] SReal getProximity() const { return getContactDistance(); }
 
     /// Get distance to the actual (visual) surface
-    SReal getProximity() { return proximity.getValue(); }
+    [[nodiscard]] SReal getContactDistance() const { return d_contactDistance.getValue(); }
 
     /// Get contact stiffness
-    SReal getContactStiffness(Index /*index*/) { return contactStiffness.getValue(); }
+    [[nodiscard]] SReal getContactStiffness(Index /*index*/) const { return contactStiffness.getValue(); }
     /// Set contact stiffness
     void setContactStiffness(SReal stiffness) { contactStiffness.setValue(stiffness); }
+    /// Get contact stiffness
+    [[nodiscard]] bool isContactStiffnessSet() const { return contactStiffness.isSet(); }
 
     /// Get contact friction (damping) coefficient
-    SReal getContactFriction(Index /*index*/) { return contactFriction.getValue(); }
+    [[nodiscard]] SReal getContactFriction(Index /*index*/) const { return contactFriction.getValue(); }
     /// Set contact friction (damping) coefficient
     void setContactFriction(SReal friction) { contactFriction.setValue(friction); }
 
     /// Get contact coefficient of restitution
-     SReal getContactRestitution(Index /*index*/) { return contactRestitution.getValue(); }
+    [[nodiscard]] SReal getContactRestitution(Index /*index*/) const { return contactRestitution.getValue(); }
     /// Set contact coefficient of restitution
     void setContactRestitution(SReal restitution) { contactRestitution.setValue(restitution); }
 
     /// Contact response algorithm
-    std::string getContactResponse() { return contactResponse.getValue(); }
+    [[nodiscard]] std::string getContactResponse() const { return contactResponse.getValue(); }
 
     /// Return the group IDs containing this model.
-    const std::set<int>& getGroups() const { return group.getValue(); }
+    [[nodiscard]] const std::set<int>& getGroups() const { return group.getValue(); }
 
     /// add the group ID to this model.
     void addGroup(const int groupId) { group.beginEdit()->insert(groupId); group.endEdit(); }
@@ -363,7 +375,10 @@ public:
     void setColor4f(const float *c);
 
     /// Set of differents parameters
-    void setProximity       (const SReal a)        { proximity.setValue(a); }
+    void setContactDistance (const SReal a)        { d_contactDistance.setValue(a); }
+    SOFA_ATTRIBUTE_DEPRECATED__NAME_CHANGED()
+    void setProximity (const SReal a)  { setContactDistance(a); }
+
     void setContactResponse (const std::string &a) { contactResponse.setValue(a); }
 
     /// Returns an int corresponding to the type of this.
@@ -389,8 +404,15 @@ protected:
     Data<bool> bSimulated;
     /// flag indication if the object can self collide
     Data<bool> bSelfCollision;
+    
+    
+    SOFA_ATTRIBUTE_RENAMED__COLLISIONMODEL_PROXIMITY()
+    objectmodel::lifecycle::RenamedData<SReal>  proximity;
+
     /// Distance to the actual (visual) surface
-    Data<SReal> proximity;
+    Data<SReal> d_contactDistance;
+
+    
     /// Default contact stiffness
     Data<SReal> contactStiffness;
     /// Default contact friction (damping) coefficient
@@ -428,7 +450,10 @@ protected:
     void* userData;
 
     /// Pointer to the  Controller component heritating from CollisionElementActiver
-    SingleLink<CollisionModel, sofa::core::objectmodel::BaseObject, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_collElemActiver;
+    SingleLink<CollisionModel, sofa::core::objectmodel::BaseComponent, BaseLink::FLAG_STOREPATH | BaseLink::FLAG_STRONGLINK> l_collElemActiver;
+
+    /// Render the whole collision model.
+    virtual void drawCollisionModel(const core::visual::VisualParams* vparams);
 
 public:
     CollisionElementActiver *myCollElemActiver; ///< CollisionElementActiver that activate or deactivate collision element during execution
@@ -437,9 +462,4 @@ public:
     bool removeInNode( objectmodel::BaseNode* node ) override;
 
 };
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core

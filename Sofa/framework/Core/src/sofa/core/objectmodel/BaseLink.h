@@ -19,20 +19,14 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_OBJECTMODEL_BASELINK_H
-#define SOFA_CORE_OBJECTMODEL_BASELINK_H
-
+#pragma once 
 #include <sofa/core/config.h>
 #include <sofa/core/fwd.h>
 #include <string>
 
 namespace sofa
 {
-
-namespace core
-{
-
-namespace objectmodel
+namespace core::objectmodel
 {
 
 class Base;
@@ -62,7 +56,7 @@ public:
     class BaseInitLink
     {
     public:
-        BaseInitLink(const std::string& name, const std::string& help) : name(name), help(help) {}
+        BaseInitLink(const std::string& n, const std::string& h) : name(n), help(h) {}
         std::string name;
         std::string help;
     };
@@ -91,9 +85,6 @@ public:
 
     virtual Base* getOwnerBase() const = 0;
 
-    SOFA_ATTRIBUTE_DISABLED__DATALINK()
-    sofa::core::objectmodel::BaseData* getOwnerData() const = delete;
-
     /// Set one of the flags.
     void setFlag(LinkFlagsEnum flag, bool b)
     {
@@ -106,8 +97,6 @@ public:
 
     bool isMultiLink() const { return getFlag(FLAG_MULTILINK); }
 
-    SOFA_ATTRIBUTE_DISABLED__DATALINK()
-    bool isDataLink() const = delete;
     bool isStrongLink() const { return getFlag(FLAG_STRONGLINK); }
     bool isDoubleLink() const { return getFlag(FLAG_DOUBLELINK); }
     bool isDuplicate() const { return getFlag(FLAG_DUPLICATE); }
@@ -127,19 +116,10 @@ public:
     /// This can be used to efficiently detect changes
     int getCounter() const { return m_counter; }
 
-    /// Return the number of changes since creation
-    /// This can be used to efficiently detect changes
-    SOFA_ATTRIBUTE_DISABLED__ASPECT_EXECPARAMS()
-    int getCounter(const core::ExecParams*) const = delete;
-
     void setLinkedBase(Base* link);
 
     virtual size_t getSize() const = 0;
     Base* getLinkedBase(std::size_t index=0) const { return _doGet_(index); }
-
-
-    SOFA_ATTRIBUTE_DISABLED__DATALINK()
-    BaseData* getLinkedData(std::size_t index=0) const = delete;
 
     // Remove all links
     void clear() { _doClear_(); }
@@ -214,14 +194,10 @@ protected:
         ++m_counter;
     }
 };
-
-} // namespace objectmodel
-
-} // namespace core
+} // namespace core::objectmodel
 
 // the BaseLink class is used everywhere
 using core::objectmodel::BaseLink;
 
 } // namespace sofa
 
-#endif

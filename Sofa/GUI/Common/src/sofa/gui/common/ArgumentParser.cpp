@@ -40,7 +40,14 @@ ArgumentParser::~ArgumentParser(){}
 
 void ArgumentParser::addArgument(std::shared_ptr<cxxopts::Value> s, const std::string name, const std::string help)
 {
-    m_options.add_options()(name.c_str(), help.c_str(), s);
+    try
+    {
+        m_options.add_options()(name.c_str(), help.c_str(), s);
+    }
+    catch (cxxopts::exceptions::option_already_exists)
+    {
+        dmsg_warning("ArgumentParser") << "Option " << name << " has already been added to the argument parser.";
+    }
 }
 
 void ArgumentParser::addArgument(std::shared_ptr<cxxopts::Value> s, const std::string name, const std::string help, std::function<void(const ArgumentParser*, const std::string&)> callback)
@@ -51,7 +58,14 @@ void ArgumentParser::addArgument(std::shared_ptr<cxxopts::Value> s, const std::s
 
 void ArgumentParser::addArgument(const std::string name, const std::string help)
 {
-    m_options.add_options()(name.c_str(), help.c_str());
+    try
+    {
+        m_options.add_options()(name.c_str(), help.c_str());
+    }
+    catch (cxxopts::exceptions::option_already_exists)
+    {
+        dmsg_warning("ArgumentParser") << "Option " << name << " has already been added to the argument parser.";
+    }
 }
 
 void ArgumentParser::showHelp()
@@ -62,14 +76,38 @@ void ArgumentParser::showHelp()
 
 void ArgumentParser::parse()
 {
+    // cxxopts::parse() actually clears value in argv and argc (before v3)
+    // so if we want to be able to call it multiple times, we need to save
+    // the original argv and argc
+    // TODO: upgrade cxxopts to v3 and remove this copy
+
+    // copy argv into a vector (automatic cleanup via RAII)
+    std::vector<std::string> argStrings;
+    argStrings.reserve(m_argc);
+    for (int i = 0; i < m_argc; i++) 
+    {
+        argStrings.emplace_back(m_argv[i]);
+    }
+
+    // build char* array pointing to the strings
+    std::vector<char*> copyArgv;
+    copyArgv.reserve(m_argc + 1);
+    for (auto& s : argStrings) {
+        copyArgv.push_back(s.data());
+    }
+    copyArgv.push_back(nullptr);
+
+    int copyArgc = m_argc;
+
     std::vector<cxxopts::KeyValue> vecArg;
     try
     {
+        extra.clear();
         m_options.parse_positional("input-file");
-        auto temp = m_options.parse(m_argc, m_argv);
+        const auto temp = m_options.parse(copyArgc, copyArgv.data());
         vecArg = temp.arguments();
     }
-    catch (const cxxopts::OptionException& e)
+    catch (const cxxopts::exceptions::exception& e)
     {
         msg_error("ArgumentParser") << e.what();
         exit(EXIT_FAILURE);
@@ -78,9 +116,7 @@ void ArgumentParser::parse()
     // copy result
     for (const auto& arg : vecArg)
     {
-        m_parseResult.insert({ arg.key(), arg.value() });
-        if(arg.key() == "argv")
-            extra.push_back(arg.value());
+        m_parseResult[arg.key()] = arg.value();
 
         //go through all possible keys (because of the short/long names)
         for (const auto& callback : m_mapCallbacks)
@@ -96,7 +132,7 @@ void ArgumentParser::parse()
 
 void ArgumentParser::showArgs()
 {
-    auto result = this->getMap();
+    const auto result = this->getMap();
 
     for (auto it = result.cbegin(); it != result.cend(); it++)
     {
@@ -111,7 +147,7 @@ void ArgumentParser::showArgs()
 std::vector<std::string> ArgumentParser::getInputFileList()
 {
     auto result = getMap();
-    if (result.count("input-file"))
+    if (result.contains("input-file"))
     {
         std::vector<std::string> tmp;
         cxxopts::values::parse_value(result["input-file"], tmp);

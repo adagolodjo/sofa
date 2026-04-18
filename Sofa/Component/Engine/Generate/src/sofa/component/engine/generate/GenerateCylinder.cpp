@@ -20,7 +20,7 @@
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
 #define SOFA_COMPONENT_ENGINE_GENERATECYLINDER_CPP
-#include "GenerateCylinder.inl"
+#include <sofa/component/engine/generate/GenerateCylinder.inl>
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/defaulttype/VecTypes.h>
 
@@ -28,14 +28,12 @@ namespace sofa::component::engine::generate
 {
 using namespace sofa::defaulttype;
 
-int GenerateCylinderClass = core::RegisterObject("Generate a Cylindrical Tetrahedral Mesh")
-        .add< GenerateCylinder<Vec3Types> >()
- 
-        ;
-
+void registerGenerateCylinder(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Engine generating a cylindrical tetrahedral mesh.")
+        .add< GenerateCylinder<Vec3Types> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_GENERATE_API GenerateCylinder<Vec3Types>;
- 
-
 
 } //namespace sofa::component::engine::generate

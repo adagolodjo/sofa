@@ -19,85 +19,26 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_OBJECTMODEL_BASE_H
-#define SOFA_CORE_OBJECTMODEL_BASE_H
+#pragma once
 
+#include <sofa/core/fwd.h>
 #include <sofa/core/objectmodel/Data.h>
+#include <sofa/core/objectmodel/lifecycle/RemovedData.h>
 #include <sofa/core/objectmodel/Link.h>
 #include <sofa/core/objectmodel/BaseClass.h>
 #include <sofa/core/objectmodel/BaseObjectDescription.h>
-#include <sofa/core/objectmodel/Tag.h>
+#include <sofa/core/objectmodel/TagSet.h>
 #include <list>
+#include <sofa/helper/logging/Messaging.h>
 #include <sofa/core/sptr.h>
 
 #include <deque>
-#include <atomic>
 
 #include <sofa/core/objectmodel/ComponentState.h>
 #include <sofa/core/DataTracker.h>
 #include <sofa/core/DataTrackerCallback.h>
+#include <sofa/core/IntrusiveObject.h>
 #include <sofa/type/fwd.h>
-
-#include <sofa/helper/system/SofaOStream.h>
-
-// forward declaration of castable classes
-// @author Matthieu Nesme, 2015
-// it is not super elegant, but it is way more efficient than dynamic_cast
-namespace sofa::core {
-    class BaseState;
-    class BaseMapping;
-    class BehaviorModel;
-    class CollisionModel;
-    class DataEngine;
-    class DevBaseMonitor;
-namespace objectmodel {
-    class BaseContext;
-    class BaseObject;
-    class BaseNode;
-    class ContextObject;
-    class ConfigurationSetting;
-} // namespace objectmodel
-namespace behavior {
-    class BaseAnimationLoop;
-    class OdeSolver;
-    class BaseLinearSolver;
-    class LinearSolver;
-    class ConstraintSolver;
-    class BaseMass;
-    class BaseMechanicalState;
-    class BaseInteractionForceField;
-    class BaseInteractionConstraint;
-    class BaseForceField;
-    class BaseProjectiveConstraintSet;
-    class BaseInteractionProjectiveConstraintSet;
-    class BaseConstraintSet;
-    class BaseConstraint;
-} // namespace behavior
-namespace visual {
-    class VisualModel;
-    class VisualManager;
-    class VisualLoop;
-    class Shader;
-} // namespace visual
-namespace topology {
-    class Topology;
-    class BaseMeshTopology;
-    class BaseTopologyObject;
-} // namespace topology
-namespace collision {
-    class CollisionGroupManager;
-    class ContactManager;
-    class Detection;
-    class Intersection;
-    class Pipeline;
-} // namespace collision
-namespace loader {
-    class BaseLoader;
-} // namespace loader
-} // namespace sofa::core
-
-// VisitorScheduler
-
 
 #define SOFA_BASE_CAST_IMPLEMENTATION(CLASSNAME) \
 virtual const CLASSNAME* to##CLASSNAME() const override { return this; } \
@@ -109,21 +50,25 @@ namespace sofa::core::objectmodel
 /**
  *  \brief Base class for everything
  *
- *  This class contains all functionnality shared by every objects in SOFA.
+ *  This class contains all functionality shared by every objects in SOFA.
  *  Most importantly it defines how to retrieve information about an object (name, type, data fields).
  *  All classes deriving from Base should use the SOFA_CLASS macro within their declaration (see BaseClass.h).
  *
  */
-class SOFA_CORE_API Base
+class SOFA_CORE_API Base : public IntrusiveObject
 {
 public:
     typedef Base* Ptr;
 
     using SPtr = sptr<Base>;
-    
+
     using MyClass = TClass< Base, void >;
     static const BaseClass* GetClass() { return MyClass::get(); }
     virtual const BaseClass* getClass() const { return GetClass(); }
+
+
+    void addDeprecatedAttribute(lifecycle::DeprecatedData* attribute);
+    std::vector<lifecycle::DeprecatedData*> m_oldAttributes;
 
 protected:
     /// Constructor cannot be called directly
@@ -141,20 +86,6 @@ private:
     Base(const Base& b);
     Base& operator=(const Base& b);
 
-    std::atomic<int> ref_counter;
-    void addRef();
-    void release();
-
-    friend inline void intrusive_ptr_add_ref(Base* p)
-    {
-        p->addRef();
-    }
-
-    friend inline void intrusive_ptr_release(Base* p)
-    {
-        p->release();
-    }
-
 protected:
     std::map<std::string, sofa::core::DataTrackerCallback> m_internalEngine;
 
@@ -166,6 +97,7 @@ public:
     void addOutputsToCallback(const std::string& name, std::initializer_list<BaseData*> outputs);
 
 
+    /// Returns the path to the Base. it is possible to use different character as separator.
     virtual std::string getPathName() const { return ""; }
 
     /// Accessor to the object name
@@ -181,26 +113,21 @@ public:
     void setName(const std::string& n, int counter);
 
     /// Get the type name of this object (i.e. class and template types)
-    /// Since #PR 1283, the signature has changed to "final" so it is not possible
-    /// to override the getTypeName() method.
-    virtual std::string getTypeName() const ;
+    std::string getTypeName() const ;
 
     /// Get the class name of this object
-    /// Since #PR 1283, the signature has changed to "final" so it is not possible
-    /// to override the getClassName() method. To specify custom class name you need
-    /// to implement a single static std::string GetCustomClassName(){} method.
+    /// To specify custom static class name you need to implement a single
+    /// static std::string GetCustomClassName(){} method.
+    /// Override only if the class name cannot be known at compile-time (e.g. Python).
     virtual std::string getClassName() const ;
 
     /// Get the template type names (if any) used to instantiate this object
-    /// Since #PR 1283, the signature has changed to "final" so it is not possible
-    /// to override the getClassName() method. To specify custom class name you need
-    /// to implement a single static std::string GetCustomTemplateName(){} method.
-    virtual std::string getTemplateName() const ;
+    /// To specify custom static template name you need to implement a single
+    /// static std::string GetCustomTemplateName(){} method.
+    virtual std::string getTemplateName() const final;
 
     /// Get the template type names (if any) used to instantiate this object
-    /// Since #PR 1283, the signature has changed to "final" so it is not possible
-    /// to override the getNameSpaceName() method.
-    virtual std::string getNameSpaceName() const ;
+    std::string getNameSpaceName() const ;
 
     /// Set the source filename (where the component is implemented)
     void setDefinitionSourceFileName(const std::string& sourceFileName);
@@ -249,9 +176,6 @@ public:
     /// Assign the field values stored in the given map of name -> value pairs
     virtual void parseFields ( const std::map<std::string,std::string*>& str );
 
-    /// Write the current field values to the given map of name -> value pairs
-    void writeDatas (std::map<std::string,std::string*>& str);
-
     /// Write the current field values to the given output stream
     /// separated with the given separator (" " used by default for XML)
     void writeDatas (std::ostream& out, const std::string& separator = " ");
@@ -277,19 +201,29 @@ public:
 
     /// Helper method used to initialize a data field containing a value of type T
     template<class T>
-    BaseData::BaseInitData initData( Data<T>* field, const char* name, const char* help, bool isDisplayed=true, bool isReadOnly=false )
+    BaseData::BaseInitData initData(::sofa::core::objectmodel::Data<T>* field, const char* n, const char* help,
+    ::sofa::core::objectmodel::BaseData::DataFlags dataflags)
     {
-        BaseData::BaseInitData res;
-        this->initData0(field, res, name, help, isDisplayed, isReadOnly);
+        ::sofa::core::objectmodel::BaseData::BaseInitData res;
+        this->initData0(field, res, n, help, dataflags);
         return res;
     }
 
     /// Helper method used to initialize a data field containing a value of type T
     template<class T>
-    typename Data<T>::InitData initData( Data<T>* field, const T& value, const char* name, const char* help, bool isDisplayed=true, bool isReadOnly=false  )
+    BaseData::BaseInitData initData( Data<T>* field, const char* n, const char* help, bool isDisplayed=true, bool isReadOnly=false )
+    {
+        BaseData::BaseInitData res;
+        this->initData0(field, res, n, help, isDisplayed, isReadOnly);
+        return res;
+    }
+
+    /// Helper method used to initialize a data field containing a value of type T
+    template<class T>
+    typename Data<T>::InitData initData( Data<T>* field, const T& value, const char* n, const char* help, bool isDisplayed=true, bool isReadOnly=false  )
     {
         typename Data<T>::InitData res;
-        this->initData0(field, res, value, name, help, isDisplayed, isReadOnly);
+        this->initData0(field, res, value, n, help, isDisplayed, isReadOnly);
         return res;
     }
 
@@ -365,21 +299,10 @@ public:
 
 private:
     /// effective ostringstream for logging
-    mutable std::ostringstream _serr, _sout;
     mutable std::deque<sofa::helper::logging::Message> m_messageslog ;
 
 public:
-    /// write into component buffer + Message processedby message handlers
-    /// default message type = Warning
-    /*SOFA_ATTRIBUTE_DEPRECATED__SOFAOSTREAM()*/ mutable helper::system::SofaOStream<helper::logging::Message::Warning> serr;
-    /// write into component buffer.
-    /// Message is processed by message handlers only if printLog==true
-    /// /// default message type = Info
-    /*SOFA_ATTRIBUTE_DEPRECATED__SOFAOSTREAM()*/ mutable helper::system::SofaOStream<helper::logging::Message::Info> sout;
-    /// runs the stream processing
-    /*SOFA_ATTRIBUTE_DEPRECATED__SOFAOSTREAM()*/ mutable helper::system::SofaEndl<Base> sendl;
-
-    void processStream(std::ostream& out);
+    mutable Data<int> d_messageLogCount;
 
     void addMessage(const sofa::helper::logging::Message& m) const ;
     size_t  countLoggedMessages(sofa::helper::logging::Message::TypeSet t=sofa::helper::logging::Message::AnyTypes) const ;
@@ -390,6 +313,7 @@ public:
 
     inline bool notMuted() const { return f_printLog.getValue(); }
 
+
 protected:
     /// Helper method used by initData()
     void initData0( BaseData* field, BaseData::BaseInitData& res, const char* name, const char* help, bool isDisplayed=true, bool isReadOnly=false );
@@ -397,9 +321,9 @@ protected:
 
     /// Helper method used by initData()
     template<class T>
-    void initData0( Data<T>* field, typename Data<T>::InitData& res, const T& value, const char* name, const char* help, bool isDisplayed=true, bool isReadOnly=false )
+    void initData0( Data<T>* field, typename Data<T>::InitData& res, const T& value, const char* n, const char* help, bool isDisplayed=true, bool isReadOnly=false )
     {
-        initData0( field, res, name, help, isDisplayed, isReadOnly );
+        initData0( field, res, n, help, isDisplayed, isReadOnly );
         res.value = value;
     }
 
@@ -407,47 +331,7 @@ protected:
 
 public:
 
-    /// Helper method & type for the NameDecoder class to it can detect inherited instances
-    /// The following code is only needed since #PR1283 to smooth the deprecation process.
-    /// Remove that after the 01.01.2021.
-    bool IsInheritingFromBase(){return true;}
     typedef Base BaseType;
-
-    /// Helper method to get the type name of a type derived from this class
-    ///
-    /// This method should be used as follow :
-    /// \code  T* ptr = nullptr; std::string type = T::typeName(ptr); \endcode
-    /// This way derived classes can redefine the typeName method
-    template<class T>
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string typeName(const T* ptr = nullptr) = delete;
-
-    /// Helper method to get the class name of a type derived from this class
-    ///
-    /// This method should be used as follow :
-    /// \code  std::string type = Base::className<B>(); \endcode
-    /// This way derived classes can redefine the className method
-    template<class T>
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string className(const T* ptr = nullptr) = delete;
-
-    /// Helper method to get the namespace name of a type derived from this class
-    ///
-    /// This method should be used as follow :
-    /// \code  std::string type = Base::namespaceName<T>(); \endcode
-    /// This way derived classes can redefine the namespaceName method
-    template<class T>
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string namespaceName(const T* ptr = nullptr) = delete;
-
-    /// Helper method to get the template name of a type derived from this class
-    ///
-    /// This method should be used as follow :
-    /// \code  std::string type = Base::templateName<B>); \endcode
-    /// This way derived classes can redefine the templateName method
-    template<class T>
-    SOFA_ATTRIBUTE_DISABLED__CLASSNAME_INTROSPECTION()
-    static std::string templateName(const T* ptr = nullptr) = delete;
 
     /// Helper method to get the shortname of a type derived from this class.
     /// The default implementation return the class name.
@@ -459,7 +343,7 @@ public:
     static std::string shortName(const T* ptr = nullptr, BaseObjectDescription* = nullptr )
     {
         SOFA_UNUSED(ptr);
-        return sofa::helper::NameDecoder::shortName(sofa::helper::NameDecoder::getClassName<T>());
+        return sofa::helper::NameDecoder::shortName(BaseClassNameHelper::getClassName<T>());
     }
 
     /// @name componentstate
@@ -468,6 +352,7 @@ public:
 
     ComponentState getComponentState() const { return d_componentState.getValue() ; }
     bool isComponentStateValid() const { return d_componentState.getValue() == ComponentState::Valid; }
+    bool isComponentStateInvalid() const { return d_componentState.getValue() == ComponentState::Invalid; }
 
     ///@}
 
@@ -490,17 +375,11 @@ public:
 
     Data<bool> f_printLog; ///< if true, emits extra messages at runtime.
 
-    Data< sofa::core::objectmodel::TagSet > f_tags; ///< list of the subsets the objet belongs to
+    Data< sofa::core::objectmodel::TagSet > f_tags; ///< list of the subsets the object belongs to
 
     Data< sofa::type::BoundingBox > f_bbox; ///< this object bounding box
 
-    Data< sofa::core::objectmodel::ComponentState >  d_componentState; ///< the object state
-
-    SOFA_ATTRIBUTE_DISABLED__COMPONENTSTATE("To fix your code, use d_componentState")
-    DeprecatedAndRemoved m_componentstate{};
-
-    SOFA_ATTRIBUTE_DISABLED__COMPONENTSTATE("To fix your code, use d_componentState")
-    DeprecatedAndRemoved d_componentstate{};
+    Data< sofa::core::objectmodel::ComponentState >  d_componentState; ///< The state of the component among (Dirty, Valid, Undefined, Loading, Invalid).
 
     std::string m_definitionSourceFileName        {""};
     int         m_definitionSourceFilePos         {-1};
@@ -514,7 +393,6 @@ public:
     ///   must be specialized in each type implementation to return a pointer of this type
     /// @{
     ///
-public:
 
 
 
@@ -527,9 +405,8 @@ public:
     SOFA_BASE_CAST_DEFINITION( core,        BehaviorModel                          )
     SOFA_BASE_CAST_DEFINITION( core,        CollisionModel                         )
     SOFA_BASE_CAST_DEFINITION( core,        DataEngine                             )
-    SOFA_BASE_CAST_DEFINITION( core,        DevBaseMonitor                         )
     SOFA_BASE_CAST_DEFINITION( objectmodel, BaseContext                            )
-    SOFA_BASE_CAST_DEFINITION( objectmodel, BaseObject                             )
+    SOFA_BASE_CAST_DEFINITION( objectmodel, BaseComponent                          )
     SOFA_BASE_CAST_DEFINITION( objectmodel, BaseNode                               )
     SOFA_BASE_CAST_DEFINITION( objectmodel, ContextObject                          )
     SOFA_BASE_CAST_DEFINITION( objectmodel, ConfigurationSetting                   )
@@ -546,7 +423,7 @@ public:
     SOFA_BASE_CAST_DEFINITION( behavior,    BaseProjectiveConstraintSet            )
     SOFA_BASE_CAST_DEFINITION( behavior,    BaseInteractionProjectiveConstraintSet )
     SOFA_BASE_CAST_DEFINITION( behavior,    BaseConstraintSet                      )
-    SOFA_BASE_CAST_DEFINITION( behavior,    BaseConstraint                         )
+    SOFA_BASE_CAST_DEFINITION( behavior,    BaseLagrangianConstraint               )
     SOFA_BASE_CAST_DEFINITION( visual,      VisualModel                            )
     SOFA_BASE_CAST_DEFINITION( visual,      VisualManager                          )
     SOFA_BASE_CAST_DEFINITION( visual,      VisualLoop                             )
@@ -562,6 +439,12 @@ public:
     SOFA_BASE_CAST_DEFINITION( loader,      BaseLoader                             )
 
 #undef SOFA_BASE_CAST_DEFINITION
+
+    SOFA_ATTRIBUTE_DEPRECATED__TOBASECONSTRAINT() virtual const behavior::BaseLagrangianConstraint* toBaseConstraint() const { return toBaseLagrangianConstraint(); }
+    SOFA_ATTRIBUTE_DEPRECATED__TOBASECONSTRAINT() virtual       behavior::BaseLagrangianConstraint* toBaseConstraint()       { return toBaseLagrangianConstraint(); }
+
+    SOFA_ATTRIBUTE_DEPRECATED__TOBASEOBJECT() virtual const objectmodel::BaseComponent* toBaseObject() const { return toBaseComponent(); }
+    SOFA_ATTRIBUTE_DEPRECATED__TOBASEOBJECT() virtual       objectmodel::BaseComponent* toBaseObject()       { return toBaseComponent(); }
 
     /// @}
 };
@@ -594,9 +477,8 @@ public:
 /// This construct a new ComponentInfo object from a Base object.
 inline ComponentInfo::SPtr getComponentInfo(const sofa::core::objectmodel::Base* t)
 {
-    return ComponentInfo::SPtr( new SofaComponentInfo(t) ) ;
+    return std::make_shared<SofaComponentInfo>(t);
 }
 
 } // namespace sofa::helper::logging
 
-#endif

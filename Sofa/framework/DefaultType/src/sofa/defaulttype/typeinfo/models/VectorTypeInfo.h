@@ -63,11 +63,11 @@ struct VectorTypeInfo
 
     static sofa::Size size(const DataType& data)
     {
-        if (BaseTypeInfo::FixedSize)
+        if constexpr (BaseTypeInfo::FixedSize)
             return sofa::Size(data.size()*BaseTypeInfo::size());
         else
         {
-            sofa::Size n = sofa::Size(data.size());
+            const sofa::Size n = sofa::Size(data.size());
             sofa::Size s = 0;
             for (sofa::Size i=0; i<n; ++i)
                 s+= BaseTypeInfo::size(data[i]);
@@ -77,12 +77,15 @@ struct VectorTypeInfo
 
     static bool setSize(DataType& data, sofa::Size size)
     {
-        if (BaseTypeInfo::FixedSize)
+        if constexpr (BaseTypeInfo::FixedSize)
         {
             data.resize(size/BaseTypeInfo::size());
             return true;
         }
-        return false;
+        else
+        {
+            return false;
+        }
     }
 
     template <typename T>
@@ -92,7 +95,7 @@ struct VectorTypeInfo
         {
             BaseTypeInfo::getValue(data[index], 0, value);
         }
-        else if (BaseTypeInfo::FixedSize)
+        else if constexpr (BaseTypeInfo::FixedSize)
         {
             BaseTypeInfo::getValue(data[(index/BaseTypeInfo::size())], (index%BaseTypeInfo::size()), value);
         }
@@ -101,7 +104,7 @@ struct VectorTypeInfo
             sofa::Size s = 0;
             for (sofa::Size i=0; i<data.size(); ++i)
             {
-                sofa::Size n = BaseTypeInfo::size(data[i]);
+                const sofa::Size n = BaseTypeInfo::size(data[i]);
                 if (index < s+n)
                 {
                     BaseTypeInfo::getValue(data[i], index-s, value);
@@ -119,7 +122,7 @@ struct VectorTypeInfo
         {
             BaseTypeInfo::setValue(data[index], 0, value);
         }
-        else if (BaseTypeInfo::FixedSize)
+        else if constexpr (BaseTypeInfo::FixedSize)
         {
             BaseTypeInfo::setValue(data[(index/BaseTypeInfo::size())], (index%BaseTypeInfo::size()), value);
         }
@@ -128,7 +131,7 @@ struct VectorTypeInfo
             sofa::Size s = 0;
             for (sofa::Size i=0; i<data.size(); ++i)
             {
-                sofa::Size n = BaseTypeInfo::size(data[i]);
+                const sofa::Size n = BaseTypeInfo::size(data[i]);
                 if (index < s+n)
                 {
                     BaseTypeInfo::setValue(data[i], index-s, value);
@@ -145,7 +148,7 @@ struct VectorTypeInfo
         {
             BaseTypeInfo::getValueString(data[index], 0, value);
         }
-        else if (BaseTypeInfo::FixedSize)
+        else if constexpr (BaseTypeInfo::FixedSize)
         {
             BaseTypeInfo::getValueString(data[(index/BaseTypeInfo::size())], (index%BaseTypeInfo::size()), value);
         }
@@ -154,7 +157,7 @@ struct VectorTypeInfo
             sofa::Size s = 0;
             for (sofa::Size i=0; i<data.size(); ++i)
             {
-                sofa::Size n = BaseTypeInfo::size(data[i]);
+                const sofa::Size n = BaseTypeInfo::size(data[i]);
                 if (index < s+n)
                 {
                     BaseTypeInfo::getValueString(data[i], index-s, value);
@@ -171,7 +174,7 @@ struct VectorTypeInfo
         {
             BaseTypeInfo::setValueString(data[index], 0, value);
         }
-        else if (BaseTypeInfo::FixedSize)
+        else if constexpr (BaseTypeInfo::FixedSize)
         {
             BaseTypeInfo::setValueString(data[(index/BaseTypeInfo::size())], (index%BaseTypeInfo::size()), value);
         }
@@ -180,7 +183,7 @@ struct VectorTypeInfo
             sofa::Size s = 0;
             for (sofa::Size i=0; i<data.size(); ++i)
             {
-                sofa::Size n = BaseTypeInfo::size(data[i]);
+                const sofa::Size n = BaseTypeInfo::size(data[i]);
                 if (index < s+n)
                 {
                     BaseTypeInfo::setValueString(data[i], index-s, value);
@@ -193,12 +196,12 @@ struct VectorTypeInfo
 
     static const void* getValuePtr(const DataType& data)
     {
-        return &data[0];
+        return data.data();
     }
 
     static void* getValuePtr(DataType& data)
     {
-        return &data[0];
+        return data.data();
     }
 };
 

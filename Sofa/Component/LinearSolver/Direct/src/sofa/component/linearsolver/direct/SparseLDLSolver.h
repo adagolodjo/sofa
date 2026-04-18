@@ -56,6 +56,7 @@ public :
     typedef typename Inherit::JMatrixType JMatrixType;
     typedef SparseLDLImplInvertData<type::vector<int>, type::vector<Real> > InvertData;
 
+    void init() override;
     void parse( sofa::core::objectmodel::BaseObjectDescription* arg ) override;
     void solve (Matrix& M, Vector& x, Vector& b) override;
     void invert(Matrix& M) override;
@@ -63,49 +64,25 @@ public :
     bool addJMInvJtLocal(TMatrix * M, ResMatrixType * result,const JMatrixType * J, SReal fact) override;
     int numStep;
 
-    SOFA_ATTRIBUTE_DISABLED__SPARSELDLSOLVER_MATRIXEXPORT
-    DeprecatedAndRemoved f_saveMatrixToFile;
-
-    SOFA_ATTRIBUTE_DISABLED__SPARSELDLSOLVER_MATRIXEXPORT
-    DeprecatedAndRemoved d_filename;
-
-    SOFA_ATTRIBUTE_DISABLED__SPARSELDLSOLVER_MATRIXEXPORT
-    DeprecatedAndRemoved d_precision;
-
     MatrixInvertData * createInvertData() override {
         return new InvertData();
-    }
-
-    // Override canCreate in order to analyze if template has been set or not.
-    template<class T>
-    static bool canCreate(T*& obj, core::objectmodel::BaseContext* context, core::objectmodel::BaseObjectDescription* arg)
-    {
-        const std::string_view templateString = arg->getAttribute("template", "");
-
-        if (templateString.empty())
-        {
-            const std::string header = "SparseLDLSolver(" + std::string(arg->getAttribute("name", "")) + ")";
-            msg_advice(header) << "Template is empty\n"
-                                << "By default " << helper::NameDecoder::getClassName<T>() << " uses blocks with a single double (to handle all cases of simulations).\n"
-                                << "If you are using only 3D DOFs, you may consider using blocks of Matrix3 to speedup the calculations.\n"
-                                << "If it is the case, add " << "template=\"CompressedRowSparseMatrixMat3x3d\" " << "to this object in your scene\n"
-                                << "Otherwise, if you want to disable this message, add " << "template=\"CompressedRowSparseMatrixd\" " << ".";
-        }
-
-        return Inherit::canCreate(obj, context, arg);
     }
 
 protected :
     SparseLDLSolver();
 
-    type::vector<int> Jlocal2global;
+    type::vector<sofa::SignedIndex> Jlocal2global;
     sofa::linearalgebra::FullMatrix<Real> JLinvDinv, JLinv;
     sofa::linearalgebra::CompressedRowSparseMatrix<Real> Mfiltered;
 
     bool factorize(Matrix& M, InvertData * invertData);
+
+    void showInvalidSystemMessage(const std::string& reason) const;
+
+    using Triplet = std::tuple<sofa::SignedIndex, sofa::SignedIndex, Real>;
 };
 
-#if  !defined(SOFA_COMPONENT_LINEARSOLVER_SPARSELDLSOLVER_CPP)
+#if !defined(SOFA_COMPONENT_LINEARSOLVER_SPARSELDLSOLVER_CPP)
 extern template class SOFA_COMPONENT_LINEARSOLVER_DIRECT_API SparseLDLSolver< sofa::linearalgebra::CompressedRowSparseMatrix< SReal>, sofa::linearalgebra::FullVector<SReal> >;
 extern template class SOFA_COMPONENT_LINEARSOLVER_DIRECT_API SparseLDLSolver< sofa::linearalgebra::CompressedRowSparseMatrix< type::Mat<3,3,SReal> >, sofa::linearalgebra::FullVector<SReal> >;
 #endif

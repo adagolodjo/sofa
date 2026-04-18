@@ -3,17 +3,17 @@
 *                    (c) 2006 INRIA, USTL, UJF, CNRS, MGH                     *
 *                                                                             *
 * This program is free software; you can redistribute it and/or modify it     *
-* under the terms of the GNU General Public License as published by the Free  *
-* Software Foundation; either version 2 of the License, or (at your option)   *
-* any later version.                                                          *
+* under the terms of the GNU Lesser General Public License as published by    *
+* the Free Software Foundation; either version 2.1 of the License, or (at     *
+* your option) any later version.                                             *
 *                                                                             *
 * This program is distributed in the hope that it will be useful, but WITHOUT *
 * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for    *
-* more details.                                                               *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License *
+* for more details.                                                           *
 *                                                                             *
-* You should have received a copy of the GNU General Public License along     *
-* with this program. If not, see <http://www.gnu.org/licenses/>.              *
+* You should have received a copy of the GNU Lesser General Public License    *
+* along with this program. If not, see <http://www.gnu.org/licenses/>.        *
 *******************************************************************************
 * Authors: The SOFA Team and external contributors (see Authors.txt)          *
 *                                                                             *
@@ -29,10 +29,10 @@
 namespace sofa::gui::common
 {
 
-void SOFA_GUI_COMMON_API decodeCollisionElement( const sofa::type::Vec4f colour, sofa::gui::component::performer::BodyPicked& body );
-void SOFA_GUI_COMMON_API decodePosition( sofa::gui::component::performer::BodyPicked& body, const sofa::type::Vec4f colour, const sofa::component::collision::geometry::TriangleCollisionModel<sofa::defaulttype::Vec3Types>* model,
+void SOFA_GUI_COMMON_API decodeCollisionElement( const type::RGBAColor& colour, sofa::gui::component::performer::BodyPicked& body );
+void SOFA_GUI_COMMON_API decodePosition( sofa::gui::component::performer::BodyPicked& body, const type::RGBAColor& colour, const sofa::component::collision::geometry::TriangleCollisionModel<sofa::defaulttype::Vec3Types>* model,
         const unsigned int index);
-void SOFA_GUI_COMMON_API decodePosition( sofa::gui::component::performer::BodyPicked& body, const sofa::type::Vec4f colour, const sofa::component::collision::geometry::SphereCollisionModel<sofa::defaulttype::Vec3Types>* model,
+void SOFA_GUI_COMMON_API decodePosition( sofa::gui::component::performer::BodyPicked& body, const type::RGBAColor& colour, const sofa::component::collision::geometry::SphereCollisionModel<sofa::defaulttype::Vec3Types>* model,
         const unsigned int index);
 
 

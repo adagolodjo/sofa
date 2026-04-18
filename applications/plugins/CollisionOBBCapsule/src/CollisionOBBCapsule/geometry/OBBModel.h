@@ -37,7 +37,7 @@ class OBBCollisionModel;
 
 /**
   *An OBB model is a set of OBBs. It is linked to a rigid mechanical object. Each frame
-  *of the rigid machanical object represents the frame of one OBB. So an OBB is represented
+  *of the rigid mechanical object represents the frame of one OBB. So an OBB is represented
   *by its frame which orients it, a center and 3 extents.
   *A point P is inside the OBB obb if and only if P = obb.center() + a*obb.axis(0) + b*obb.axis(1) + c*obb.axis(2)
   *with -obb.extent(0) <= a <= obb.extent(0), -obb.extent(1) <= b <= obb.extent(1), -obb.extent(2) <= c <= obb.extent(2).
@@ -147,6 +147,7 @@ public:
 protected:
     OBBCollisionModel();
     OBBCollisionModel(sofa::core::behavior::MechanicalState<TDataTypes>* mstate );
+    void drawCollisionModel(const sofa::core::visual::VisualParams* vparams) override;
 public:
     void init() override;
 
@@ -159,8 +160,6 @@ public:
     //virtual void computeContinuousBoundingTree(SReal dt, int maxDepth=0);
 
     void draw(const sofa::core::visual::VisualParams* vparams, sofa::Index index) override;
-
-    void draw(const sofa::core::visual::VisualParams* vparams) override;
 
     sofa::core::behavior::MechanicalState<DataTypes>* getMechanicalState() { return _mstate; }
 
@@ -176,7 +175,7 @@ public:
             return false;
         }
 
-        return BaseObject::canCreate(obj, context, arg);
+        return sofa::core::objectmodel::BaseComponent::canCreate(obj, context, arg);
     }
 
     /**

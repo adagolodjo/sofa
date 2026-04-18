@@ -25,7 +25,7 @@
 #include <image/config.h>
 #include "ImageTypes.h"
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/type/Vec.h>
 
 #include <sofa/helper/OptionsGroup.h>
@@ -78,7 +78,7 @@ public:
 
         f_listening.setValue(true);
 
-        helper::OptionsGroup fluidOptions(3,"No update", "Every time step", "Every draw");
+        helper::OptionsGroup fluidOptions{"No update", "Every time step", "Every draw"};
         _update.setValue(fluidOptions);
     }
 

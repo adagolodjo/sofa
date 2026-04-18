@@ -19,17 +19,14 @@
 *                                                                             *
 * Contact information: contact@sofa-framework.org                             *
 ******************************************************************************/
-#ifndef SOFA_CORE_COLLISIONELEMENT_H
-#define SOFA_CORE_COLLISIONELEMENT_H
+#pragma once
+
 #include <sofa/core/config.h>
 #include <sofa/core/fwd.h>
 
 #include <vector>
 
-namespace sofa
-{
-
-namespace core
+namespace sofa::core
 {
 
 /**
@@ -47,22 +44,22 @@ public:
     /// In most cases it will be used by the CollisionModel to
     /// create interators to its elements (such as in the begin() and end()
     /// methods).
-    BaseCollisionElementIterator(Index index=0)
-        : index(index), it(emptyVector.begin()), itend(emptyVector.end())
+    BaseCollisionElementIterator(Index cindex=0)
+        : index(cindex), it(emptyVector.begin()), itend(emptyVector.end())
     {
     }
 
     /// Constructor.
     /// This constructor should be used in case a vector of indices is used.
-    BaseCollisionElementIterator(Index index, VIterator it, VIterator itend)
-        : index(index), it(it), itend(itend)
+    BaseCollisionElementIterator(Index cindex, VIterator vit, VIterator vitend)
+        : index(cindex), it(vit), itend(vitend)
     {
     }
 
     /// Constructor.
     /// This constructor should be used in case a vector of indices is used.
-    BaseCollisionElementIterator(VIterator it, VIterator itend)
-        : index(-1), it(it), itend(itend)
+    BaseCollisionElementIterator(VIterator vit, VIterator vitend)
+        : index(-1), it(vit), itend(vitend)
     {
         if (it != itend) index = *it;
     }
@@ -92,7 +89,7 @@ public:
     /// Postfix increment this iterator to reference the next element.
     BaseCollisionElementIterator operator++(int)
     {
-        auto tmp = *this;
+        const auto tmp = *this;
         next();
         return tmp;
     }
@@ -168,22 +165,22 @@ public:
     /// In most cases it will be used by the CollisionModel to
     /// create interators to its elements (such as in the begin() and end()
     /// methods).
-    TCollisionElementIterator(Model* model=nullptr, Index index=0)
-        : BaseCollisionElementIterator(index), model(model)
+    TCollisionElementIterator(Model* cmodel=nullptr, Index cindex=0)
+        : BaseCollisionElementIterator(cindex), model(cmodel)
     {
     }
 
     /// Constructor.
     /// This constructor should be used in case a vector of indices is used.
-    TCollisionElementIterator(Model* model, Index index, VIterator it, VIterator itend)
-        : BaseCollisionElementIterator(index, it, itend), model(model)
+    TCollisionElementIterator(Model* cmodel, Index cindex, VIterator vit, VIterator vitend)
+        : BaseCollisionElementIterator(cindex, vit, vitend), model(cmodel)
     {
     }
 
     /// Constructor.
     /// This constructor should be used in case a vector of indices is used.
-    TCollisionElementIterator(Model* model, VIterator it, VIterator itend)
-        : BaseCollisionElementIterator(it, itend), model(model)
+    TCollisionElementIterator(Model* cmodel, VIterator vit, VIterator vitend)
+        : BaseCollisionElementIterator(vit, vitend), model(cmodel)
     {
     }
 
@@ -264,13 +261,13 @@ public:
     }
 
     /// Distance to the actual (visual) surface
-    double getProximity() { return model->getProximity(); }
+    [[nodiscard]] SReal getContactDistance() const { return model->getContactDistance(); }
 
     /// Contact stiffness
-    double getContactStiffness() { return model->getContactStiffness(index); }
+    [[nodiscard]] SReal getContactStiffness() const { return model->getContactStiffness(index); }
 
     /// Contact friction (damping) coefficient
-    double getContactFriction() { return model->getContactFriction(index); }
+    [[nodiscard]] SReal getContactFriction() const { return model->getContactFriction(index); }
 
 
     /// Render this element.
@@ -300,7 +297,7 @@ inline bool TCollisionElementIterator<CollisionModel>::isActive(core::CollisionM
  *  collision element. It is only there to create a reference to it, not to
  *  actual contain its data. Classes derived from TCollisionElementIterator
  *  does not store any data, but just provide methods allowing to access the
- *  additionnal data stored inside the derived CollisionModel. For instance,
+ *  additional data stored inside the derived CollisionModel. For instance,
  *  the Cube class adds the minVect() / maxVect() methods to retrieve the
  *  corners of the cube, however this data is not stored inside Cube, instead
  *  it is stored inside the CubeData class within CubeModel.
@@ -313,22 +310,22 @@ public:
     /// In most cases it will be used by the CollisionModel to
     /// create interators to its elements (such as in the begin() and end()
     /// methods).
-    CollisionElementIterator(CollisionModel* model=nullptr, Index index=0)
-        : TCollisionElementIterator<CollisionModel>(model, index)
+    CollisionElementIterator(CollisionModel* cmodel=nullptr, Index cindex=0)
+        : TCollisionElementIterator<CollisionModel>(cmodel, cindex)
     {
     }
 
     /// Constructor.
     /// This constructor should be used in case a vector of indices is used.
-    CollisionElementIterator(CollisionModel* model, VIterator it, VIterator itend)
-        : TCollisionElementIterator<CollisionModel>(model, it, itend)
+    CollisionElementIterator(CollisionModel* cmodel, VIterator vit, VIterator vitend)
+        : TCollisionElementIterator<CollisionModel>(cmodel, vit, vitend)
     {
     }
 
     /// Constructor.
     /// This constructor should be used in case a vector of indices is used.
-    CollisionElementIterator(CollisionModel* model, Index index, VIterator it, VIterator itend)
-        : TCollisionElementIterator<CollisionModel>(model, index, it, itend)
+    CollisionElementIterator(CollisionModel* cmodel, Index cindex, VIterator vit, VIterator vitend)
+        : TCollisionElementIterator<CollisionModel>(cmodel, cindex, vit, vitend)
     {
     }
 
@@ -362,9 +359,4 @@ std::pair<CollisionElementIterator,CollisionElementIterator> TCollisionElementIt
 {
     return model->getExternalChildren(index);
 }
-
-} // namespace core
-
-} // namespace sofa
-
-#endif
+} // namespace sofa::core

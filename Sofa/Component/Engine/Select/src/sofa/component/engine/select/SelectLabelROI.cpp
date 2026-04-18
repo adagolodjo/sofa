@@ -21,19 +21,21 @@
 ******************************************************************************/
 #define SelectLabelROI_CPP_
 
-#include "SelectLabelROI.h"
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/component/engine/select/SelectLabelROI.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <sofa/core/ObjectFactory.h>
 
 namespace sofa::component::engine::select
 {
 
-int SelectLabelROIClass = core::RegisterObject("Select a subset of labeled points or cells stored in (vector<svector<label>>) given certain labels")
+void registerSelectLabelROI(sofa::core::ObjectFactory* factory)
+{
+    factory->registerObjects(core::ObjectRegistrationData("Select a subset of labeled points or cells stored in (vector<svector<label>>) given certain labels.")
         .add< SelectLabelROI<unsigned int> >(true)
         .add< SelectLabelROI<unsigned char> >()
         .add< SelectLabelROI<unsigned short> >()
-        .add< SelectLabelROI<int> >()
-        ;
+        .add< SelectLabelROI<int> >());
+}
 
 template class SOFA_COMPONENT_ENGINE_SELECT_API SelectLabelROI<unsigned int>;
 template class SOFA_COMPONENT_ENGINE_SELECT_API SelectLabelROI<unsigned char>;

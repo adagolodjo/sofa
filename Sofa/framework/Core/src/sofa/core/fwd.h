@@ -24,15 +24,19 @@
 #include <sofa/core/config.h>
 #include <iosfwd>
 
+
 namespace sofa::helper::visual { class DrawTool; }
 
 namespace sofa::core
 {
+
+
 class BaseState;
 class BaseMapping;
 class BehaviorModel;
 class CollisionModel;
 class CollisionElementIterator;
+class DataEngine;
 
 class ExecParams;
 class ConstraintParams;
@@ -68,7 +72,8 @@ SOFA_CORE_API SReal dt(const sofa::core::MechanicalParams*);
 namespace sofa::core::objectmodel
 {
 class Base;
-class BaseObject;
+class BaseComponent;
+using BaseObject = BaseComponent;
 class BaseNode;
 class BaseContext;
 class BaseData;
@@ -81,6 +86,8 @@ class AbstractDataLink;
 class ContextObject;
 class ConfigurationSetting;
 
+template<class TOwnerType, class TDestType, unsigned TFlags>
+class SingleLink;
 
 class Tag;
 SOFA_CORE_API std::ostream& operator<<(std::ostream& o, const Tag& t);
@@ -94,7 +101,7 @@ class BaseForceField;
 class BaseMass;
 class BaseMechanicalState;
 class BaseAnimationLoop;
-class BaseConstraint;
+class BaseLagrangianConstraint;
 class BaseConstraintSet;
 class ConstraintSolver;
 class ConstraintResolution;
@@ -104,7 +111,8 @@ class BaseInteractionForceField;
 class BaseProjectiveConstraintSet;
 class BaseInteractionProjectiveConstraintSet;
 class BaseInteractionConstraint;
-
+class BaseMechanicalState;
+class LinearSolver;
 class MultiMatrixAccessor;
 
 template<class T>
@@ -157,7 +165,16 @@ SOFA_CORE_API const sofa::core::visual::DisplayFlags& getDisplayFlags(const Visu
 
 namespace sofa::core::collision
 {
+class CollisionGroupManager;
+class ContactManager;
+class Detection;
+class Intersection;
 class Pipeline;
+}
+
+namespace sofa::core::loader
+{
+class BaseLoader;
 }
 
 namespace sofa::core
@@ -174,7 +191,7 @@ namespace sofa::core
 /// These functions are called "opaque" as they work with only forward declaration of the involved
 /// types in comparison to class methods the requires the full class declaration to be used.
 ///
-/// It is highly recommanded to use as much as possible opaque function in header files as this
+/// It is highly recommended to use as much as possible opaque function in header files as this
 /// allow to reduce the dependency tree.
 ///
 /// Opaque function may be slower at runtime (by one function call) but this is true only if LTO isn't
@@ -194,6 +211,9 @@ sofa::core::objectmodel::Base* castToBase(Source*b){ return b; }
 /// Dynamic cast from Base* into the type parameter Dest
 template<class Dest>
 Dest castTo(sofa::core::objectmodel::Base* base){ return dynamic_cast<Dest>(base); }
+
+template<class Dest>
+const Dest castTo(const sofa::core::objectmodel::Base* base){ return dynamic_cast<const Dest>(base); }
 
 namespace objectmodel::base
 {
@@ -244,7 +264,7 @@ SOFA_DECLARE_OPAQUE_FUNCTION_BETWEEN_BASE_AND(sofa::core::BaseMapping);
 SOFA_DECLARE_OPAQUE_FUNCTION_BETWEEN_BASE_AND(sofa::core::BehaviorModel);
 SOFA_DECLARE_OPAQUE_FUNCTION_BETWEEN_BASE_AND(sofa::core::CollisionModel);
 
-SOFA_DECLARE_OPAQUE_FUNCTION_BETWEEN_BASE_AND(sofa::core::objectmodel::BaseObject);
+SOFA_DECLARE_OPAQUE_FUNCTION_BETWEEN_BASE_AND(sofa::core::objectmodel::BaseComponent);
 SOFA_DECLARE_OPAQUE_FUNCTION_BETWEEN_BASE_AND(sofa::core::objectmodel::ContextObject);
 SOFA_DECLARE_OPAQUE_FUNCTION_BETWEEN_BASE_AND(sofa::core::objectmodel::ConfigurationSetting);
 

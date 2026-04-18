@@ -25,17 +25,14 @@
 #include <sofa/simulation/Visitor.h>
 
 
-namespace sofa
-{
-
-namespace simulation
+namespace sofa::simulation
 {
 
 class SOFA_SIMULATION_CORE_API DeactivationVisitor : public Visitor
 {
 public:
 
-    DeactivationVisitor(const core::ExecParams* params ,bool _active=false):Visitor(params),active(_active) {}
+    DeactivationVisitor(const core::ExecParams* eparams ,bool _active=false):Visitor(eparams),active(_active) {}
 
     Result processNodeTopDown(simulation::Node* node) override;
     void processNodeBottomUp(simulation::Node* node) override;
@@ -58,8 +55,7 @@ protected:
 };
 
 
-} // namespace simulation
+} // namespace sofa::simulation
 
-} // namespace sofa
 
 #endif

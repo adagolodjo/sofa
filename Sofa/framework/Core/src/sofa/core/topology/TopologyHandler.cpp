@@ -22,6 +22,8 @@
 #define SOFA_CORE_TOPOLOGY_TOPOLOGYHANDLER_DEFINITION true
 #include <sofa/core/topology/TopologyHandler.h>
 #include <sofa/helper/AdvancedTimer.h>
+#include <sofa/helper/ScopedAdvancedTimer.h>
+
 
 namespace sofa::core::topology
 {
@@ -47,7 +49,7 @@ void TopologyHandler::ApplyTopologyChanges(const std::list<const core::topology:
 {
     SOFA_UNUSED(_dataSize);
 
-    if (!this->isTopologyDataRegistered())
+    if (!this->isTopologyHandlerRegistered())
         return;
 
     std::list<const core::topology::TopologyChange*>::iterator changeIt;
@@ -57,7 +59,7 @@ void TopologyHandler::ApplyTopologyChanges(const std::list<const core::topology:
     {
         core::topology::TopologyChangeType changeType = (*changeIt)->getChangeType();
         std::string topoChangeType = m_prefix + ": " + m_data_name + " - " + parseTopologyChangeTypeToString(changeType);
-        sofa::helper::AdvancedTimer::stepBegin(topoChangeType);
+        helper::ScopedAdvancedTimer timer(topoChangeType);
 
         // New version using map of callback
         std::map < core::topology::TopologyChangeType, TopologyChangeCallback>::iterator itM;
@@ -122,9 +124,8 @@ void TopologyHandler::ApplyTopologyChanges(const std::list<const core::topology:
 #undef SOFA_CASE_EVENT
         default:
             break;
-        }; // switch( changeType )
+        } // switch( changeType )
 
-        sofa::helper::AdvancedTimer::stepEnd(topoChangeType);
         //++changeIt;
     }
 }
@@ -132,13 +133,12 @@ void TopologyHandler::ApplyTopologyChanges(const std::list<const core::topology:
 void TopologyHandler::update()
 {
     DDGNode::cleanDirty();
-    if (!this->isTopologyDataRegistered())
+    if (!this->isTopologyHandlerRegistered())
         return;
 
-    std::string msg = this->getName() + " - doUpdate: Nbr changes: " + std::to_string(m_topology->m_changeList.getValue().size());
-    sofa::helper::AdvancedTimer::stepBegin(msg.c_str());
+    const std::string msg = this->getName() + " - doUpdate: Nbr changes: " + std::to_string(m_topology->m_changeList.getValue().size());
+    helper::ScopedAdvancedTimer timer(msg);
     this->handleTopologyChange();
-    sofa::helper::AdvancedTimer::stepEnd(msg.c_str());
 }
 
 void TopologyHandler::addCallBack(core::topology::TopologyChangeType type, TopologyChangeCallback callback)
@@ -147,13 +147,14 @@ void TopologyHandler::addCallBack(core::topology::TopologyChangeType type, Topol
     m_callbackMap[type] = callback;
 }
 
-bool TopologyHandler::registerTopology(sofa::core::topology::BaseMeshTopology* _topology)
+bool TopologyHandler::registerTopology(sofa::core::topology::BaseMeshTopology* _topology, bool printLog)
 {
     m_topology = dynamic_cast<sofa::core::topology::TopologyContainer*>(_topology);
 
     if (m_topology == nullptr)
     {
-        msg_info("TopologyHandler") << "Topology: " << _topology->getName() << " is not dynamic, topology engine on Data '" << m_data_name << "' won't be registered.";
+        msg_info_when(printLog, "TopologyHandler") << "The " << m_prefix << " managing the TopologyData '" << m_data_name
+            << "' won't be registered because linked topology '" << _topology->getName() << "' is not dynamic. Topological changes won't be supported by this Data.";
         return false;
     }
 

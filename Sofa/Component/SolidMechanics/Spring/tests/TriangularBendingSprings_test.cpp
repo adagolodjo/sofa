@@ -26,8 +26,8 @@
 #include <sofa/component/solidmechanics/spring/TriangularBendingSprings.h>
 #include <sofa/core/topology/TopologyData.inl>
 
-#include <SofaSimulationGraph/SimpleApi.h>
-#include <SofaSimulationGraph/DAGSimulation.h>
+#include <sofa/simpleapi/SimpleApi.h>
+#include <sofa/simulation/graph/DAGSimulation.h>
 #include <sofa/simulation/Simulation.h>
 #include <sofa/simulation/Node.h>
 using sofa::simulation::Node;
@@ -67,21 +67,30 @@ protected:
     
 public:
 
-    void SetUp() override
+    void doSetUp() override
     {
-        sofa::simpleapi::importPlugin("SofaComponentAll");
-        simulation::setSimulation(m_simulation = new simulation::graph::DAGSimulation());
+        m_simulation = sofa::simulation::getSimulation();
+        this->loadPlugins({
+            Sofa.Component.Topology.Container.Dynamic,
+            Sofa.Component.Topology.Container.Grid
+        });
     }
 
-    void TearDown() override
+    void doTearDown() override
     {
         if (m_root != nullptr)
-            simulation::getSimulation()->unload(m_root);
+            sofa::simulation::node::unload(m_root);
     }
 
     void createSimpleTrianglePairScene(Real ks, Real kd)
     {
         m_root = sofa::simpleapi::createRootNode(m_simulation, "root");
+
+        this->loadPlugins({
+            Sofa.Component.StateContainer,
+            Sofa.Component.Topology.Container.Dynamic,
+            Sofa.Component.SolidMechanics.Spring
+        });
 
         createObject(m_root, "DefaultAnimationLoop");
         createObject(m_root, "DefaultVisualManagerLoop");        
@@ -93,7 +102,7 @@ public:
         createObject(m_root, "TriangularBendingSprings", { {"Name","TBS"}, {"stiffness", str(ks)}, {"damping", str(kd)} });
 
         /// Init simulation
-        sofa::simulation::getSimulation()->init(m_root.get());
+        sofa::simulation::node::initRoot(m_root.get());
     }
 
 
@@ -103,12 +112,21 @@ public:
         m_root->setGravity(type::Vec3(0.0, -1.0, 0.0));
         m_root->setDt(0.01);
 
+        this->loadPlugins({
+            Sofa.Component.StateContainer,
+            Sofa.Component.Topology.Container.Grid,
+            Sofa.Component.SolidMechanics.Spring,
+            Sofa.Component.ODESolver.Backward,
+            Sofa.Component.LinearSolver.Iterative,
+            Sofa.Component.Mass
+        });
+
         createObject(m_root, "DefaultAnimationLoop");
         createObject(m_root, "DefaultVisualManagerLoop");
         createObject(m_root, "RegularGridTopology", { {"name", "grid"}, 
             {"n", str(type::Vec3(nbrGrid, nbrGrid, 1))}, {"min", "0 0 0"}, {"max", "10 10 0"} });
-        
-        Node::SPtr FNode = sofa::simpleapi::createChild(m_root, "SpringNode");
+
+        const Node::SPtr FNode = sofa::simpleapi::createChild(m_root, "SpringNode");
         createObject(FNode, "EulerImplicitSolver");
         createObject(FNode, "CGLinearSolver", {{ "iterations", "20" }, { "tolerance", "1e-5" }, {"threshold", "1e-8"}});
         createObject(FNode, "MechanicalObject", {
@@ -126,7 +144,7 @@ public:
         ASSERT_NE(m_root.get(), nullptr);
 
         /// Init simulation
-        sofa::simulation::getSimulation()->init(m_root.get());
+        sofa::simulation::node::initRoot(m_root.get());
     }
 
 
@@ -148,19 +166,32 @@ public:
     void checkNoTopology()
     {
         m_root = sofa::simpleapi::createRootNode(m_simulation, "root");
+
+        this->loadPlugins({
+            Sofa.Component.StateContainer,
+            Sofa.Component.SolidMechanics.Spring
+        });
+
         createObject(m_root, "MechanicalObject", { {"template","Vec3d"}, {"position", "0 0 0  1 0 0  0 1 0  1 1 1"} });
         createObject(m_root, "TriangularBendingSprings");
 
         EXPECT_MSG_EMIT(Error);
 
         /// Init simulation
-        sofa::simulation::getSimulation()->init(m_root.get());
+        sofa::simulation::node::initRoot(m_root.get());
     }
 
 
     void checkEmptyTopology()
     {
         m_root = sofa::simpleapi::createRootNode(m_simulation, "root");
+
+        this->loadPlugins({
+            Sofa.Component.StateContainer,
+            Sofa.Component.Topology.Container.Dynamic,
+            Sofa.Component.SolidMechanics.Spring
+        });
+
         createObject(m_root, "MechanicalObject", { {"template","Vec3d"}, {"position", "0 0 0  1 0 0  0 1 0  1 1 1"} });
         createObject(m_root, "TriangleSetTopologyContainer");
         createObject(m_root, "TriangularBendingSprings");
@@ -168,13 +199,19 @@ public:
         EXPECT_MSG_EMIT(Error);
 
         /// Init simulation
-        sofa::simulation::getSimulation()->init(m_root.get());
+        sofa::simulation::node::initRoot(m_root.get());
     }
 
 
     void checkDefaultAttributes()
     {
         m_root = sofa::simpleapi::createRootNode(m_simulation, "root");
+
+        this->loadPlugins({
+            Sofa.Component.StateContainer,
+            Sofa.Component.Topology.Container.Dynamic,
+            Sofa.Component.SolidMechanics.Spring
+        });
 
         createObject(m_root, "MechanicalObject", { {"template","Vec3d"}, {"position", "0 0 0  1 0 0  0 1 0  1 1 1"} });
         createObject(m_root, "TriangleSetTopologyContainer", { {"triangles","0 1 2  1 3 2"} });
@@ -203,12 +240,12 @@ public:
         typename TriangleBS::SPtr triBS = m_root->getTreeObject<TriangleBS>();
         ASSERT_TRUE(triBS.get() != nullptr);
         
-        const VecEdgeInfo& EdgeInfos = triBS->edgeInfo.getValue();
+        const VecEdgeInfo& EdgeInfos = triBS->d_edgeInfo.getValue();
         ASSERT_EQ(EdgeInfos.size(), 5);
 
         // only one commun edge == only one spring between [0; 3] with restLength = ||(1,1,1)||
         int cptActivated = 0;
-        float restLength = sqrtf(3);
+        const float restLength = sqrtf(3);
         for (auto& ei : EdgeInfos)
         {
             ASSERT_TRUE(ei.is_initialized == true);
@@ -231,7 +268,7 @@ public:
     {
         // load Triangular FEM
         int nbrGrid = 20;
-        int nbrStep = 10;
+        const int nbrStep = 10;
         createGridScene(nbrGrid, 300, 0.5);
 
         if (m_root.get() == nullptr)
@@ -249,7 +286,7 @@ public:
         ASSERT_TRUE(triBS.get() != nullptr);
         ASSERT_FLOAT_EQ(triBS->getAccumulatedPotentialEnergy(), 0.0);
 
-        const VecEdgeInfo& EdgeInfos = triBS->edgeInfo.getValue();
+        const VecEdgeInfo& EdgeInfos = triBS->d_edgeInfo.getValue();
         
         ASSERT_EQ(EdgeInfos.size(), 1121);
         ASSERT_EQ(EdgeInfos[0].is_activated, true);
@@ -263,7 +300,7 @@ public:
 
         for (int i = 0; i < nbrStep; i++)
         {
-            m_simulation->animate(m_root.get(), 0.01);
+            sofa::simulation::node::animate(m_root.get(), 0.01_sreal);
         }
 
         EXPECT_NEAR(positions[nbrGrid][0], -0.000132, 1e-4);
@@ -284,24 +321,24 @@ public:
         if (m_root.get() == nullptr)
             return;
 
-        typename TriangleBS::SPtr triBS = m_root->getTreeObject<TriangleBS>();        
-        typename TriangleModifier::SPtr triModif = m_root->getTreeObject<TriangleModifier>();
+        typename TriangleBS::SPtr triBS = m_root->getTreeObject<TriangleBS>();
+        const typename TriangleModifier::SPtr triModif = m_root->getTreeObject<TriangleModifier>();
 
         ASSERT_TRUE(triBS.get() != nullptr);
         ASSERT_TRUE(triModif.get() != nullptr);
 
-        const VecEdgeInfo& EdgeInfos = triBS->edgeInfo.getValue();
+        const VecEdgeInfo& EdgeInfos = triBS->d_edgeInfo.getValue();
         ASSERT_EQ(EdgeInfos.size(), 56);
-        
-        sofa::topology::SetIndex triIndices = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }; 
+
+        const sofa::topology::SetIndex triIndices = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }; 
         triModif->removeTriangles(triIndices, true, true); // remove 10 first triangles
 
-        m_simulation->animate(m_root.get(), 0.01);
+        sofa::simulation::node::animate(m_root.get(), 0.01_sreal);
         ASSERT_EQ(EdgeInfos.size(), 40);
 
         triModif->removeTriangles(triIndices, true, true); // remove 10 more triangles
         triModif->removeTriangles(triIndices, true, true); // remove 10 more triangles
-        m_simulation->animate(m_root.get(), 0.01);
+        sofa::simulation::node::animate(m_root.get(), 0.01_sreal);
         
         ASSERT_EQ(EdgeInfos.size(), 5); // only one pair of triangle reminding == 1 edge in middle == 1 bending spring
         ASSERT_EQ(EdgeInfos[0].is_activated, false);

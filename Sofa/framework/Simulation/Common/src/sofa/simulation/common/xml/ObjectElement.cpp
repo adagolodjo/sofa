@@ -30,10 +30,10 @@ namespace sofa::simulation::xml
 using namespace sofa::defaulttype;
 using helper::Creator;
 
-//template class Factory< std::string, objectmodel::BaseObject, Node<objectmodel::BaseObject*>* >;
+//template class Factory< std::string, objectmodel::BaseComponent, Node<objectmodel::BaseComponent*>* >;
 
-ObjectElement::ObjectElement(const std::string& name, const std::string& type, BaseElement* parent)
-    : Element<core::objectmodel::BaseObject>(name, type, parent)
+ObjectElement::ObjectElement(const std::string& name, const std::string& type, BaseElement* eparent)
+    : Element<core::objectmodel::BaseComponent>(name, type, eparent)
 {
 }
 
@@ -44,10 +44,8 @@ ObjectElement::~ObjectElement()
 
 bool ObjectElement::init()
 {
-    int i=0;
     for (child_iterator<> it = begin(); it != end(); ++it)
     {
-        i++;
         it->init();
     }
 
@@ -62,13 +60,13 @@ bool ObjectElement::initNode()
 
     for (AttributeMap::iterator it = attributes.begin(), itend = attributes.end(); it != itend; ++it)
     {
-        if (replaceAttribute.find(it->first) != replaceAttribute.end())
+        if (replaceAttribute.contains(it->first))
         {
             setAttribute(it->first,replaceAttribute[it->first]);
         }
     }
 
-    core::objectmodel::BaseObject::SPtr obj = core::ObjectFactory::CreateObject(ctx, this);
+    core::objectmodel::BaseComponent::SPtr obj = core::ObjectFactory::CreateObject(ctx, this);
 
     if (obj == nullptr)
         obj = Factory::CreateObject(this->getType(), this);

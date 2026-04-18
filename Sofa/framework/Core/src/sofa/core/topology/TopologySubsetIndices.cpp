@@ -34,9 +34,9 @@ TopologySubsetIndices::TopologySubsetIndices(const typename sofa::core::topology
 
 }
 
-Index TopologySubsetIndices::indexOfElement(Index index)
+Index TopologySubsetIndices::indexOfElement(Index index) const
 {
-    const container_type& data = this->getValue();
+    const container_type& data = m_value.getValue();
     for (Index idElem = 0; idElem < data.size(); idElem++)
     {
         if (data[idElem] == index)
@@ -46,11 +46,30 @@ Index TopologySubsetIndices::indexOfElement(Index index)
     return sofa::InvalidID;
 }
 
+
+const type::vector<Index> TopologySubsetIndices::indicesOfElement(Index index) const
+{
+    const container_type& data = m_value.getValue();
+    type::vector<Index> returnVec;
+    for (Index idElem = 0; idElem < data.size(); idElem++)
+    {
+        if (data[idElem] == index)
+            returnVec.push_back(idElem);
+    }
+
+    return returnVec;
+}
+
 void TopologySubsetIndices::createTopologyHandler(sofa::core::topology::BaseMeshTopology* _topology)
 {
     this->Inherit::createTopologyHandler(_topology);
 }
 
+Index TopologySubsetIndices::getLastElementIndex() const
+{
+    const auto nbr = Index(m_topology->getNbPoints());
+    return (nbr == 0) ? sofa::InvalidID : nbr - 1;
+}
 
 void TopologySubsetIndices::swapPostProcess(Index i1, Index i2)
 {
@@ -60,10 +79,10 @@ void TopologySubsetIndices::swapPostProcess(Index i1, Index i2)
 }
 
 
-void TopologySubsetIndices::removePostProcess(sofa::Size nbElements)
+void TopologySubsetIndices::removePostProcess(sofa::Index elemId)
 {
     // nothing to do here
-    SOFA_UNUSED(nbElements);
+    SOFA_UNUSED(elemId);
 }
 
 
@@ -80,7 +99,6 @@ void TopologySubsetIndices::updateLastIndex(Index posLastIndex, Index newGlobalI
 }
 
 template class SOFA_CORE_API sofa::core::topology::TopologyDataHandler < core::topology::BaseMeshTopology::Point, type::vector<Index> >;
-template class SOFA_CORE_API sofa::core::topology::TopologyData < core::topology::BaseMeshTopology::Point, type::vector<Index> >;
 //template class SOFA_CORE_API sofa::core::topology::BaseTopologyData < type::vector<Index> >;
 
 } //namespace sofa::core::topology

@@ -12,7 +12,7 @@
 
 typedef sofa::component::container::MechanicalObject<sofa::defaulttype::Rigid3Types> MechanicalObjectRigid3;
 
-typedef sofa::type::Vector3 Vec3;
+typedef sofa::type::Vec3 Vec3;
 
 using namespace sofa::PrimitiveCreationTest;
 using sofa::core::objectmodel::New;
@@ -46,7 +46,7 @@ sofa::component::collision::BulletOBBCollisionModel<sofa::defaulttype::Rigid3Typ
 
     //editing DOF related to the OBBCollisionModel<sofa::defaulttype::Rigid3Types> to be created, size is 1 because it contains just one OBB
     obbDOF->resize(1);
-    Data<MechanicalObjectRigid3::VecCoord> & dpositions = *obbDOF->write( sofa::core::VecId::position() );
+    Data<MechanicalObjectRigid3::VecCoord> & dpositions = *obbDOF->write( sofa::core::vec_id::write_access::position );
     MechanicalObjectRigid3::VecCoord & positions = *dpositions.beginEdit();
 
     //we create a frame that we will rotate like it is specified by the parameters angles and order
@@ -71,8 +71,8 @@ sofa::component::collision::BulletOBBCollisionModel<sofa::defaulttype::Rigid3Typ
 
     dpositions.endEdit();
 
-    //Editting the velocity of the OBB
-    Data<MechanicalObjectRigid3::VecDeriv> & dvelocities = *obbDOF->write( sofa::core::VecId::velocity() );
+    //Editing the velocity of the OBB
+    Data<MechanicalObjectRigid3::VecDeriv> & dvelocities = *obbDOF->write( sofa::core::vec_id::write_access::velocity );
 
     MechanicalObjectRigid3::VecDeriv & velocities = *dvelocities.beginEdit();
     velocities[0] = v;
@@ -85,7 +85,7 @@ sofa::component::collision::BulletOBBCollisionModel<sofa::defaulttype::Rigid3Typ
     sofa::component::collision::BulletOBBCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr obbCollisionModel = New<sofa::component::collision::BulletOBBModel >();
     obb->addObject(obbCollisionModel);
 
-    //editting the OBBModel
+    //editing the OBBModel
     //obbCollisionModel->init();
     obbCollisionModel->resize(1);
 
@@ -110,7 +110,7 @@ static void randTrans(Vec3 & angles,Vec3 & new_pos){
 static void transMechaRigid(const Vec3 & angles,const Vec3 & new_pos,sofa::simulation::Node::SPtr & node){
     MechanicalObjectRigid3* mecha = node->get<MechanicalObjectRigid3>(sofa::simulation::Node::SearchDown);
 
-    Data<MechanicalObjectRigid3::VecCoord> & dpositions = *mecha->write( sofa::core::VecId::position() );
+    Data<MechanicalObjectRigid3::VecCoord> & dpositions = *mecha->write( sofa::core::vec_id::write_access::position );
     MechanicalObjectRigid3::VecCoord & positions = *dpositions.beginEdit();
 
     auto & quat = positions[0].getOrientation();
@@ -131,11 +131,11 @@ struct copyBulletOBB{
 
         //editing DOF related to the OBBCollisionModel<sofa::defaulttype::Rigid3Types> to be created, size is 1 because it contains just one OBB
         obbDOF->resize(1);
-        Data<MechanicalObjectRigid3::VecCoord> & dpositions = *obbDOF->write( sofa::core::VecId::position() );
+        Data<MechanicalObjectRigid3::VecCoord> & dpositions = *obbDOF->write( sofa::core::vec_id::write_access::position );
         MechanicalObjectRigid3::VecCoord & positions = *dpositions.beginEdit();
 
         const MechanicalObjectRigid3 * read_mec = obb_read->getContext()->get<MechanicalObjectRigid3>();
-        const Data<MechanicalObjectRigid3::VecCoord> & read_positions = *read_mec->read( sofa::core::VecId::position() );
+        const Data<MechanicalObjectRigid3::VecCoord> & read_positions = *read_mec->read( sofa::core::vec_id::read_access::position );
 
         //we finnaly edit the positions by filling it with a RigidCoord made up from p and the rotated fram x,y,z
         positions[0] = (read_positions.getValue())[0];
@@ -148,7 +148,7 @@ struct copyBulletOBB{
         sofa::component::collision::BulletOBBCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr obbCollisionModel = New<sofa::component::collision::BulletOBBModel >();
         obb->addObject(obbCollisionModel);
 
-        //editting the OBBModel
+        //editing the OBBModel
         //obbCollisionModel->init();
         obbCollisionModel->resize(1);
 
@@ -174,11 +174,11 @@ struct copyBulletConvexHull{
 
         //editing DOF related to the OBBCollisionModel<sofa::defaulttype::Rigid3Types> to be created, size is 1 because it contains just one OBB
         cv_hullDOF->resize(1);
-        Data<MechanicalObjectRigid3::VecCoord> & dpositions = *cv_hullDOF->write( sofa::core::VecId::position() );
+        Data<MechanicalObjectRigid3::VecCoord> & dpositions = *cv_hullDOF->write( sofa::core::vec_id::write_access::position );
         MechanicalObjectRigid3::VecCoord & positions = *dpositions.beginEdit();
 
         const MechanicalObjectRigid3 * read_mec = obb_read->getContext()->get<MechanicalObjectRigid3>();
-        const Data<MechanicalObjectRigid3::VecCoord> & read_positions = *read_mec->read( sofa::core::VecId::position() );
+        const Data<MechanicalObjectRigid3::VecCoord> & read_positions = *read_mec->read( sofa::core::vec_id::read_access::position );
 
         //we finnaly edit the positions by filling it with a RigidCoord made up from p and the rotated fram x,y,z
         positions[0] = (read_positions.getValue())[0];
@@ -191,7 +191,7 @@ struct copyBulletConvexHull{
         sofa::component::collision::BulletConvexHullModel::SPtr cv_hull_model = New<sofa::component::collision::BulletConvexHullModel >();
         obb->addObject(cv_hull_model);
 
-        //editting the OBBModel
+        //editing the OBBModel
         //obbCollisionModel->init();
         cv_hull_model->resize(1);
 
@@ -227,11 +227,11 @@ struct copyBulletConvexHull{
 
 //    //editing DOF related to the OBBCollisionModel<sofa::defaulttype::Rigid3Types> to be created, size is 1 because it contains just one OBB
 //    obbDOF->resize(1);
-//    Data<MechanicalObjectRigid3::VecCoord> & dpositions = *obbDOF->write( sofa::core::VecId::position() );
+//    Data<MechanicalObjectRigid3::VecCoord> & dpositions = *obbDOF->write( sofa::core::vec_id::write_access::position );
 //    MechanicalObjectRigid3::VecCoord & positions = *dpositions.beginEdit();
 
 //    const MechanicalObjectRigid3 * read_mec = obb_read->getContext()->get<MechanicalObjectRigid3>();
-//    const Data<MechanicalObjectRigid3::VecCoord> & read_positions = *read_mec->read( sofa::core::VecId::position() );
+//    const Data<MechanicalObjectRigid3::VecCoord> & read_positions = *read_mec->read( sofa::core::vec_id::read_access::position );
 
 //    //we finnaly edit the positions by filling it with a RigidCoord made up from p and the rotated fram x,y,z
 //    positions[0] = (read_positions.getValue())[0];
@@ -244,7 +244,7 @@ struct copyBulletConvexHull{
 //    sofa::component::collision::OBBCollisionModel<sofa::defaulttype::Rigid3Types>::SPtr obbCollisionModel = New<sofa::component::collision::OBBModel >();
 //    obb->addObject(obbCollisionModel);
 
-//    //editting the OBBModel
+//    //editing the OBBModel
 //    //obbCollisionModel->init();
 //    obbCollisionModel->resize(1);
 

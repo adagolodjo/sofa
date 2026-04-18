@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22)
 project(CollisionOBBCapsule VERSION 1.0 LANGUAGES CXX)
 
 # List all files
@@ -63,12 +63,13 @@ set(SOURCE_FILES
     ${COLLISIONOBBCAPSULE_SRC_DIR}/response/mapper/OBBContactMapper.h
     )
 
-find_package(Sofa.Component.Collision REQUIRED)
-find_package(SofaUserInteraction REQUIRED)
+find_package(Sofa.Config REQUIRED)
+sofa_find_package(Sofa.Component.Collision REQUIRED)
+sofa_find_package(Sofa.GUI.Component REQUIRED) # for performers
+
 add_library(${PROJECT_NAME} SHARED ${HEADER_FILES} ${SOURCE_FILES})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC Sofa.Component.Collision)
-target_link_libraries(${PROJECT_NAME} PUBLIC SofaUserInteraction)
+target_link_libraries(${PROJECT_NAME} PUBLIC Sofa.Component.Collision Sofa.GUI.Component)
 
 sofa_create_package_with_targets(
     PACKAGE_NAME ${PROJECT_NAME}

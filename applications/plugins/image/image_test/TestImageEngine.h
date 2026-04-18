@@ -23,7 +23,7 @@
 #define SOFA_COMPONENT_ENGINE_TestImageEngine_H
 
 #include <sofa/core/DataEngine.h>
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/objectmodel/BaseComponent.h>
 #include <image/ImageTypes.h>
 #include <sofa/core/objectmodel/Event.h>
 #include <sofa/simulation/AnimateEndEvent.h>
@@ -41,7 +41,7 @@ namespace engine
 
 /**
  * This class is only used to test engine with image data.
- * Given a input image the ouput image will have the same dimension as input image and all pixels will be 0.
+ * Given a input image the output image will have the same dimension as input image and all pixels will be 0.
  */
 template <class _ImageTypes>
 class TestImageEngine : public core::DataEngine
@@ -61,12 +61,12 @@ public:
     typedef helper::WriteOnlyAccessor<Data< ImageTypes > > waImage;
     typedef helper::ReadAccessor<Data< ImageTypes > > raImage;
 
-    Data< ImageTypes > inputImage;  ///< input image
-    Data< ImageTypes > outputImage; ///< ouput image
+    Data< ImageTypes > inputImage; ///< input image
+    Data< ImageTypes > outputImage; ///< output image
 
     TestImageEngine() :   Inherited()
         , inputImage(initData(&inputImage,ImageTypes(),"inputImage","input image"))
-        , outputImage(initData(&outputImage,ImageTypes(),"outputImage","ouput image"))
+        , outputImage(initData(&outputImage,ImageTypes(),"outputImage","output image"))
     {
         inputImage.setReadOnly(true);
     }

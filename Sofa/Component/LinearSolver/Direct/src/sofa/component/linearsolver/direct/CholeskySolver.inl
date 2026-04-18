@@ -25,7 +25,7 @@
 #include <sofa/linearalgebra/SparseMatrix.h>
 #include <sofa/core/ObjectFactory.h>
 #include <iostream>
-#include "sofa/helper/system/thread/CTime.h"
+#include <sofa/helper/system/thread/CTime.h>
 #include <sofa/core/objectmodel/BaseContext.h>
 #include <sofa/core/behavior/LinearSolver.h>
 #include <cmath>
@@ -35,7 +35,6 @@ namespace sofa::component::linearsolver::direct
 
 template<class TMatrix, class TVector>
 CholeskySolver<TMatrix,TVector>::CholeskySolver()
-    : f_verbose( initData(&f_verbose,false,"verbose","Dump system state at each iteration") )
 {
 }
 
@@ -47,7 +46,7 @@ template<class TMatrix, class TVector>
 void CholeskySolver<TMatrix,TVector>::solve (Matrix& /*M*/, Vector& z, Vector& r)
 {
     //Compute L
-    int n = L.colSize();
+    const int n = L.colSize();
 
     //Solve L u = b
     for (int j=0; j<n; j++)

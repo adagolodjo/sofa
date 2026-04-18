@@ -21,13 +21,8 @@
 ******************************************************************************/
 #include <sofa/core/loader/SceneLoader.h>
 
-namespace sofa
-{
 
-namespace core
-{
-
-namespace loader
+namespace sofa::core::loader
 {
 
 using namespace sofa::defaulttype;
@@ -39,10 +34,10 @@ SceneLoader::SceneLoader() : BaseLoader()
 
 void SceneLoader::parse(sofa::core::objectmodel::BaseObjectDescription* arg)
 {
-    objectmodel::BaseObject::parse(arg);
+    objectmodel::BaseComponent::parse(arg);
 
     if (canLoad())
-        load(/*m_filename.getFullPath().c_str()*/);
+        load(/*d_filename.getFullPath().c_str()*/);
     else
         msg_info("SceneLoader") << "Doing nothing";
 }
@@ -57,9 +52,9 @@ bool SceneLoader::canLoad()
     return BaseLoader::canLoad();
 }
 
-} // namespace loader
+} // namespace sofa::core::loader
 
-} // namespace core
 
-} // namespace sofa
+
+
 

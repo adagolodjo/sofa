@@ -64,6 +64,7 @@ public:
     virtual void setSceneFileName(const std::string &f);
     virtual void setScene(sofa::simulation::Node::SPtr scene, const char* filename = nullptr, bool /*keepParams*/= false);
     virtual void setCameraMode(core::visual::VisualParams::CameraType);
+    void addCameraIfRequired();
 
     /// true when the viewer keep the hand on the render
     /// false when it's not in activity
@@ -133,7 +134,7 @@ public:
     bool m_showSelectedObjectVolumes {false};
     bool m_showSelectedObjectIndices {false};
     type::RGBAColor m_selectionColor {type::RGBAColor::purple()};
-    float m_visualScaling {0.2};
+    float m_visualScaling {1.0};
 
 protected:
     void drawIndices(const sofa::type::BoundingBox& bbox, const std::vector<sofa::type::Vec3>& positions);

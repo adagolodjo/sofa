@@ -270,15 +270,7 @@ bool BaseViewer::load()
 
     if (groot)
     {
-        groot->get(currentCamera, core::objectmodel::BaseContext::SearchDown);
-        if (!currentCamera)
-        {
-            currentCamera = sofa::core::objectmodel::New<sofa::component::visual::InteractiveCamera>();
-            currentCamera->setName(groot->getNameHelper().resolveName(currentCamera->getClassName(), sofa::core::ComponentNameHelper::Convention::python));
-            groot->addObject(currentCamera);
-            currentCamera->bwdInit();
-            msg_info("BaseViewer") << "There is no camera in this scene, I created one. To remove this error message, add a camera in your scene.";
-        }
+        addCameraIfRequired();
         sofa::component::visual::VisualStyle::SPtr visualStyle = nullptr;
         groot->get(visualStyle);
         if (!visualStyle)
@@ -303,6 +295,19 @@ bool BaseViewer::load()
     }
 
     return false;
+}
+void BaseViewer::addCameraIfRequired()
+{
+    groot->get(currentCamera, core::objectmodel::BaseContext::SearchDown);
+    if (!currentCamera)
+    {
+        currentCamera = sofa::core::objectmodel::New<sofa::component::visual::InteractiveCamera>();
+        currentCamera->setName(groot->getNameHelper().resolveName(currentCamera->getClassName(), sofa::core::ComponentNameHelper::Convention::python));
+        groot->addObject(currentCamera);
+        currentCamera->bwdInit();
+        msg_info("BaseViewer") << "There is no camera in this scene, I created one. To remove this error message, add a camera in your scene.";
+    }
+
 }
 
 bool BaseViewer::unload()
@@ -472,8 +477,7 @@ void BaseViewer::drawSelection(sofa::core::visual::VisualParams* vparams)
 
             if(m_showSelectedObjectIndices && !positions.empty() && validBox)
             {
-                const float scale = (box.maxBBox() - box.minBBox()).norm() * m_visualScaling;
-                drawTool->draw3DText_Indices(positions, scale, m_selectionColor);
+                drawTool->draw3DText_Indices(positions, m_visualScaling, m_selectionColor);
             }
 
             continue;

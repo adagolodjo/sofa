@@ -88,7 +88,7 @@ void FEMForceField<DataTypes, ElementType>::addForce(
 template <class DataTypes, class ElementType>
 void FEMForceField<DataTypes, ElementType>::computeElementsForces(
     const sofa::core::MechanicalParams* mparams,
-    sofa::type::vector<ElementForce>& f,
+    sofa::type::vector<ElementGradient>& f,
     const sofa::VecCoord_t<DataTypes>& x)
 {
     SCOPED_TIMER("ElementForces");
@@ -159,10 +159,12 @@ void FEMForceField<DataTypes, ElementType>::addDForce(
 
 template <class DataTypes, class ElementType>
 void FEMForceField<DataTypes, ElementType>::computeElementsForcesDeriv(
-    const sofa::core::MechanicalParams* mparams, sofa::type::vector<ElementForce>& df,
+    const sofa::core::MechanicalParams* mparams, sofa::type::vector<ElementGradient>& df,
     const sofa::VecDeriv_t<DataTypes>& dx)
 {
     SCOPED_TIMER("ElementForcesDeriv");
+
+    this->beforeElementForceDeriv(mparams);
 
     const auto& elements = trait::FiniteElement::getElementSequence(*this->l_topology);
 
@@ -234,6 +236,22 @@ void FEMForceField<DataTypes, ElementType>::draw(const sofa::core::visual::Visua
 
     m_drawMesh.elementSpace = d_elementSpace.getValue();
     m_drawMesh.drawAllElements(vparams->drawTool(), x, this->l_topology.get());
+}
+
+template <class DataTypes, class ElementType>
+void FEMForceField<DataTypes, ElementType>::computeBBox(const core::ExecParams* params, bool onlyVisible)
+{
+    SOFA_UNUSED(params);
+
+    if(!onlyVisible)
+        return;
+
+    auto* vparams = sofa::core::visual::VisualParams::defaultInstance();
+
+    if(onlyVisible && !vparams->displayFlags().getShowForceFields())
+        return;
+
+    this->f_bbox.setValue(this->mstate->computeBBox());
 }
 
 }  // namespace sofa::component::solidmechanics::fem::elastic

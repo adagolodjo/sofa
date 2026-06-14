@@ -53,6 +53,22 @@ BaseMechanicalVisitor::BaseMechanicalVisitor(const sofa::core::ExecParams *param
     canAccessSleepingNode = false;
 }
 
+bool BaseMechanicalVisitor::isMechanicalStateMapped(simulation::Node* node) const
+{
+    /**
+     * WARNING!!!!!
+     *
+     * This condition is not valid for all cases, as it only checks for the presence of a mechanical
+     * mapping in the same Node. This condition does not ensure that the state is not an output of a
+     * mapping.
+     *
+     * Examples of situations where this condition is not appropritate:
+     * - No mapping in the Node but the mapping is defined in another Node.
+     * - There is a mapping in the Node, but the state is not an output of this mapping.
+     */
+    return node->mechanicalMapping != nullptr;
+}
+
 Visitor::Result BaseMechanicalVisitor::processNodeTopDown(simulation::Node *node, VisitorContext *ctx)
 {
     for (auto *solver : node->solver)
@@ -76,7 +92,7 @@ Visitor::Result BaseMechanicalVisitor::processNodeTopDown(simulation::Node *node
 
     if (node->mechanicalState != nullptr)
     {
-        if (node->mechanicalMapping != nullptr)
+        if (isMechanicalStateMapped(node))
         {
             res = runVisitorTask(this, ctx, &BaseMechanicalVisitor::fwdMappedMechanicalState, &*node->mechanicalState, fwdVisitorType);
         }
@@ -134,7 +150,7 @@ void BaseMechanicalVisitor::processNodeBottomUp(simulation::Node *node, VisitorC
 
     if (node->mechanicalState != nullptr)
     {
-        if (node->mechanicalMapping != nullptr)
+        if (isMechanicalStateMapped(node))
         {
             runVisitorTask(this, ctx, &BaseMechanicalVisitor::bwdMappedMechanicalState, &*node->mechanicalState, bwdVisitorType);
         }
@@ -237,20 +253,20 @@ void BaseMechanicalVisitor::printReadVectors(simulation::Node* node, core::objec
     {
         core::behavior::BaseMechanicalState *dof1, *dof2;
 
-        if (BaseInteractionForceField* interact = dynamic_cast< BaseInteractionForceField* > (obj))
+        if (BaseInteractionForceField* interact1 = dynamic_cast< BaseInteractionForceField* > (obj))
         {
-            dof1 = interact->getMechModel1();
-            dof2 = interact->getMechModel2();
+            dof1 = interact1->getMechModel1();
+            dof2 = interact1->getMechModel2();
         }
-        else if (BaseInteractionProjectiveConstraintSet* interact = dynamic_cast< BaseInteractionProjectiveConstraintSet* > (obj))
+        else if (BaseInteractionProjectiveConstraintSet* interact2 = dynamic_cast< BaseInteractionProjectiveConstraintSet* > (obj))
         {
-            dof1 = interact->getMechModel1();
-            dof2 = interact->getMechModel2();
+            dof1 = interact2->getMechModel1();
+            dof2 = interact2->getMechModel2();
         }
-        else if (BaseInteractionConstraint* interact = dynamic_cast< BaseInteractionConstraint* > (obj))
+        else if (BaseInteractionConstraint* interact3 = dynamic_cast< BaseInteractionConstraint* > (obj))
         {
-            dof1 = interact->getMechModel1();
-            dof2 = interact->getMechModel2();
+            dof1 = interact3->getMechModel1();
+            dof2 = interact3->getMechModel2();
         }else
         {
             printReadVectors(node->mechanicalState);
@@ -285,20 +301,20 @@ void BaseMechanicalVisitor::printWriteVectors(simulation::Node* node, core::obje
     {
         BaseMechanicalState *dof1, *dof2;
 
-        if (BaseInteractionForceField* interact = dynamic_cast< BaseInteractionForceField* > (obj))
+        if (BaseInteractionForceField* interact1 = dynamic_cast< BaseInteractionForceField* > (obj))
         {
-            dof1 = interact->getMechModel1();
-            dof2 = interact->getMechModel2();
+            dof1 = interact1->getMechModel1();
+            dof2 = interact1->getMechModel2();
         }
-        else if (BaseInteractionProjectiveConstraintSet* interact = dynamic_cast< BaseInteractionProjectiveConstraintSet* > (obj))
+        else if (BaseInteractionProjectiveConstraintSet* interact2 = dynamic_cast< BaseInteractionProjectiveConstraintSet* > (obj))
         {
-            dof1 = interact->getMechModel1();
-            dof2 = interact->getMechModel2();
+            dof1 = interact2->getMechModel1();
+            dof2 = interact2->getMechModel2();
         }
-        else if (BaseInteractionConstraint* interact = dynamic_cast< BaseInteractionConstraint* > (obj))
+        else if (BaseInteractionConstraint* interact3 = dynamic_cast< BaseInteractionConstraint* > (obj))
         {
-            dof1 = interact->getMechModel1();
-            dof2 = interact->getMechModel2();
+            dof1 = interact3->getMechModel1();
+            dof2 = interact3->getMechModel2();
         }else
         {
             BaseMechanicalState* dof = node->mechanicalState;

@@ -50,7 +50,7 @@ public:
 
 private:
     using trait = sofa::component::solidmechanics::fem::elastic::trait<DataTypes, ElementType>;
-    using ElementForce = typename trait::ElementForce;
+    using ElementGradient = typename trait::ElementGradient;
 
 public:
     void init() override;
@@ -67,6 +67,8 @@ public:
 
     void draw(const sofa::core::visual::VisualParams*) override;
 
+    void computeBBox(const core::ExecParams* params, bool onlyVisible) override;
+
     sofa::Data<ComputeStrategy> d_computeForceStrategy;
     sofa::Data<ComputeStrategy> d_computeForceDerivStrategy;
 
@@ -79,17 +81,17 @@ protected:
     /// Methods related to addForce
     /// @{
     void computeElementsForces(const sofa::core::MechanicalParams* mparams,
-        sofa::type::vector<ElementForce>& f,
+        sofa::type::vector<ElementGradient>& f,
         const sofa::VecCoord_t<DataTypes>& x);
 
     virtual void beforeElementForce(const sofa::core::MechanicalParams* mparams,
-        sofa::type::vector<ElementForce>& f,
+        sofa::type::vector<ElementGradient>& f,
         const sofa::VecCoord_t<DataTypes>& x) {}
 
     virtual void computeElementsForces(
         const sofa::simulation::Range<std::size_t>& range,
         const sofa::core::MechanicalParams* mparams,
-        sofa::type::vector<ElementForce>& f,
+        sofa::type::vector<ElementGradient>& f,
         const sofa::VecCoord_t<DataTypes>& x) = 0;
 
     void dispatchElementForcesToNodes(
@@ -101,13 +103,15 @@ protected:
     /// Methods related to addDForce
     /// @{
     void computeElementsForcesDeriv(const sofa::core::MechanicalParams* mparams,
-        sofa::type::vector<ElementForce>& df,
+        sofa::type::vector<ElementGradient>& df,
         const sofa::VecDeriv_t<DataTypes>& dx);
+
+    virtual void beforeElementForceDeriv(const sofa::core::MechanicalParams* mparams) {}
 
     virtual void computeElementsForcesDeriv(
         const sofa::simulation::Range<std::size_t>& range,
         const sofa::core::MechanicalParams* mparams,
-        sofa::type::vector<ElementForce>& df,
+        sofa::type::vector<ElementGradient>& df,
         const sofa::VecDeriv_t<DataTypes>& dx) = 0;
 
     /**
